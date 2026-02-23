@@ -1,0 +1,29 @@
+# dependencies
+node_modules
+.pnp
+.pnp.cjs
+
+# build
+/dist
+/build
+**/dist
+**/build
+
+# env
+.env
+.env.*
+!.env.example
+
+# logs
+*.log
+
+# editors
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# vite
+apps/fe/node_modules/.vite

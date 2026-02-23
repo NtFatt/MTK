@@ -1,0 +1,45 @@
+{
+  "info": {
+    "name": "Hadilao Realtime Recovery v14",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Realtime Snapshot (room=sessionKey:...)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/realtime/snapshot?room=sessionKey:{{sessionKey}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "realtime", "snapshot"],
+          "query": [
+            { "key": "room", "value": "sessionKey:{{sessionKey}}" }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Realtime Resync (batch)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"rooms\": [\n    { \"room\": \"sessionKey:{{sessionKey}}\", \"lastSeq\": 0 }\n  ],\n  \"limit\": 500\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/realtime/resync",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "realtime", "resync"]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3001" },
+    { "key": "sessionKey", "value": "" }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "name": "hadilao-online",
+  "private": true,
+  "packageManager": "pnpm@10.4.1",
+  "scripts": {
+    "dev": "pnpm -C packages/contracts dev & pnpm -C apps/api dev & pnpm -C apps/fe dev",
+
+    "build": "pnpm -C packages/contracts build && pnpm -C apps/api build --if-present && pnpm -C apps/fe build --if-present",
+    "typecheck": "pnpm -C packages/contracts typecheck && pnpm -C apps/api typecheck --if-present && pnpm -C apps/fe typecheck --if-present",
+    "lint": "pnpm -C apps/api lint --if-present && pnpm -C apps/fe lint --if-present",
+
+    "contracts:dev": "pnpm -C packages/contracts dev",
+    "contracts:build": "pnpm -C packages/contracts build",
+
+    "fe:dev": "pnpm -C apps/fe dev",
+    "fe:build": "pnpm -C apps/fe build",
+    "fe:preview": "pnpm -C apps/fe preview",
+
+    "api:dev": "pnpm -C apps/api dev",
+    "api:smoke": "pnpm -C apps/api smoke",
+    "api:db:reset": "pnpm -C apps/api db:reset",
+    "api:db:migrate": "pnpm -C apps/api db:migrate",
+    "api:db:diff": "pnpm -C apps/api db:diff"
+  },
+  "pnpm": {
+    "overrides": {
+      "vite": "npm:rolldown-vite@7.2.5"
+    }
+  }
+}

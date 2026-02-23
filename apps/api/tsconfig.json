@@ -1,0 +1,41 @@
+{
+  "compilerOptions": {
+    /* 1. Thiết lập đường dẫn viết tắt (Path Mapping) */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+
+    /* 2. File Layout */
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    /* 3. Environment Settings */
+    "module": "nodenext",
+    "target": "esnext",
+    "moduleResolution": "nodenext",
+    "esModuleInterop": true,
+    "lib": ["esnext"],
+    "types": ["node", "express", "cors", "morgan"],
+
+    /* 4. Other Outputs */
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    /* 5. Stricter Typechecking Options */
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "strict": true,
+
+    /* 6. Recommended Options */
+    "jsx": "react-jsx",
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noUncheckedSideEffectImports": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

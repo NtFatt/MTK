@@ -1,0 +1,133 @@
+{
+  "info": {
+    "name": "Hadilao - Reservation Flow (API)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3001" },
+    { "key": "areaName", "value": "Tầng 1" },
+    { "key": "partySize", "value": "4" },
+    { "key": "reservedFrom", "value": "2026-02-05T19:00:00+07:00" },
+    { "key": "reservedTo", "value": "2026-02-05T20:30:00+07:00" },
+    { "key": "contactPhone", "value": "0900000000" },
+    { "key": "contactName", "value": "Guest" },
+    { "key": "note", "value": "" },
+    { "key": "adminUsername", "value": "admin" },
+    { "key": "adminPassword", "value": "admin123" },
+    { "key": "adminToken", "value": "" },
+    { "key": "reservationCode", "value": "" },
+    { "key": "sessionKey", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "01 - Check Availability",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/reservations/availability?areaName={{areaName}}&partySize={{partySize}}&reservedFrom={{reservedFrom}}&reservedTo={{reservedTo}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "reservations", "availability"],
+          "query": [
+            { "key": "areaName", "value": "{{areaName}}" },
+            { "key": "partySize", "value": "{{partySize}}" },
+            { "key": "reservedFrom", "value": "{{reservedFrom}}" },
+            { "key": "reservedTo", "value": "{{reservedTo}}" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "02 - Create Reservation",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const data = pm.response.json();",
+              "if (data && data.reservationCode) { pm.collectionVariables.set('reservationCode', data.reservationCode); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"areaName\": \"{{areaName}}\",\n  \"partySize\": {{partySize}},\n  \"contactPhone\": \"{{contactPhone}}\",\n  \"contactName\": \"{{contactName}}\",\n  \"note\": \"{{note}}\",\n  \"reservedFrom\": \"{{reservedFrom}}\",\n  \"reservedTo\": \"{{reservedTo}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/reservations",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "reservations"]
+        }
+      }
+    },
+    {
+      "name": "03 - Admin Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const data = pm.response.json();",
+              "if (data && data.token) { pm.collectionVariables.set('adminToken', data.token); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/admin/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "admin", "auth", "login"]
+        }
+      }
+    },
+    {
+      "name": "04 - Admin Confirm Reservation",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/admin/reservations/{{reservationCode}}/confirm",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "admin", "reservations", "{{reservationCode}}", "confirm"]
+        }
+      }
+    },
+    {
+      "name": "05 - Admin Check-in Reservation (Open Session)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const data = pm.response.json();",
+              "if (data && data.sessionKey) { pm.collectionVariables.set('sessionKey', data.sessionKey); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/admin/reservations/{{reservationCode}}/checkin",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "admin", "reservations", "{{reservationCode}}", "checkin"]
+        }
+      }
+    }
+  ]
+}

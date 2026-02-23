@@ -1,0 +1,608 @@
+{
+  "info": {
+    "_postman_id": "2d968021-fb72-4885-9855-26df79456ad9",
+    "name": "Hadilao Smoke - Core Flow (P0/P1) v6",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Collection-level prerequest (SMOKE STABLE)",
+          "// 1) Optional admin API key header (fallback auth)",
+          "const adminApiKey = pm.environment.get('adminApiKey');",
+          "if (adminApiKey && String(adminApiKey).trim().length > 0) {",
+          "  pm.request.headers.upsert({ key: 'x-admin-api-key', value: adminApiKey });",
+          "}",
+          "// 2) SMOKE defaults to match seed.sql",
+          "// Seed bạn từng show: Zone A (4 seats), Zone B (6 seats)",
+          "const area = String(pm.environment.get('areaName') || '').trim();",
+          "if (!area) pm.environment.set('areaName', 'Zone A');",
+          "const ps = Number(pm.environment.get('partySize'));",
+          "if (!Number.isFinite(ps) || ps <= 0) pm.environment.set('partySize', 2);",
+          "// 3) Reservation time window (SMOKE SAFE)",
+          "// Đặt reservedFrom ~ now + 5 phút để check-in luôn hợp lệ",
+          "const reservedFromDate = new Date(Date.now() + 5 * 60 * 1000);",
+          "const reservedToDate   = new Date(reservedFromDate.getTime() + 60 * 60 * 1000);",
+          "",
+          "pm.environment.set('reservedFrom', reservedFromDate.toISOString());",
+          "pm.environment.set('reservedTo', reservedToDate.toISOString());"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Client Auth (OTP)",
+      "item": [
+        {
+          "name": "Request OTP (REGISTER)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/client/otp/request",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "client",
+                "otp",
+                "request"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"{{clientPhone}}\",\n  \"purpose\": \"REGISTER\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Always generate a fresh phone for REGISTER smoke (idempotent)",
+                  "const suffix = String(Date.now()).slice(-8);     // 8 digits",
+                  "pm.environment.set(\"clientPhone\", \"09\" + suffix);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "if (j.otpId) pm.environment.set('otpId', String(j.otpId));",
+                  "if (j.devEchoOtp) pm.environment.set('otpCode', String(j.devEchoOtp));",
+                  "// If devEchoOtp is disabled, set otpCode manually in environment."
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify OTP (REGISTER) => Tokens",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/client/otp/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "client",
+                "otp",
+                "verify"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"{{clientPhone}}\",\n  \"purpose\": \"REGISTER\",\n  \"otp\": \"{{otpCode}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.environment.set('clientAccessToken', String(j.accessToken || ''));",
+                  "pm.environment.set('clientRefreshToken', String(j.refreshToken || ''));",
+                  "if (j.client && j.client.clientId) pm.environment.set('clientId', String(j.client.clientId));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "00 - Admin",
+      "item": [
+        {
+          "name": "Admin Login (Bearer token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"{{adminUsername}}\", \"password\": \"{{adminPassword}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "if (pm.response.code !== 200) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw new Error('HTTP ' + pm.response.code); }",
+                  "pm.test('Content-Type is JSON', function () { pm.expect(pm.response.headers.get('Content-Type') || '').to.include('application/json'); });",
+                  "let json;",
+                  "try { json = pm.response.json(); } catch (e) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw e; }",
+                  "pm.test('login returns token', function(){",
+                  "  const token = json.token || json.accessToken || (json.data && (json.data.token || json.data.accessToken));",
+                  "  pm.expect(token, 'token').to.be.a('string').and.to.have.length.greaterThan(10);",
+                  "  pm.environment.set('adminToken', token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 - Health",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/health"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "if (pm.response.code < 200 || pm.response.code > 299) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw new Error('HTTP ' + pm.response.code); }",
+                  "pm.test('Content-Type is JSON', function () { pm.expect(pm.response.headers.get('Content-Type') || '').to.include('application/json'); });",
+                  "let json;",
+                  "try { json = pm.response.json(); } catch (e) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw e; }",
+                  "pm.test('health ok', function(){ pm.expect(json).to.be.ok; });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - Menu",
+      "item": [
+        {
+          "name": "List Menu Items (pick first itemId)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/menu/items?limit=50"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });if (pm.response.code < 200 || pm.response.code > 299) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw new Error('HTTP ' + pm.response.code); }pm.test('Content-Type is JSON', function () { pm.expect(pm.response.headers.get('Content-Type') || '').to.include('application/json'); });let json;try { json = pm.response.json(); } catch (e) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw e; }const itemsWrap = json.items ? json : (json.data && json.data.items ? json.data : json);const items = (itemsWrap && itemsWrap.items) ? itemsWrap.items : (Array.isArray(itemsWrap) ? itemsWrap : []);pm.test('menu has items', function(){ pm.expect(items.length, 'items length').to.be.greaterThan(0); });function stockOf(it){ const v = (it && (it.stockQty ?? it.stock_qty ?? it.stock ?? it.quantity ?? 0)); const n = Number(v); return Number.isFinite(n) ? n : 0; }const pick = items.find(it => stockOf(it) > 0) || items[0];const id = pick && (pick.menuItemId || pick.itemId || pick.item_id || pick.id);pm.test('pick menuItemId', function(){ pm.expect(id, 'menuItemId').to.exist; });pm.environment.set('menuItemId', String(id));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 - Reservation Flow",
+      "item": [
+        {
+          "name": "Create Reservation (client)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"areaName\": \"{{areaName}}\",\n  \"partySize\": {{partySize}},\n  \"contactName\": \"Smoke Tester\",\n  \"contactPhone\": \"0900000000\",\n  \"note\": \"smoke\",\n  \"reservedFrom\": \"{{reservedFrom}}\",\n  \"reservedTo\": \"{{reservedTo}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const status = pm.response.code;",
+                  "// SUCCESS",
+                  "if (status === 201) {",
+                  "  pm.test('HTTP 201', () => pm.expect(status).to.eql(201));",
+                  "  pm.test('Content-Type is JSON', () => pm.expect(pm.response.headers.get('Content-Type') || '').to.include('application/json'));",
+                  "",
+                  "  let json;",
+                  "  try { json = pm.response.json(); }",
+                  "  catch (e) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw e; }",
+                  "",
+                  "  const code = json.reservationCode || (json.data && json.data.reservationCode);",
+                  "  pm.test('reservationCode set', () => pm.expect(code, 'reservationCode').to.exist);",
+                  "  pm.environment.set('reservationCode', String(code));",
+                  "  return;",
+                  "}",
+                  "// Parse JSON for error handling",
+                  "let json = null;",
+                  "try { json = pm.response.json(); } catch (_) {}",
+                  "// If no table available -> retry once with other zone",
+                  "const errCode = (json && (json.code || (json.error && json.error.code))) || '';",
+                  "if (status === 409 && errCode === 'NO_TABLE_AVAILABLE') {",
+                  "  const retry = Number(pm.environment.get('__rsv_retry') || 0);",
+                  "  if (retry < 1) {",
+                  "    pm.environment.set('__rsv_retry', String(retry + 1));",
+                  "",
+                  "    const current = String(pm.environment.get('areaName') || '').trim();",
+                  "    const next = (current === 'Zone A') ? 'Zone B' : 'Zone A';",
+                  "    pm.environment.set('areaName', next);",
+                  "",
+                  "    console.log(`NO_TABLE_AVAILABLE on ${current}. Retrying once with areaName=${next}`);",
+                  "    pm.execution.setNextRequest(pm.info.requestName); // retry same request",
+                  "    return;",
+                  "  }",
+                  "}",
+                  "// FAIL hard",
+                  "console.log(pm.response.text());",
+                  "pm.execution.setNextRequest(null);",
+                  "throw new Error(`Create Reservation failed: HTTP ${status} (${errCode || 'UNKNOWN'})`);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin Confirm Reservation",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/reservations/{{reservationCode}}/confirm",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "if (pm.response.code < 200 || pm.response.code > 299) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw new Error('HTTP ' + pm.response.code); }",
+                  "if (pm.response.code === 204) { pm.test('confirm ok (no content)', function(){ pm.expect(true).to.equal(true); }); }",
+                  "else {",
+                  "  pm.test('Content-Type is JSON', function () { pm.expect(pm.response.headers.get('Content-Type') || '').to.include('application/json'); });",
+                  "  let json;",
+                  "  try { json = pm.response.json(); } catch (e) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw e; }",
+                  "  pm.test('confirm ok', function(){ pm.expect(json).to.be.ok; });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin Check-in Reservation (opens session)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/reservations/{{reservationCode}}/checkin",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "if (pm.response.code < 200 || pm.response.code > 299) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw new Error('HTTP ' + pm.response.code); }",
+                  "pm.test('Content-Type is JSON', function () { pm.expect(pm.response.headers.get('Content-Type') || '').to.include('application/json'); });",
+                  "let json;",
+                  "try { json = pm.response.json(); } catch (e) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw e; }",
+                  "const sessionKey = json.sessionKey || (json.data && json.data.sessionKey);",
+                  "pm.test('sessionKey set', function(){ pm.expect(sessionKey, 'sessionKey').to.exist; });",
+                  "pm.environment.set('sessionKey', String(sessionKey));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 - Cart + Order + Payment",
+      "item": [
+        {
+          "name": "Get/Create cart by sessionKey",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/carts/session/{{sessionKey}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "if (pm.response.code < 200 || pm.response.code > 299) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw new Error('HTTP ' + pm.response.code); }",
+                  "pm.test('Content-Type is JSON', function () { pm.expect(pm.response.headers.get('Content-Type') || '').to.include('application/json'); });",
+                  "let json;",
+                  "try { json = pm.response.json(); } catch (e) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw e; }",
+                  "const cartKey = json.cartKey || (json.data && (json.data.cartKey || (json.data.cart && json.data.cart.cartKey))) || (json.cart && json.cart.cartKey);",
+                  "pm.test('cartKey set', function(){ pm.expect(cartKey, 'cartKey').to.exist; });",
+                  "pm.environment.set('cartKey', String(cartKey));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upsert Cart Item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/carts/{{cartKey}}/items",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"itemId\": \"{{menuItemId}}\", \"quantity\": 1}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP is one of [200, 204]', function () { pm.expect([200, 204]).to.include(pm.response.code); });",
+                  "if (![200, 204].includes(pm.response.code)) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw new Error('HTTP ' + pm.response.code); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Order from Cart",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/orders/from-cart/{{cartKey}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', function () { pm.expect(pm.response.code).to.eql(201); });",
+                  "if (pm.response.code !== 201) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw new Error('HTTP ' + pm.response.code); }",
+                  "pm.test('Content-Type is JSON', function () { pm.expect(pm.response.headers.get('Content-Type') || '').to.include('application/json'); });",
+                  "let json;",
+                  "try { json = pm.response.json(); } catch (e) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw e; }",
+                  "const orderCode = json.orderCode || (json.data && json.data.orderCode);",
+                  "pm.test('orderCode set', function(){ pm.expect(orderCode, 'orderCode').to.exist; });",
+                  "pm.environment.set('orderCode', String(orderCode));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mock Payment SUCCESS (admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/payments/mock-success/{{orderCode}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', function () { pm.expect(pm.response.code).to.eql(201); });",
+                  "if (pm.response.code !== 201) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw new Error('HTTP ' + pm.response.code); }",
+                  "pm.test('Content-Type is JSON', function () { pm.expect(pm.response.headers.get('Content-Type') || '').to.include('application/json'); });",
+                  "let json;",
+                  "try { json = pm.response.json(); } catch (e) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw e; }",
+                  "pm.test('paid ok', function(){ pm.expect(json).to.be.ok; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Order Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderCode}}/status"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "if (pm.response.code < 200 || pm.response.code > 299) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw new Error('HTTP ' + pm.response.code); }",
+                  "pm.test('Content-Type is JSON', function () { pm.expect(pm.response.headers.get('Content-Type') || '').to.include('application/json'); });",
+                  "let json;",
+                  "try { json = pm.response.json(); } catch (e) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw e; }",
+                  "pm.test('order status exists', function(){ pm.expect(json.status || json.orderStatus || (json.data && json.data.status), 'status').to.exist; });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 - Close + Maintenance",
+      "item": [
+        {
+          "name": "Close Session",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/sessions/{{sessionKey}}/close"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "if (pm.response.code < 200 || pm.response.code > 299) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw new Error('HTTP ' + pm.response.code); }",
+                  "pm.test('Content-Type is JSON', function () { pm.expect(pm.response.headers.get('Content-Type') || '').to.include('application/json'); });",
+                  "let json;",
+                  "try { json = pm.response.json(); } catch (e) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw e; }",
+                  "pm.test('close ok', function(){ pm.expect(json).to.be.ok; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Run Maintenance (admin)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/maintenance/run",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "if (pm.response.code < 200 || pm.response.code > 299) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw new Error('HTTP ' + pm.response.code); }",
+                  "pm.test('Content-Type is JSON', function () { pm.expect(pm.response.headers.get('Content-Type') || '').to.include('application/json'); });",
+                  "let json;",
+                  "try { json = pm.response.json(); } catch (e) { console.log(pm.response.text()); pm.execution.setNextRequest(null); throw e; }",
+                  "pm.test('maintenance ok', function(){ pm.expect(json).to.be.ok; });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
