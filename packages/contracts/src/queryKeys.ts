@@ -9,6 +9,13 @@
 
 export type QK = readonly unknown[];
 
+function normalizeBranchId<T extends { branchId?: string | number }>(params: T): T & { branchId?: string } {
+  return {
+    ...params,
+    branchId: params.branchId != null ? String(params.branchId) : undefined,
+  };
+}
+
 export const qk = {
   health: () => ["health"] as const,
   version: () => ["version"] as const,
@@ -25,31 +32,51 @@ export const qk = {
   branches: {
     list: (params?: { q?: string; page?: number; size?: number }) =>
       ["branches", "list", params ?? {}] as const,
-    detail: (branchId: string | number) => ["branches", "detail", branchId] as const,
+    detail: (branchId: string | number) => ["branches", "detail", String(branchId)] as const,
   },
 
   tables: {
-    list: (params: { branchId?: string | number; directionId?: string; status?: string } = {}) =>
-      ["tables", "list", params] as const,
+    list: (params: { branchId?: string | number; directionId?: string; status?: string } = {}) => {
+      const normalized = normalizeBranchId(params);
+      return ["tables", "list", normalized] as const;
+    },
+  },
+
+  // Internal ops tables (admin/ops)
+  ops: {
+    tables: {
+      list: (params: { branchId?: string | number } = {}) => {
+        const normalized = normalizeBranchId(params);
+        return ["ops", "tables", "list", normalized] as const;
+      },
+    },
   },
 
   menu: {
-    categories: (params: { branchId?: string | number } = {}) =>
-      ["menu", "categories", params] as const,
+    categories: (params: { branchId?: string | number } = {}) => {
+      const normalized = normalizeBranchId(params);
+      return ["menu", "categories", normalized] as const;
+    },
     items: (params: {
       branchId?: string | number;
       categoryId?: string | number;
       q?: string;
       page?: number;
       size?: number;
-    } = {}) => ["menu", "items", "list", params] as const,
-    itemDetail: (itemId: string | number) => ["menu", "items", "detail", itemId] as const,
-    itemCombo: (itemId: string | number) => ["menu", "items", "combo", itemId] as const,
-    itemMeatProfile: (itemId: string | number) => ["menu", "items", "meatProfile", itemId] as const,
+    } = {}) => {
+      const normalized = normalizeBranchId(params);
+      return ["menu", "items", "list", normalized] as const;
+    },
+    itemDetail: (itemId: string | number) => ["menu", "items", "detail", String(itemId)] as const,
+    itemCombo: (itemId: string | number) => ["menu", "items", "combo", String(itemId)] as const,
+    itemMeatProfile: (itemId: string | number) => ["menu", "items", "meatProfile", String(itemId)] as const,
   },
 
   sessions: {
-    open: (params: { branchId?: string | number } = {}) => ["sessions", "open", params] as const,
+    open: (params: { branchId?: string | number } = {}) => {
+      const normalized = normalizeBranchId(params);
+      return ["sessions", "open", normalized] as const;
+    },
     detail: (sessionKey: string) => ["sessions", "detail", sessionKey] as const,
   },
 
@@ -63,28 +90,46 @@ export const qk = {
     status: (orderCode: string) => ["orders", "status", orderCode] as const,
 
     // Internal
-    kitchenQueue: (params: { branchId?: string | number } = {}) =>
-      ["orders", "kitchen", "queue", params] as const,
-    cashierUnpaid: (params: { branchId?: string | number } = {}) =>
-      ["orders", "cashier", "unpaid", params] as const,
+    kitchenQueue: (params: { branchId?: string | number } = {}) => {
+      const normalized = normalizeBranchId(params);
+      return ["orders", "kitchen", "queue", normalized] as const;
+    },
+    cashierUnpaid: (params: { branchId?: string | number } = {}) => {
+      const normalized = normalizeBranchId(params);
+      return ["orders", "cashier", "unpaid", normalized] as const;
+    },
   },
 
   inventory: {
-    stock: (params: { branchId?: string | number } = {}) => ["inventory", "stock", params] as const,
-    holds: (params: { branchId?: string | number } = {}) => ["inventory", "holds", params] as const,
-    rehydrateMetrics: (params: { branchId?: string | number } = {}) =>
-      ["inventory", "rehydrate", "metrics", params] as const,
+    stock: (params: { branchId?: string | number } = {}) => {
+      const normalized = normalizeBranchId(params);
+      return ["inventory", "stock", normalized] as const;
+    },
+    holds: (params: { branchId?: string | number } = {}) => {
+      const normalized = normalizeBranchId(params);
+      return ["inventory", "holds", normalized] as const;
+    },
+    rehydrateMetrics: (params: { branchId?: string | number } = {}) => {
+      const normalized = normalizeBranchId(params);
+      return ["inventory", "rehydrate", "metrics", normalized] as const;
+    },
   },
 
   reservations: {
-    list: (params: { branchId?: string | number; status?: string; q?: string } = {}) =>
-      ["reservations", "list", params] as const,
+    list: (params: { branchId?: string | number; status?: string; q?: string } = {}) => {
+      const normalized = normalizeBranchId(params);
+      return ["reservations", "list", normalized] as const;
+    },
   },
 
   realtime: {
-    snapshot: (params: { branchId?: string | number; sinceSeq?: number } = {}) =>
-      ["realtime", "snapshot", params] as const,
-    audit: (params: { branchId?: string | number; sinceSeq?: number } = {}) =>
-      ["realtime", "audit", params] as const,
+    snapshot: (params: { branchId?: string | number; sinceSeq?: number } = {}) => {
+      const normalized = normalizeBranchId(params);
+      return ["realtime", "snapshot", normalized] as const;
+    },
+    audit: (params: { branchId?: string | number; sinceSeq?: number } = {}) => {
+      const normalized = normalizeBranchId(params);
+      return ["realtime", "audit", normalized] as const;
+    },
   },
 } as const;

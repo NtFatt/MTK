@@ -3,7 +3,6 @@ import { qk } from "@hadilao/contracts";
 import type { EventEnvelope } from "./types";
 import { createInvalidateDebouncer } from "./invalidateDebounce";
 import { realtimeConfig } from "./config";
-import { opsTablesQueryKey } from "../../features/internal/ops/tables/hooks/queryKeys";
 
 let queryClient: QueryClient | null = null;
 let debouncer: ReturnType<typeof createInvalidateDebouncer> | null = null;
@@ -100,7 +99,7 @@ export function routeRealtimeEvent(env: EventEnvelope) {
     }
 
     const branchId = tryExtractBranchId(env);
-    if (branchId != null) enqueueInvalidate(opsTablesQueryKey({ branchId }), true);
+    if (branchId != null) enqueueInvalidate(qk.ops.tables.list({ branchId }), true);
     return;
   }
 
@@ -111,7 +110,7 @@ export function routeRealtimeEvent(env: EventEnvelope) {
     enqueueInvalidate(qk.cart.bySessionKey(sk), true);
     // Internal ops tables view may expose cartKey/sessionKey per table.
     const branchId = tryExtractBranchId(env);
-    if (branchId != null) enqueueInvalidate(opsTablesQueryKey({ branchId }), true);
+    if (branchId != null) enqueueInvalidate(qk.ops.tables.list({ branchId }), true);
     return;
   }
 
@@ -135,7 +134,7 @@ export function routeRealtimeEvent(env: EventEnvelope) {
   // 4) Table sessions
   if (type === "table.session.opened" || type === "table.session.closed") {
     const branchId = tryExtractBranchId(env);
-    if (branchId != null) enqueueInvalidate(opsTablesQueryKey({ branchId }), true);
+    if (branchId != null) enqueueInvalidate(qk.ops.tables.list({ branchId }), true);
 
     const sk = tryExtractSessionKey(env);
     if (sk) enqueueInvalidate(qk.sessions.detail(sk), true);
@@ -145,7 +144,7 @@ export function routeRealtimeEvent(env: EventEnvelope) {
   // 5) Reservations
   if (type === "reservation.created" || type === "reservation.status.changed") {
     const branchId = tryExtractBranchId(env);
-    if (branchId != null) enqueueInvalidate(opsTablesQueryKey({ branchId }), true);
+    if (branchId != null) enqueueInvalidate(qk.ops.tables.list({ branchId }), true);
     return;
   }
 }
