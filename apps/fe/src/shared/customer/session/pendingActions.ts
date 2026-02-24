@@ -8,12 +8,12 @@ import { apiFetch } from "../../../lib/apiFetch";
 export type PendingAddCartItem = {
   kind: "ADD_CART_ITEM";
   returnTo: string;
-  payload: {
-    itemId: string | number;
-    qty: number;
-    note?: string;
-    optionsHash?: string;
-  };
+ payload: {
+  itemId: string | number;
+  quantity: number;
+  note?: string;
+  optionsHash?: string;
+};
 };
 
 export type PendingAction = PendingAddCartItem;
@@ -60,35 +60,43 @@ function sameItem(a: any, b: any) {
  * Apply pending action once a sessionKey exists.
  * - Only clears pending action after a successful apply.
  */
-export async function applyPendingAction(sessionKey: string): Promise<{ applied: boolean; returnTo?: string }> {
+export async function applyPendingAction(
+  sessionKey: string,
+  branchId?: string | number | null
+): Promise<{ applied: boolean; returnTo?: string }> {
   const action = loadPendingAction();
   if (!action) return { applied: false };
 
   if (action.kind === "ADD_CART_ITEM") {
-    // Ensure a cart exists for this session, then upsert items.
-    const cart = await apiFetch<CartLike>(`/carts/session/${encodeURIComponent(sessionKey)}`, {
-      method: "POST",
-    });
-
-    const existing = Array.isArray(cart?.items) ? cart.items : [];
-    const nextItem = action.payload;
-
-    const merged = [...existing];
-    const idx = merged.findIndex((it) => sameItem(it, nextItem));
-    if (idx >= 0) {
-      merged[idx] = { ...merged[idx], qty: (merged[idx].qty ?? 0) + (nextItem.qty ?? 1) };
-    } else {
-      merged.push({
-        itemId: nextItem.itemId,
-        qty: nextItem.qty ?? 1,
-        note: nextItem.note,
-        optionsHash: nextItem.optionsHash,
-      });
+    const bidNum = Number(branchId);
+    if (!Number.isFinite(bidNum) || bidNum <= 0) {
+      // không đủ info để apply → đừng throw để khỏi spam error
+      return { applied: false, returnTo: action.returnTo };
     }
+
+    // 1) open cart for session (BE require branchId)
+    const cart = await apiFetch<CartLike>(
+      `/carts/session/${encodeURIComponent(sessionKey)}?branchId=${encodeURIComponent(String(bidNum))}`,
+      {
+        method: "POST",
+        body: JSON.stringify({ branchId: bidNum }),
+      }
+    );
+
+    if (!cart?.cartKey) throw new Error("Cart key missing");
+
+    // 2) upsert 1 item theo schema mới
+    const p: any = action.payload;
+    const quantity = Number(p.quantity ?? p.qty ?? 1);
+    const q = Number.isFinite(quantity) ? Math.max(1, Math.trunc(quantity)) : 1;
 
     await apiFetch(`/carts/${encodeURIComponent(cart.cartKey)}/items`, {
       method: "PUT",
-      body: JSON.stringify({ items: merged }),
+      body: JSON.stringify({
+        itemId: String(p.itemId),
+        quantity: q,
+        // itemOptions: p.itemOptions (nếu sau này có)
+      }),
     });
 
     clearPendingAction();

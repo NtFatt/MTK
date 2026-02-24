@@ -38,7 +38,57 @@ function roleFromString(s: unknown): Role {
   const roles: Role[] = ["PUBLIC", "CLIENT", "STAFF", "KITCHEN", "CASHIER", "BRANCH_MANAGER", "ADMIN"];
   return roles.includes(r as Role) ? (r as Role) : "PUBLIC";
 }
-
+function defaultPermissionsForRole(role: Role): string[] {
+  switch (role) {
+    case "ADMIN":
+      return [
+        "ops.tables.read",
+        "ops.sessions.open",
+        "ops.sessions.close",
+        "ops.carts.get",
+        "ops.carts.items.upsert",
+        "ops.orders.create",
+        "kitchen.queue.read",
+        "cashier.unpaid.read",
+        "cashier.settle_cash",
+        "orders.status.change",
+        "reservations.confirm",
+        "reservations.checkin",
+      ];
+    case "BRANCH_MANAGER":
+      return [
+        "ops.tables.read",
+        "ops.sessions.open",
+        "ops.sessions.close",
+        "ops.carts.get",
+        "ops.carts.items.upsert",
+        "ops.orders.create",
+        "kitchen.queue.read",
+        "cashier.unpaid.read",
+        "cashier.settle_cash",
+        "orders.status.change",
+        "reservations.confirm",
+        "reservations.checkin",
+      ];
+    case "STAFF":
+      return [
+        "ops.tables.read",
+        "ops.sessions.open",
+        "ops.sessions.close",
+        "ops.carts.get",
+        "ops.carts.items.upsert",
+        "ops.orders.create",
+        "reservations.confirm",
+        "reservations.checkin",
+      ];
+    case "KITCHEN":
+      return ["kitchen.queue.read", "orders.status.change"];
+    case "CASHIER":
+      return ["cashier.unpaid.read", "cashier.settle_cash"];
+    default:
+      return [];
+  }
+}
 function normalizeBranchId(b: unknown): string | undefined {
   if (b == null) return undefined;
   const s = String(b).trim();
@@ -259,13 +309,15 @@ export async function adminLogin(payload: AdminLoginPayload): Promise<AuthSessio
         ? new Date(res.expiresAt).getTime()
         : Number(res.expiresAt)
       : getExpiresAtFromClaims(claims);
+  const effectivePermissions = permissions.length ? permissions : defaultPermissionsForRole(role);
 
   return {
     accessToken,
     refreshToken: undefined, // internal: no refresh in contract
     user,
     role,
-    permissions,
+    permissions: effectivePermissions,
+
     branchId,
     expiresAt,
   };

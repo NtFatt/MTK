@@ -31,7 +31,7 @@ export function MenuCard({ item }: MenuCardProps) {
       savePendingAction({
         kind: "ADD_CART_ITEM",
         returnTo: next,
-        payload: { itemId: item.id, qty: 1, note: "" },
+        payload: { itemId: item.id, quantity: 1, note: "" },
       });
       navigate(`/c/qr?next=${encodeURIComponent(next)}`);
       return;

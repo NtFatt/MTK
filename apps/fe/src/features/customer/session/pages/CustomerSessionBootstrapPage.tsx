@@ -22,8 +22,7 @@ export function CustomerSessionBootstrapPage() {
     void (async () => {
       let target = next ? String(next) : "/c/menu";
       try {
-        const res = await applyPendingAction(sessionKey);
-        if (res.returnTo) target = res.returnTo;
+        const res = await applyPendingAction(sessionKey, session.branchId); if (res.returnTo) target = res.returnTo;
       } finally {
         navigate(target, { replace: true });
       }
