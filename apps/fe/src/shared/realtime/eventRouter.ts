@@ -70,9 +70,19 @@ function tryExtractBranchId(env: EventEnvelope): string | number | null {
 }
 
 function enqueueInvalidate(queryKey: readonly unknown[], exact = false) {
+
   if (!debouncer) return;
   debouncer.enqueue({ queryKey, exact });
 }
+const ORDER_EVENTS = new Set([
+  "order.created",
+  "order.updated",
+  "order.status_changed",
+  "order.status.changed",
+  "order.statusChanged",
+  "order.status_updated",
+  "order.status.change",
+]);
 
 export function routeRealtimeEvent(env: EventEnvelope) {
   if (!queryClient || !debouncer) return;
@@ -115,15 +125,20 @@ export function routeRealtimeEvent(env: EventEnvelope) {
   }
 
   // 2) Orders
-  if (type === "order.created" || type === "order.status_changed" || type === "order.status.changed") {
+  if (ORDER_EVENTS.has(type)) {
     const orderCode = tryExtractOrderCode(env);
     if (orderCode) enqueueInvalidate(qk.orders.byCode(orderCode), true);
-    // order.created usually implies cart was converted
+
     const sk = tryExtractSessionKey(env);
     if (sk) enqueueInvalidate(qk.cart.bySessionKey(sk), true);
+
+    const branchId = tryExtractBranchId(env);
+    if (branchId != null) {
+      // ✅ prefix invalidate (exact=false) để match cả key có thêm filters object
+      enqueueInvalidate(qk.orders.kitchenQueue({ branchId }), false);
+    }
     return;
   }
-
   // 3) Payment
   if (type === "payment.success") {
     const orderCode = tryExtractOrderCode(env);

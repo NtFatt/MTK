@@ -160,7 +160,15 @@ async function main() {
   }
 
   // 4) Pick a menu item
-  const menu = await httpJson("GET", `${baseUrl}/api/v1/menu/items?limit=5`, null, {}, timeoutMs);
+  const menu = await httpJson(
+    "GET",
+    `${baseUrl}/api/v1/menu/items?branchId=${branchId}&limit=5`,
+    null,
+    {},
+    timeoutMs
+  );
+
+
   if (menu.status < 200 || menu.status > 299) {
     console.error(menu.text);
     socket.close();
@@ -237,7 +245,7 @@ async function main() {
     die(`Create reservation failed: HTTP ${rsv.status}`);
   }
 
-const reservationCode = rsv.json?.reservationCode || rsv.json?.data?.reservationCode;
+  const reservationCode = rsv.json?.reservationCode || rsv.json?.data?.reservationCode;
   if (!reservationCode) {
     socket.close();
     die("Reservation did not return reservationCode");
@@ -275,6 +283,16 @@ const reservationCode = rsv.json?.reservationCode || rsv.json?.data?.reservation
     socket.close();
     die("Check-in did not return sessionKey");
   }
+  const branchId =
+    checkin.json?.branchId ||
+    checkin.json?.data?.branchId ||
+    checkin.json?.reservation?.branchId ||
+    checkin.json?.data?.reservation?.branchId;
+
+  if (!branchId) {
+    socket.close();
+    die("Check-in did not return branchId (required by your BE)");
+  }
 
   // 7) Join sessionKey room (v1)
   const sessionRoom = `sessionKey:${sessionKey}`;
@@ -287,8 +305,13 @@ const reservationCode = rsv.json?.reservationCode || rsv.json?.data?.reservation
   }
 
   // 8) Get/create cart
-  const cartRes = await httpJson("POST", `${baseUrl}/api/v1/carts/session/${sessionKey}`, null, {}, timeoutMs);
-  if (cartRes.status < 200 || cartRes.status > 299) {
+  const cartRes = await httpJson(
+    "POST",
+    `${baseUrl}/api/v1/carts/session/${sessionKey}?branchId=${branchId}`,
+    null,
+    {},
+    timeoutMs
+  ); if (cartRes.status < 200 || cartRes.status > 299) {
     console.error(cartRes.text);
     socket.close();
     die(`Get/Create cart failed: HTTP ${cartRes.status}`);

@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
+import { useCustomerSessionStore, selectBranchId } from "../../../../shared/customer/session/sessionStore";
+
+
 import { CustomerNavbar } from "../components/CustomerNavbar";
 import { HeroBanner } from "../components/HeroBanner";
 import { CategoryTabs } from "../components/CategoryTabs";
@@ -47,8 +50,10 @@ function buildItemsForUi(
 export function CustomerMenuPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const pageState = getStateFromSearchParams(searchParams);
+  const branchId = useCustomerSessionStore(selectBranchId);
 
-  const menuQuery = useMenuQuery();
+  
+ const menuQuery = useMenuQuery(branchId ? { branchId } : {});
   const { data: menuData, isLoading, isError, error, refetch } = menuQuery;
 
   const [activeCategoryId, setActiveCategoryId] = useState<string>("all");

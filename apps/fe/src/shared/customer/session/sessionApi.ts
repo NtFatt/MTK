@@ -34,13 +34,18 @@ type OpenSessionDto = {
 function mapToCustomerSession(dto: OpenSessionDto): CustomerSession {
   const sessionKey = dto.sessionKey ?? dto.session?.sessionKey;
   if (!sessionKey) throw new Error("Missing sessionKey");
+
+  const t: any = dto.table ?? {};
+  const branchId =
+    t.branchId ?? t.branch_id ?? (dto as any).branchId ?? (dto as any).branch_id ?? undefined;
+
   return {
     sessionKey,
     sessionId: dto.sessionId ?? dto.session?.id,
-    tableId: dto.table?.id,
-    directionId: dto.table?.directionId,
-    branchId: dto.table?.branchId ?? undefined,
-    tableCode: dto.table?.code,
+    tableId: t.id,
+    directionId: t.directionId ?? t.direction_id,
+    branchId,
+    tableCode: t.code,
     openedAt: dto.session?.openedAt,
   };
 }

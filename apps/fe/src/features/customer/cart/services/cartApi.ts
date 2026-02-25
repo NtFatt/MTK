@@ -2,7 +2,7 @@
  * Cart API — contract-first (match BE).
  * POST /api/v1/carts/session/:sessionKey
  * GET  /api/v1/carts/:cartKey
- * PUT  /api/v1/carts/:cartKey/items      -> body { itemId, quantity, itemOptions? }
+ * PUT  /api/v1/carts/:cartKey/items
  * DEL  /api/v1/carts/:cartKey/items/:itemId?optionsHash=...
  */
 import { apiFetch } from "../../../../lib/apiFetch";
@@ -23,31 +23,37 @@ function extractCartKey(x: any): string {
     x?.key ??
     x?.data?.cartKey ??
     x?.data?.cart_key ??
-    x?.data?.key;
+    x?.data?.key ??
+    x?.data?.cart?.cartKey ??
+    x?.data?.cart?.cart_key ??
+    x?.cart?.cartKey ??
+    x?.cart?.cart_key;
 
   return typeof ck === "string" && ck.trim() ? ck.trim() : "";
 }
 
 function withCartKey(cart: any, fallbackCartKey: string): Cart {
-  // đảm bảo cartKey luôn có để hook dùng cart.cartKey không bao giờ undefined
   const cartKey = extractCartKey(cart) || fallbackCartKey;
   return { ...(cart as any), cartKey } as Cart;
 }
 
+// ✅ BE của bạn đang enforce branchId -> bắt buộc truyền branchId
 export async function openCartForSession(
   sessionKey: string,
   branchId: string | number
 ): Promise<{ cartKey: string; cartStatus?: string }> {
-  const bidNum = Number(branchId);
-  if (!Number.isFinite(bidNum) || bidNum <= 0) {
-    throw new Error("branchId is required to open cart for session");
-  }
+  if (!sessionKey) throw new Error("sessionKey is required");
 
-  const path = `/carts/session/${encodeURIComponent(sessionKey)}?branchId=${encodeURIComponent(String(bidNum))}`;
+  const bid = Number(branchId);
+  if (!Number.isFinite(bid) || bid <= 0) throw new Error("branchId is required");
+
+  const path =
+    `/carts/session/${encodeURIComponent(sessionKey)}` +
+    `?branchId=${encodeURIComponent(String(bid))}`;
 
   const res = await apiFetch<OpenCartResponse>(path, {
     method: "POST",
-    body: JSON.stringify({ branchId: bidNum }), // ✅ number
+    body: JSON.stringify({ branchId: bid }),
   });
 
   const cartKey = extractCartKey(res);
@@ -69,7 +75,7 @@ export async function getCart(cartKey: string): Promise<Cart> {
   return withCartKey(res, cartKey);
 }
 
-/** open -> get detail (luôn trả Cart có cartKey) */
+/** ✅ open -> get detail (luôn trả Cart có cartKey) */
 export async function getOrCreateCart(sessionKey: string, branchId: string | number): Promise<Cart> {
   const opened = await openCartForSession(sessionKey, branchId);
   return getCart(opened.cartKey);

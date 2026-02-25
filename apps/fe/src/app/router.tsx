@@ -13,14 +13,21 @@ import { RequireCustomerSession } from '../shared/customer/session/guards';
 import { InternalLoginPage } from '../features/internal/auth/pages/InternalLoginPage';
 import { InternalLogoutPage } from '../features/internal/auth/pages/InternalLogoutPage';
 import { InternalTablesPage } from '../features/internal/ops/tables/pages/InternalTablesPage';
+import { InternalKitchenPage } from "../features/internal/kitchen/pages/InternalKitchenPage";
 
 export const router = createBrowserRouter([
   // ✅ App entry: vào menu trước
   { path: '/', element: <Navigate to="/c/menu" replace /> },
 
   // ✅ Customer public routes
-  { path: 'c/menu', element: <CustomerMenuPage /> },
-  { path: 'c/qr', element: <CustomerQrPage /> },
+  {
+    path: "c/menu",
+    element: (
+      <RequireCustomerSession>
+        <CustomerMenuPage />
+      </RequireCustomerSession>
+    ),
+  }, { path: 'c/qr', element: <CustomerQrPage /> },
   { path: 'c/session/:sessionKey', element: <CustomerSessionBootstrapPage /> },
 
   // ✅ Customer protected routes (cần session)
@@ -56,6 +63,15 @@ export const router = createBrowserRouter([
   // ✅ Internal routes
   { path: 'i/login', element: <InternalLoginPage /> },
   { path: 'i/logout', element: <InternalLogoutPage /> },
+
+  {
+    path: "i/:branchId/kitchen",
+    element: (
+      <RequireAuth>
+        <InternalKitchenPage />
+      </RequireAuth>
+    ),
+  },
   {
     path: 'i/:branchId/tables',
     element: (
@@ -71,4 +87,6 @@ export const router = createBrowserRouter([
 
   // ✅ Catch-all (đỡ 404 trắng)
   { path: '*', element: <Navigate to="/c/menu" replace /> },
+
+
 ]);

@@ -49,7 +49,12 @@ export function InternalKitchenPage() {
     branchParam ? `kitchen:${branchParam}` : null,
     enabled && !!branchParam,
     session
-      ? { kind: "internal", userKey: session.user?.id ? String(session.user.id) : "internal", branchId: session.branchId ?? undefined, token: session.accessToken }
+      ? {
+        kind: "internal",
+        userKey: session.user?.id ? String(session.user.id) : "internal",
+        branchId: branchParam || (session.branchId ?? undefined),
+        token: session.accessToken,
+      }
       : undefined
   );
 
@@ -65,8 +70,7 @@ export function InternalKitchenPage() {
     limit: 50,
   });
 
-  const { mutateAsync, isPending } = useChangeOrderStatusMutation();
-
+  const { mutateAsync, isPending } = useChangeOrderStatusMutation(branchParam);
   const list = useMemo(() => {
     const raw = data ?? [];
     const qn = q.trim().toLowerCase();

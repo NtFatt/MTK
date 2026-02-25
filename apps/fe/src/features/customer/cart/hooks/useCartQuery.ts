@@ -11,8 +11,8 @@ export function useCartQuery(sessionKey: string | null) {
 
   return useAppQuery<Cart, Cart, ReturnType<typeof qk.cart.bySessionKey>>({
     queryKey: qk.cart.bySessionKey(sessionKey ?? ""),
+    enabled: !!sessionKey && branchId != null,
     queryFn: () => getOrCreateCart(sessionKey!, branchId!),
-    enabled: !!sessionKey && !!branchId,
     staleTime: STALE_MS,
   });
 }

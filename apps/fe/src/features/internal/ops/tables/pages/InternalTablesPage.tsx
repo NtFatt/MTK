@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useStore } from "zustand";
 
@@ -10,16 +10,36 @@ import { Skeleton } from "../../../../../shared/ui/skeleton";
 import { useRealtimeRoom } from "../../../../../shared/realtime";
 import { realtimeConfig } from "../../../../../shared/realtime/config";
 import { useOpsTablesQuery } from "../hooks/useOpsTablesQuery";
+import { useAppMutation } from "../../../../../shared/http/useAppMutation";
+import { openOpsSession, extractSessionKey } from "../services/opsSessionsApi";
+import { apiFetch } from "../../../../../lib/apiFetch";
+import {
+  getOrCreateOpsCartBySessionKey,
+  extractCartKey,
+  getOpsCart,
+  normalizeOpsCartItems,
+} from "../services/opsCartsApi";
 
 function isAdminRole(role: unknown): boolean {
   return String(role ?? "").toUpperCase() === "ADMIN";
 }
-
+function formatElapsed(iso?: string) {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return null;
+  const ms = Date.now() - t;
+  const m = Math.max(0, Math.floor(ms / 60000));
+  if (m < 60) return `${m} phút`;
+  const h = Math.floor(m / 60);
+  const mm = m % 60;
+  return `${h}h ${mm}m`;
+}
 export function InternalTablesPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const session = useStore(authStore, (s) => s.session);
 
   const branchParam = branchId ?? "";
+  const branchKey = Number.isFinite(Number(branchParam)) ? Number(branchParam) : branchParam;
   const userBranch = session?.branchId;
   const role = session?.role;
 
@@ -42,15 +62,91 @@ export function InternalTablesPage() {
     enabled && !!room,
     session
       ? {
-          kind: "internal",
-          userKey: session.user?.id ? String(session.user.id) : "internal",
-          branchId: session.branchId ?? undefined,
-          token: session.accessToken,
-        }
+        kind: "internal",
+        userKey: session.user?.id ? String(session.user.id) : "internal",
+        branchId: branchKey ?? undefined,
+        token: session.accessToken,
+      }
       : undefined
   );
 
-  const { data, isLoading, error, refetch } = useOpsTablesQuery(branchParam, enabled);
+  const { data, isLoading, error, refetch } = useOpsTablesQuery(branchKey, enabled);
+  type LiveInfo = {
+    sessionKey?: string;
+    cartKey?: string;
+    startedAt?: string;     // thời gian bắt đầu (fallback từ cart.createdAt)
+    items?: { itemId: string; name?: string; qty: number; note?: string }[];
+  };
+  const [live, setLive] = useState<Record<string, LiveInfo>>({});
+  const loadLive = useAppMutation({
+mutationFn: async (t: { tableId: string | number; directionId?: string }) => {
+  const s = await openOpsSession({ tableId: t.tableId, directionId: t.directionId });
+
+  const openedAtRaw =
+    (s as any)?.session?.openedAt ??
+    (s as any)?.data?.session?.openedAt ??
+    (s as any)?.sessionOpenedAt ??
+    (s as any)?.data?.sessionOpenedAt;
+
+  const startedAt =
+    typeof openedAtRaw === "string"
+      ? openedAtRaw
+      : openedAtRaw
+        ? new Date(openedAtRaw).toISOString()
+        : undefined;
+
+  const sessionKey = extractSessionKey(s);
+  if (!sessionKey) throw new Error("Missing sessionKey from /admin/ops/sessions/open");
+
+  const c = await getOrCreateOpsCartBySessionKey(sessionKey);
+  const cartKey = extractCartKey(c);
+
+  if (!cartKey) {
+    return { tableId: String(t.tableId), sessionKey, cartKey: "", startedAt, items: [] as any[] };
+  }
+
+  const cartDetail = await getOpsCart(cartKey);
+  const items = normalizeOpsCartItems(cartDetail);
+
+  // map itemId -> name
+  const menuRes = await apiFetch<any>(
+    `/menu/items?branchId=${encodeURIComponent(String(branchParam))}&limit=500`
+  );
+
+  const menuItems: any[] = Array.isArray(menuRes?.items)
+    ? menuRes.items
+    : Array.isArray(menuRes)
+      ? menuRes
+      : [];
+
+  const nameById = new Map(
+    menuItems
+      .map((x) => [String(x?.id ?? x?.itemId ?? "").trim(), String(x?.name ?? "").trim()] as const)
+      .filter(([id, name]) => id && name)
+  );
+
+  const itemsWithName = items.map((it) => ({
+    ...it,
+    name: it.name ?? nameById.get(String(it.itemId)) ?? undefined,
+  }));
+
+  return { tableId: String(t.tableId), sessionKey, cartKey, startedAt, items: itemsWithName };
+},
+
+    onSuccess: (out) => {
+      setLive((prev) => ({
+        ...prev,
+        [out.tableId]: {
+          sessionKey: out.sessionKey,
+          cartKey: out.cartKey,
+          startedAt: out.startedAt,
+          items: out.items ?? [],
+        },
+      }));
+      void refetch();
+    },
+
+  });
 
   return (
     <main className="mx-auto max-w-5xl p-6">
@@ -124,27 +220,92 @@ export function InternalTablesPage() {
             )}
 
             {(data ?? []).map((t, idx) => {
-              const code = t.code ?? `#${idx + 1}`;
+              const code = t.code ?? (t.id != null ? `#${t.id}` : `#${idx + 1}`);
               const status = t.status ?? "—";
+
+              const tableIdStr = String(t.id ?? "");
+              const liveInfo = (tableIdStr && live[tableIdStr]) ? live[tableIdStr] : {};
+              const directionId = (t as any).directionId as string | undefined;
+
               return (
                 <Card key={String(t.id ?? code)}>
                   <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle className="text-base">{code}</CardTitle>
                     <Badge variant={status === "AVAILABLE" ? "secondary" : "default"}>{status}</Badge>
                   </CardHeader>
+
                   <CardContent className="text-sm text-muted-foreground">
                     {t.seats != null && <div>Số ghế: {t.seats}</div>}
                     {t.area && <div>Khu: {t.area}</div>}
-                    {t.sessionKey && (
+
+                    {directionId && (
                       <div>
-                        Session: <span className="font-mono">{t.sessionKey}</span>
+                        Direction: <span className="font-mono">{directionId}</span>
                       </div>
                     )}
-                    {t.cartKey && (
+
+                    {liveInfo?.sessionKey && (
                       <div>
-                        Cart: <span className="font-mono">{t.cartKey}</span>
+                        Session: <span className="font-mono">{liveInfo.sessionKey}</span>
                       </div>
                     )}
+
+                    {liveInfo?.cartKey && (
+                      <div>
+                        Cart: <span className="font-mono">{liveInfo.cartKey}</span>
+                      </div>
+                    )}
+                    {liveInfo?.startedAt && (
+                      <div>
+                        Đang ngồi:{" "}
+                        <span className="font-medium text-foreground">
+                          {formatElapsed(liveInfo.startedAt) ?? "—"}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="mt-2">
+                      <div className="text-xs uppercase tracking-wide">Món khách gọi</div>
+
+                      {(liveInfo?.items?.length ?? 0) === 0 ? (
+                        <div className="mt-1 text-xs opacity-70">Chưa có món (khách chưa gọi)</div>
+                      ) : (
+                        <>
+                          <ul className="mt-1 space-y-1">
+                            {liveInfo.items!.slice(0, 5).map((it) => (
+                              <li key={`${it.itemId}-${it.note ?? ""}`} className="flex justify-between gap-2">
+                                <span className="truncate">
+                                  {it.name ?? `#${it.itemId}`}
+                                  {it.note ? <span className="opacity-70"> — {it.note}</span> : null}
+                                </span>
+                                <span className="font-mono">x{it.qty}</span>
+                              </li>
+                            ))}
+                          </ul>
+
+                          {liveInfo.items!.length > 5 && (
+                            <div className="mt-1 text-xs opacity-70">+{liveInfo.items!.length - 5} món nữa…</div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    <Can perm="ops.sessions.open">
+                      <div className="mt-3">
+                        <button
+                          className="inline-flex items-center justify-center rounded-md border px-3 py-1 text-sm"
+                          onClick={() =>
+                            void loadLive.mutateAsync({
+                              tableId: t.id!,
+                              directionId,
+                            })
+                          }
+                          disabled={!enabled || loadLive.isPending || t.id == null}
+                          type="button"
+                        >
+                          {loadLive.isPending ? "Đang tải..." : "Chi tiết"}
+                        </button>
+                      </div>
+                    </Can>
                   </CardContent>
                 </Card>
               );
