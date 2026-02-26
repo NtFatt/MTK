@@ -13,6 +13,7 @@ import { RequireCustomerSession } from '../shared/customer/session/guards';
 import { InternalLoginPage } from '../features/internal/auth/pages/InternalLoginPage';
 import { InternalLogoutPage } from '../features/internal/auth/pages/InternalLogoutPage';
 import { InternalTablesPage } from '../features/internal/ops/tables/pages/InternalTablesPage';
+import { InternalPosMenuPage } from '../features/internal/pos/pages/InternalPosMenuPage';
 import { InternalKitchenPage } from "../features/internal/kitchen/pages/InternalKitchenPage";
 
 export const router = createBrowserRouter([
@@ -77,6 +78,22 @@ export const router = createBrowserRouter([
     element: (
       <RequireAuth>
         <InternalTablesPage />
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "i/pos/tables",
+    element: (
+      <RequireAuth>
+        <InternalTablesPage />
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "i/pos/menu",
+    element: (
+      <RequireAuth>
+        <InternalPosMenuPage />
       </RequireAuth>
     ),
   },

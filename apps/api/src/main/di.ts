@@ -1,5 +1,6 @@
 import { env } from "../infrastructure/config/env.js";
 import type { RedisClient } from "../infrastructure/redis/redisClient.js";
+import { MySQLOpsTableOrderSummaryRepository } from "../infrastructure/db/mysql/repositories/MySQLOpsTableOrderSummaryRepository.js";
 
 // ===== Services =====
 import { OrderCodeGenerator } from "../infrastructure/services/OrderCodeGenerator.js";
@@ -237,9 +238,9 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
   // ===== Realtime snapshots/resync (HTTP) =====
   const replayStore = (redis && env.REALTIME_REPLAY_ENABLED)
     ? new RedisRoomEventStore(redis, {
-        ttlSeconds: env.REALTIME_REPLAY_TTL_SECONDS,
-        maxItems: env.REALTIME_REPLAY_MAX_ITEMS,
-      })
+      ttlSeconds: env.REALTIME_REPLAY_TTL_SECONDS,
+      maxItems: env.REALTIME_REPLAY_MAX_ITEMS,
+    })
     : null;
 
   const realtimeSnapshotController = new RealtimeSnapshotController({
@@ -279,8 +280,8 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
   // ===== 7 roles: OPS/KITCHEN/CASHIER (internal, branch-scoped for STAFF tokens) =====
   const orderQueryRepo = new MySQLOrderQueryRepository();
 
-  const listBranchTables = new ListBranchTables(tableRepo);
-  const adminOpsController = new AdminOpsController(
+  const opsTableSummaryRepo = new MySQLOpsTableOrderSummaryRepository();
+  const listBranchTables = new ListBranchTables(tableRepo, opsTableSummaryRepo); const adminOpsController = new AdminOpsController(
     listBranchTables,
     tableRepo,
     sessionRepo,

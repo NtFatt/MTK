@@ -11,6 +11,15 @@ export async function getOpsCart(cartKey: string) {
     method: "GET",
   });
 }
+// ...
+
+export async function putOpsCartItems(cartKey: string, payload: { itemId: string; qty: number; note?: string }) {
+  const path = `/admin/ops/carts/${encodeURIComponent(cartKey)}/items`;
+  return apiFetchAuthed(path, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
 
 export function extractCartKey(res: any): string {
   const ck =

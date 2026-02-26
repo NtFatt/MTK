@@ -13,6 +13,8 @@ import { useOpsTablesQuery } from "../hooks/useOpsTablesQuery";
 import { useAppMutation } from "../../../../../shared/http/useAppMutation";
 import { openOpsSession, extractSessionKey } from "../services/opsSessionsApi";
 import { apiFetch } from "../../../../../lib/apiFetch";
+import { useNavigate } from "react-router-dom";
+import { posStore } from "../../../ops/posStore";
 import {
   getOrCreateOpsCartBySessionKey,
   extractCartKey,
@@ -35,10 +37,12 @@ function formatElapsed(iso?: string) {
   return `${h}h ${mm}m`;
 }
 export function InternalTablesPage() {
-  const { branchId } = useParams<{ branchId: string }>();
   const session = useStore(authStore, (s) => s.session);
+  const { branchId } = useParams<{ branchId: string }>();
 
-  const branchParam = branchId ?? "";
+  // fallback branch cho route /i/pos/tables (không có :branchId)
+  const branchParam = branchId ?? (session?.branchId != null ? String(session.branchId) : "");
+
   const branchKey = Number.isFinite(Number(branchParam)) ? Number(branchParam) : branchParam;
   const userBranch = session?.branchId;
   const role = session?.role;
@@ -53,6 +57,9 @@ export function InternalTablesPage() {
 
   const enabled = !!session && !isBranchMismatch && canReadTables;
 
+  const nav = useNavigate();
+  const setTable = useStore(posStore, (s) => s.setTable);
+  const setPosSession = useStore(posStore, (s) => s.setSession);
   const room = branchParam
     ? `${realtimeConfig.internalBranchRoomPrefix}:${branchParam}`
     : null;
@@ -79,59 +86,59 @@ export function InternalTablesPage() {
   };
   const [live, setLive] = useState<Record<string, LiveInfo>>({});
   const loadLive = useAppMutation({
-mutationFn: async (t: { tableId: string | number; directionId?: string }) => {
-  const s = await openOpsSession({ tableId: t.tableId, directionId: t.directionId });
+    mutationFn: async (t: { tableId: string | number; directionId?: string }) => {
+      const s = await openOpsSession({ tableId: t.tableId, directionId: t.directionId });
 
-  const openedAtRaw =
-    (s as any)?.session?.openedAt ??
-    (s as any)?.data?.session?.openedAt ??
-    (s as any)?.sessionOpenedAt ??
-    (s as any)?.data?.sessionOpenedAt;
+      const openedAtRaw =
+        (s as any)?.session?.openedAt ??
+        (s as any)?.data?.session?.openedAt ??
+        (s as any)?.sessionOpenedAt ??
+        (s as any)?.data?.sessionOpenedAt;
 
-  const startedAt =
-    typeof openedAtRaw === "string"
-      ? openedAtRaw
-      : openedAtRaw
-        ? new Date(openedAtRaw).toISOString()
-        : undefined;
+      const startedAt =
+        typeof openedAtRaw === "string"
+          ? openedAtRaw
+          : openedAtRaw
+            ? new Date(openedAtRaw).toISOString()
+            : undefined;
 
-  const sessionKey = extractSessionKey(s);
-  if (!sessionKey) throw new Error("Missing sessionKey from /admin/ops/sessions/open");
+      const sessionKey = extractSessionKey(s);
+      if (!sessionKey) throw new Error("Missing sessionKey from /admin/ops/sessions/open");
 
-  const c = await getOrCreateOpsCartBySessionKey(sessionKey);
-  const cartKey = extractCartKey(c);
+      const c = await getOrCreateOpsCartBySessionKey(sessionKey);
+      const cartKey = extractCartKey(c);
 
-  if (!cartKey) {
-    return { tableId: String(t.tableId), sessionKey, cartKey: "", startedAt, items: [] as any[] };
-  }
+      if (!cartKey) {
+        return { tableId: String(t.tableId), sessionKey, cartKey: "", startedAt, items: [] as any[] };
+      }
 
-  const cartDetail = await getOpsCart(cartKey);
-  const items = normalizeOpsCartItems(cartDetail);
+      const cartDetail = await getOpsCart(cartKey);
+      const items = normalizeOpsCartItems(cartDetail);
 
-  // map itemId -> name
-  const menuRes = await apiFetch<any>(
-    `/menu/items?branchId=${encodeURIComponent(String(branchParam))}&limit=500`
-  );
+      // map itemId -> name
+      const menuRes = await apiFetch<any>(
+        `/menu/items?branchId=${encodeURIComponent(String(branchParam))}&limit=500`
+      );
 
-  const menuItems: any[] = Array.isArray(menuRes?.items)
-    ? menuRes.items
-    : Array.isArray(menuRes)
-      ? menuRes
-      : [];
+      const menuItems: any[] = Array.isArray(menuRes?.items)
+        ? menuRes.items
+        : Array.isArray(menuRes)
+          ? menuRes
+          : [];
 
-  const nameById = new Map(
-    menuItems
-      .map((x) => [String(x?.id ?? x?.itemId ?? "").trim(), String(x?.name ?? "").trim()] as const)
-      .filter(([id, name]) => id && name)
-  );
+      const nameById = new Map(
+        menuItems
+          .map((x) => [String(x?.id ?? x?.itemId ?? "").trim(), String(x?.name ?? "").trim()] as const)
+          .filter(([id, name]) => id && name)
+      );
 
-  const itemsWithName = items.map((it) => ({
-    ...it,
-    name: it.name ?? nameById.get(String(it.itemId)) ?? undefined,
-  }));
+      const itemsWithName = items.map((it) => ({
+        ...it,
+        name: it.name ?? nameById.get(String(it.itemId)) ?? undefined,
+      }));
 
-  return { tableId: String(t.tableId), sessionKey, cartKey, startedAt, items: itemsWithName };
-},
+      return { tableId: String(t.tableId), sessionKey, cartKey, startedAt, items: itemsWithName };
+    },
 
     onSuccess: (out) => {
       setLive((prev) => ({
@@ -226,7 +233,32 @@ mutationFn: async (t: { tableId: string | number; directionId?: string }) => {
               const tableIdStr = String(t.id ?? "");
               const liveInfo = (tableIdStr && live[tableIdStr]) ? live[tableIdStr] : {};
               const directionId = (t as any).directionId as string | undefined;
+              async function selectTableAndGoMenu(t: any, directionId?: string) {
+                if (!t?.id) return;
 
+                // lưu bàn vào store
+                setTable({
+                  branchId: branchKey,
+                  tableId: String(t.id),
+                  tableCode: t.code,
+                  directionId,
+                });
+
+                // open ops session
+                const s = await openOpsSession({ tableId: t.id, directionId });
+                const sessionKey = extractSessionKey(s);
+                if (!sessionKey) throw new Error("Missing sessionKey from /admin/ops/sessions/open");
+
+                // get/create ops cart
+                const c = await getOrCreateOpsCartBySessionKey(sessionKey);
+                const cartKey = extractCartKey(c) ?? undefined;
+
+                // lưu session/cart vào store
+                setPosSession({ sessionKey, cartKey });
+
+                // qua menu POS
+                nav("/i/pos/menu");
+              }
               return (
                 <Card key={String(t.id ?? code)}>
                   <CardHeader className="flex flex-row items-center justify-between">
@@ -267,10 +299,24 @@ mutationFn: async (t: { tableId: string | number; directionId?: string }) => {
                     <div className="mt-2">
                       <div className="text-xs uppercase tracking-wide">Món khách gọi</div>
 
-                      {(liveInfo?.items?.length ?? 0) === 0 ? (
-                        <div className="mt-1 text-xs opacity-70">Chưa có món (khách chưa gọi)</div>
+                      {/* 1) Ưu tiên dữ liệu ORDER từ BE */}
+                      {t.activeItemsPreview ? (
+                        <div className="mt-1 text-xs opacity-80">
+                          {t.activeItemsPreview}
+                          {t.activeOrderStatus ? <span className="ml-2 opacity-70">({t.activeOrderStatus})</span> : null}
+                        </div>
+                      ) : (t.activeOrdersCount ?? 0) > 0 ? (
+                        <div className="mt-1 text-xs opacity-70">
+                          Có {t.activeOrdersCount} đơn đang xử lý{t.activeOrderStatus ? ` (${t.activeOrderStatus})` : ""}
+                        </div>
                       ) : (
+                        <div className="mt-1 text-xs opacity-70">Chưa có món (khách chưa gọi)</div>
+                      )}
+
+                      {/* 2) Nếu đã bấm Chi tiết và load ops cart thì show thêm */}
+                      {(liveInfo?.items?.length ?? 0) > 0 && (
                         <>
+                          <div className="mt-2 text-[11px] uppercase tracking-wide opacity-60">Chi tiết (ops cart)</div>
                           <ul className="mt-1 space-y-1">
                             {liveInfo.items!.slice(0, 5).map((it) => (
                               <li key={`${it.itemId}-${it.note ?? ""}`} className="flex justify-between gap-2">
@@ -282,15 +328,12 @@ mutationFn: async (t: { tableId: string | number; directionId?: string }) => {
                               </li>
                             ))}
                           </ul>
-
-                          {liveInfo.items!.length > 5 && (
-                            <div className="mt-1 text-xs opacity-70">+{liveInfo.items!.length - 5} món nữa…</div>
-                          )}
                         </>
                       )}
                     </div>
                     <Can perm="ops.sessions.open">
-                      <div className="mt-3">
+                      <div className="mt-3 flex gap-2">
+                        {/* giữ lại nút Chi tiết như cũ nếu bạn muốn xem live ops cart */}
                         <button
                           className="inline-flex items-center justify-center rounded-md border px-3 py-1 text-sm"
                           onClick={() =>
@@ -303,6 +346,16 @@ mutationFn: async (t: { tableId: string | number; directionId?: string }) => {
                           type="button"
                         >
                           {loadLive.isPending ? "Đang tải..." : "Chi tiết"}
+                        </button>
+
+                        {/* nút mới: chọn bàn -> qua POS menu */}
+                        <button
+                          className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-1 text-sm text-primary-foreground hover:opacity-90"
+                          onClick={() => void selectTableAndGoMenu(t, directionId)}
+                          disabled={!enabled || t.id == null}
+                          type="button"
+                        >
+                          Gọi món
                         </button>
                       </div>
                     </Can>
