@@ -35,8 +35,7 @@ type SettleCashResponse = {
 
 function uuid(): string {
   // idempotency key
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const c = (globalThis as any).crypto;
+  const c = globalThis.crypto as Crypto | undefined;
   if (c?.randomUUID) return c.randomUUID();
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
@@ -77,7 +76,9 @@ function getIdemKey(scope: string): string {
 function clearIdemKey(scope: string) {
   try {
     sessionStorage.removeItem(`idem:${scope}`);
-  } catch { }
+  } catch {
+    // noop: sessionStorage may be unavailable (private mode)
+  }
 }
 
 export function InternalCashierPage() {

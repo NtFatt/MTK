@@ -24,4 +24,10 @@ export function extractSessionKey(res: any): string {
     res?.data?.session?.session_key;
 
   return typeof sk === "string" && sk.trim() ? sk.trim() : "";
+
+}
+export async function closeOpsSession(input: { sessionKey: string }) {
+  return apiFetchAuthed(`/admin/ops/sessions/${encodeURIComponent(String(input.sessionKey))}/close`, {
+    method: "POST",
+  });
 }

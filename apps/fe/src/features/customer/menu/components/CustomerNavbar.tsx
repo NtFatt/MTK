@@ -14,17 +14,18 @@ export function CustomerNavbar() {
   const resetSession = useStore(customerSessionStore, (s: any) => s.reset?.bind(s));
 
   const cartQuery = useCartQuery(sessionKey);
-const cartCount =
-  (cartQuery.data?.items ?? []).reduce((acc: number, it: any) => acc + Number(it.qty ?? it.quantity ?? 1), 0);  const onSwitchBranch = () => {
-    // 1) reset store (nếu có)
+  const cartCount = (cartQuery.data?.items ?? []).reduce(
+    (acc: number, it: any) => acc + Number(it.qty ?? it.quantity ?? 1),
+    0
+  );
+
+  const onSwitchBranch = () => {
     resetSession?.();
 
-    // 2) reset localStorage (đặt đúng key bạn đang dùng)
     localStorage.removeItem("hadilao.sessionKey");
     localStorage.removeItem("hadilao.branchId");
     localStorage.removeItem("hadilao.cartKey");
 
-    // 3) đi về màn chọn chi nhánh
     navigate("/c/start", { replace: true });
   };
 
@@ -44,6 +45,15 @@ const cartCount =
               </Badge>
             )}
           </Link>
+
+          {/* ✅ dùng onSwitchBranch để hết lint + đúng UX */}
+          <button
+            type="button"
+            onClick={onSwitchBranch}
+            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+          >
+            Đổi chi nhánh
+          </button>
         </nav>
       </div>
     </header>

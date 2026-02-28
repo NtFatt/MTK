@@ -13,7 +13,6 @@ import { useRealtimeRoom } from "../../../../shared/realtime";
 
 import { useKitchenQueueQuery } from "../hooks/useKitchenQueueQuery";
 import { useChangeOrderStatusMutation } from "../hooks/useChangeOrderStatusMutation";
-import type { KitchenQueueRow } from "../services/kitchenQueueApi";
 
 function isAdminRole(role: unknown): boolean {
   return String(role ?? "").toUpperCase() === "ADMIN";
@@ -35,14 +34,20 @@ export function InternalKitchenPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const session = useStore(authStore, (s) => s.session);
 
-  const branchParam = branchId ?? "";
+  const branchParam = String(branchId ?? "").trim();
   const userBranch = session?.branchId;
   const role = session?.role;
 
   const isBranchMismatch =
     !isAdminRole(role) && userBranch != null && String(userBranch) !== String(branchParam);
 
-  const enabled = !!session && !isBranchMismatch;
+  const canReadKitchen = useMemo(() => {
+    const perms = session?.permissions ?? [];
+    return perms.includes("kitchen.queue.read");
+  }, [session?.permissions]);
+
+  // ✅ chỉ enable khi có quyền read + không mismatch
+  const enabled = !!session && !isBranchMismatch && canReadKitchen;
 
   // join kitchen room (prefix "kitchen:" đã được eventRouter parse branchId)
   useRealtimeRoom(
@@ -50,11 +55,15 @@ export function InternalKitchenPage() {
     enabled && !!branchParam,
     session
       ? {
-        kind: "internal",
-        userKey: session.user?.id ? String(session.user.id) : "internal",
-        branchId: branchParam || (session.branchId ?? undefined),
-        token: session.accessToken,
-      }
+          kind: "internal",
+          userKey: session.user?.id ? String(session.user.id) : "internal",
+          branchId: branchParam
+            ? String(branchParam)
+            : session?.branchId != null
+              ? String(session.branchId)
+              : undefined,
+          token: session.accessToken,
+        }
       : undefined
   );
 
@@ -71,13 +80,14 @@ export function InternalKitchenPage() {
   });
 
   const { mutateAsync, isPending } = useChangeOrderStatusMutation(branchParam);
+
   const list = useMemo(() => {
     const raw = data ?? [];
     const qn = q.trim().toLowerCase();
     return raw.filter((r) => {
       if (!qn) return true;
       return (
-        r.orderCode.toLowerCase().includes(qn) ||
+        String(r.orderCode ?? "").toLowerCase().includes(qn) ||
         String(r.tableCode ?? "").toLowerCase().includes(qn) ||
         normStatus(r.orderStatus).includes(qn.toUpperCase())
       );
@@ -93,6 +103,7 @@ export function InternalKitchenPage() {
             Chi nhánh: <span className="font-mono">{branchParam || "—"}</span>
           </p>
         </div>
+
         <Button variant="secondary" onClick={() => void refetch()} disabled={!enabled || isFetching}>
           {isFetching ? "Đang tải..." : "Refresh"}
         </Button>
@@ -134,7 +145,10 @@ export function InternalKitchenPage() {
 
             {!isLoading && error && (
               <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-                Không thể tải kitchen queue. <button className="underline" onClick={() => void refetch()}>Thử lại</button>
+                Không thể tải kitchen queue.{" "}
+                <button className="underline" onClick={() => void refetch()}>
+                  Thử lại
+                </button>
               </div>
             )}
 
@@ -162,8 +176,9 @@ export function InternalKitchenPage() {
                           <div>
                             Bàn: <span className="font-mono">{r.tableCode ?? "—"}</span>
                           </div>
+
                           <div className="text-xs">
-                            {r.createdAt ? `Created: ${r.createdAt}` : null}
+                            {r.createdAt ? `Created: ${new Date(r.createdAt).toLocaleString("vi-VN")}` : null}
                           </div>
 
                           {action && (
@@ -171,7 +186,10 @@ export function InternalKitchenPage() {
                               <div className="mt-3">
                                 <Button
                                   onClick={() =>
-                                    void mutateAsync({ orderCode: r.orderCode, body: { toStatus: action.to, note: null } })
+                                    void mutateAsync({
+                                      orderCode: r.orderCode,
+                                      body: { toStatus: action.to, note: null },
+                                    }).then(() => refetch())
                                   }
                                   disabled={isPending}
                                 >

@@ -8,12 +8,12 @@ import { apiFetch } from "../../../lib/apiFetch";
 export type PendingAddCartItem = {
   kind: "ADD_CART_ITEM";
   returnTo: string;
- payload: {
-  itemId: string | number;
-  quantity: number;
-  note?: string;
-  optionsHash?: string;
-};
+  payload: {
+    itemId: string | number;
+    quantity: number;
+    note?: string;
+    optionsHash?: string;
+  };
 };
 
 export type PendingAction = PendingAddCartItem;
@@ -52,9 +52,6 @@ type CartLike = {
   items?: Array<{ itemId: string | number; qty: number; note?: string; optionsHash?: string }>;
 };
 
-function sameItem(a: any, b: any) {
-  return String(a?.itemId) === String(b?.itemId) && String(a?.optionsHash ?? "") === String(b?.optionsHash ?? "");
-}
 
 /**
  * Apply pending action once a sessionKey exists.

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useStore } from "zustand";
 
 import { authStore } from "../../../../../shared/auth/authStore";
@@ -11,20 +11,22 @@ import { useRealtimeRoom } from "../../../../../shared/realtime";
 import { realtimeConfig } from "../../../../../shared/realtime/config";
 import { useOpsTablesQuery } from "../hooks/useOpsTablesQuery";
 import { useAppMutation } from "../../../../../shared/http/useAppMutation";
-import { openOpsSession, extractSessionKey } from "../services/opsSessionsApi";
+
+import { openOpsSession, closeOpsSession, extractSessionKey } from "../services/opsSessionsApi";
 import { apiFetch } from "../../../../../lib/apiFetch";
-import { useNavigate } from "react-router-dom";
 import { posStore } from "../../../ops/posStore";
 import {
   getOrCreateOpsCartBySessionKey,
   extractCartKey,
   getOpsCart,
   normalizeOpsCartItems,
+  extractCartCreatedAt,
 } from "../services/opsCartsApi";
 
 function isAdminRole(role: unknown): boolean {
   return String(role ?? "").toUpperCase() === "ADMIN";
 }
+
 function formatElapsed(iso?: string) {
   if (!iso) return null;
   const t = Date.parse(iso);
@@ -36,14 +38,22 @@ function formatElapsed(iso?: string) {
   const mm = m % 60;
   return `${h}h ${mm}m`;
 }
+
+type LiveInfo = {
+  sessionKey?: string;
+  cartKey?: string;
+  startedAt?: string; // fallback từ cart.createdAt
+  items?: { itemId: string; name?: string; qty: number; note?: string }[];
+};
+
 export function InternalTablesPage() {
   const session = useStore(authStore, (s) => s.session);
   const { branchId } = useParams<{ branchId: string }>();
 
   // fallback branch cho route /i/pos/tables (không có :branchId)
   const branchParam = branchId ?? (session?.branchId != null ? String(session.branchId) : "");
-
   const branchKey = Number.isFinite(Number(branchParam)) ? Number(branchParam) : branchParam;
+
   const userBranch = session?.branchId;
   const role = session?.role;
 
@@ -60,60 +70,48 @@ export function InternalTablesPage() {
   const nav = useNavigate();
   const setTable = useStore(posStore, (s) => s.setTable);
   const setPosSession = useStore(posStore, (s) => s.setSession);
-  const room = branchParam
-    ? `${realtimeConfig.internalBranchRoomPrefix}:${branchParam}`
-    : null;
+
+  // PR-07: join ops room (không join branch room)
+  const room = branchParam ? `${realtimeConfig.internalOpsRoomPrefix}:${branchParam}` : null;
 
   useRealtimeRoom(
     room,
     enabled && !!room,
     session
       ? {
-        kind: "internal",
-        userKey: session.user?.id ? String(session.user.id) : "internal",
-        branchId: branchKey ?? undefined,
-        token: session.accessToken,
-      }
+          kind: "internal",
+          userKey: session.user?.id ? String(session.user.id) : "internal",
+          branchId: branchKey ?? undefined,
+          token: session.accessToken,
+        }
       : undefined
   );
 
   const { data, isLoading, error, refetch } = useOpsTablesQuery(branchKey, enabled);
-  type LiveInfo = {
-    sessionKey?: string;
-    cartKey?: string;
-    startedAt?: string;     // thời gian bắt đầu (fallback từ cart.createdAt)
-    items?: { itemId: string; name?: string; qty: number; note?: string }[];
-  };
+
   const [live, setLive] = useState<Record<string, LiveInfo>>({});
+  const [noSessionFor, setNoSessionFor] = useState<string | null>(null);
+
+  // ========= Live detail (READ ONLY) =========
   const loadLive = useAppMutation({
-    mutationFn: async (t: { tableId: string | number; directionId?: string }) => {
-      const s = await openOpsSession({ tableId: t.tableId, directionId: t.directionId });
+    mutationFn: async (t: { tableId: string | number; sessionKey?: string | null; cartKey?: string | null }) => {
+      const sessionKey = String(t.sessionKey ?? "").trim();
+      if (!sessionKey) throw new Error("NO_SESSION");
 
-      const openedAtRaw =
-        (s as any)?.session?.openedAt ??
-        (s as any)?.data?.session?.openedAt ??
-        (s as any)?.sessionOpenedAt ??
-        (s as any)?.data?.sessionOpenedAt;
-
-      const startedAt =
-        typeof openedAtRaw === "string"
-          ? openedAtRaw
-          : openedAtRaw
-            ? new Date(openedAtRaw).toISOString()
-            : undefined;
-
-      const sessionKey = extractSessionKey(s);
-      if (!sessionKey) throw new Error("Missing sessionKey from /admin/ops/sessions/open");
-
-      const c = await getOrCreateOpsCartBySessionKey(sessionKey);
-      const cartKey = extractCartKey(c);
+      let cartKey = String(t.cartKey ?? "").trim();
 
       if (!cartKey) {
-        return { tableId: String(t.tableId), sessionKey, cartKey: "", startedAt, items: [] as any[] };
+        const c = await getOrCreateOpsCartBySessionKey(sessionKey);
+        cartKey = extractCartKey(c);
+      }
+
+      if (!cartKey) {
+        return { tableId: String(t.tableId), sessionKey, cartKey: "", startedAt: undefined, items: [] as any[] };
       }
 
       const cartDetail = await getOpsCart(cartKey);
       const items = normalizeOpsCartItems(cartDetail);
+      const startedAt = extractCartCreatedAt(cartDetail);
 
       // map itemId -> name
       const menuRes = await apiFetch<any>(
@@ -152,8 +150,50 @@ export function InternalTablesPage() {
       }));
       void refetch();
     },
-
   });
+
+  // ========= Close session =========
+  const closeMut = useAppMutation({
+    mutationFn: async (p: { tableId: string | number; sessionKey: string }) => {
+      await closeOpsSession({ sessionKey: p.sessionKey });
+      return { tableId: String(p.tableId) };
+    },
+    onSuccess: (out) => {
+      setLive((prev) => {
+        const next = { ...prev };
+        delete next[out.tableId];
+        return next;
+      });
+      void refetch();
+    },
+  });
+
+  async function selectTableAndGoMenu(t: any, directionId?: string) {
+    if (!t?.id) return;
+
+    // lưu bàn vào store
+    setTable({
+      branchId: branchKey,
+      tableId: String(t.id),
+      tableCode: t.code,
+      directionId,
+    });
+
+    // open ops session (đúng chỗ: chỉ khi user "Gọi món")
+    const s = await openOpsSession({ tableId: t.id, directionId });
+    const sessionKey = extractSessionKey(s);
+    if (!sessionKey) throw new Error("Missing sessionKey from /admin/ops/sessions/open");
+
+    // get/create ops cart
+    const c = await getOrCreateOpsCartBySessionKey(sessionKey);
+    const cartKey = extractCartKey(c) ?? undefined;
+
+    // lưu session/cart vào store
+    setPosSession({ sessionKey, cartKey });
+
+    // qua menu POS
+    nav("/i/pos/menu");
+  }
 
   return (
     <main className="mx-auto max-w-5xl p-6">
@@ -166,6 +206,7 @@ export function InternalTablesPage() {
           className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
           onClick={() => void refetch()}
           disabled={!enabled}
+          type="button"
         >
           Refresh
         </button>
@@ -231,34 +272,15 @@ export function InternalTablesPage() {
               const status = t.status ?? "—";
 
               const tableIdStr = String(t.id ?? "");
-              const liveInfo = (tableIdStr && live[tableIdStr]) ? live[tableIdStr] : {};
+              const liveInfo = tableIdStr && live[tableIdStr] ? live[tableIdStr] : {};
               const directionId = (t as any).directionId as string | undefined;
-              async function selectTableAndGoMenu(t: any, directionId?: string) {
-                if (!t?.id) return;
 
-                // lưu bàn vào store
-                setTable({
-                  branchId: branchKey,
-                  tableId: String(t.id),
-                  tableCode: t.code,
-                  directionId,
-                });
+              // best-effort mapping (BE có thể đặt tên field khác)
+              const sessionKeyFromRow =
+                (t as any).sessionKey ?? (t as any).activeSessionKey ?? (t as any).currentSessionKey ?? null;
 
-                // open ops session
-                const s = await openOpsSession({ tableId: t.id, directionId });
-                const sessionKey = extractSessionKey(s);
-                if (!sessionKey) throw new Error("Missing sessionKey from /admin/ops/sessions/open");
+              const cartKeyFromRow = (t as any).cartKey ?? (t as any).activeCartKey ?? null;
 
-                // get/create ops cart
-                const c = await getOrCreateOpsCartBySessionKey(sessionKey);
-                const cartKey = extractCartKey(c) ?? undefined;
-
-                // lưu session/cart vào store
-                setPosSession({ sessionKey, cartKey });
-
-                // qua menu POS
-                nav("/i/pos/menu");
-              }
               return (
                 <Card key={String(t.id ?? code)}>
                   <CardHeader className="flex flex-row items-center justify-between">
@@ -287,19 +309,24 @@ export function InternalTablesPage() {
                         Cart: <span className="font-mono">{liveInfo.cartKey}</span>
                       </div>
                     )}
+
                     {liveInfo?.startedAt && (
                       <div>
                         Đang ngồi:{" "}
-                        <span className="font-medium text-foreground">
-                          {formatElapsed(liveInfo.startedAt) ?? "—"}
-                        </span>
+                        <span className="font-medium text-foreground">{formatElapsed(liveInfo.startedAt) ?? "—"}</span>
                       </div>
                     )}
 
                     <div className="mt-2">
                       <div className="text-xs uppercase tracking-wide">Món khách gọi</div>
 
-                      {/* 1) Ưu tiên dữ liệu ORDER từ BE */}
+                      {noSessionFor === String(t.id) && (
+                        <div className="mt-2 text-xs text-muted-foreground">
+                          Bàn chưa có phiên. Bấm <b>Gọi món</b> để mở phiên trước.
+                        </div>
+                      )}
+
+                      {/* 1) Ưu tiên preview order từ BE */}
                       {t.activeItemsPreview ? (
                         <div className="mt-1 text-xs opacity-80">
                           {t.activeItemsPreview}
@@ -313,7 +340,7 @@ export function InternalTablesPage() {
                         <div className="mt-1 text-xs opacity-70">Chưa có món (khách chưa gọi)</div>
                       )}
 
-                      {/* 2) Nếu đã bấm Chi tiết và load ops cart thì show thêm */}
+                      {/* 2) Nếu đã load ops cart thì show thêm */}
                       {(liveInfo?.items?.length ?? 0) > 0 && (
                         <>
                           <div className="mt-2 text-[11px] uppercase tracking-wide opacity-60">Chi tiết (ops cart)</div>
@@ -331,24 +358,34 @@ export function InternalTablesPage() {
                         </>
                       )}
                     </div>
-                    <Can perm="ops.sessions.open">
-                      <div className="mt-3 flex gap-2">
-                        {/* giữ lại nút Chi tiết như cũ nếu bạn muốn xem live ops cart */}
-                        <button
-                          className="inline-flex items-center justify-center rounded-md border px-3 py-1 text-sm"
-                          onClick={() =>
-                            void loadLive.mutateAsync({
-                              tableId: t.id!,
-                              directionId,
-                            })
-                          }
-                          disabled={!enabled || loadLive.isPending || t.id == null}
-                          type="button"
-                        >
-                          {loadLive.isPending ? "Đang tải..." : "Chi tiết"}
-                        </button>
 
-                        {/* nút mới: chọn bàn -> qua POS menu */}
+                    {/* Actions */}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {/* Chi tiết: read-only, không phụ thuộc ops.sessions.open */}
+                      <button
+                        className="inline-flex items-center justify-center rounded-md border px-3 py-1 text-sm"
+                        onClick={() => {
+                          const tid = String(t.id ?? "");
+                          setNoSessionFor(null);
+
+                          void loadLive
+                            .mutateAsync({
+                              tableId: t.id!,
+                              sessionKey: sessionKeyFromRow,
+                              cartKey: cartKeyFromRow,
+                            })
+                            .catch((e) => {
+                              if (String(e?.message ?? "") === "NO_SESSION") setNoSessionFor(tid);
+                            });
+                        }}
+                        disabled={!enabled || loadLive.isPending || t.id == null}
+                        type="button"
+                      >
+                        {loadLive.isPending ? "Đang tải..." : "Chi tiết"}
+                      </button>
+
+                      {/* Gọi món */}
+                      <Can perm="ops.sessions.open">
                         <button
                           className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-1 text-sm text-primary-foreground hover:opacity-90"
                           onClick={() => void selectTableAndGoMenu(t, directionId)}
@@ -357,8 +394,27 @@ export function InternalTablesPage() {
                         >
                           Gọi món
                         </button>
-                      </div>
-                    </Can>
+                      </Can>
+
+                      {/* Đóng phiên */}
+                      {sessionKeyFromRow ? (
+                        <Can perm="ops.sessions.close">
+                          <button
+                            className="inline-flex items-center justify-center rounded-md border px-3 py-1 text-sm"
+                            onClick={() =>
+                              void closeMut.mutateAsync({
+                                tableId: t.id!,
+                                sessionKey: String(sessionKeyFromRow),
+                              })
+                            }
+                            disabled={!enabled || closeMut.isPending || t.id == null}
+                            type="button"
+                          >
+                            {closeMut.isPending ? "Đang đóng..." : "Đóng phiên"}
+                          </button>
+                        </Can>
+                      ) : null}
+                    </div>
                   </CardContent>
                 </Card>
               );

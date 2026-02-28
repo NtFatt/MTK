@@ -1,6 +1,6 @@
 import { useAppQuery } from "../../../../shared/http/useAppQuery";
+import { qk } from "@hadilao/contracts";
 import { fetchKitchenQueue, type KitchenQueueRow } from "../services/kitchenQueueApi";
-import { kitchenQueueQueryKey } from "./queryKeys";
 
 const STALE_MS = 2000;
 
@@ -11,10 +11,13 @@ export function useKitchenQueueQuery(input: {
   limit?: number;
 }) {
   const b = input.branchId != null ? String(input.branchId) : "";
+  const statuses = (input.statuses ?? []).map((x) => String(x).trim().toUpperCase()).filter(Boolean);
+  const limit = Number(input.limit ?? 50);
 
-  return useAppQuery<KitchenQueueRow[], KitchenQueueRow[], ReturnType<typeof kitchenQueueQueryKey>>({
-    queryKey: kitchenQueueQueryKey({ branchId: b, statuses: input.statuses, limit: input.limit }),
-    queryFn: () => fetchKitchenQueue({ branchId: b, statuses: input.statuses, limit: input.limit }),
+  return useAppQuery<KitchenQueueRow[], KitchenQueueRow[], readonly unknown[]>({
+    // ✅ prefix = qk.orders.kitchenQueue => realtime + mutation invalidate match
+    queryKey: [...qk.orders.kitchenQueue({ branchId: b }), { statuses, limit }],
+    queryFn: () => fetchKitchenQueue({ branchId: b, statuses, limit }),
     enabled: input.enabled && b.length > 0,
     staleTime: STALE_MS,
   });

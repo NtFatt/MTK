@@ -182,7 +182,6 @@ export function CustomerQrPage() {
     return () => {
       stopScan();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -248,7 +247,7 @@ export function CustomerQrPage() {
               <Alert variant="destructive">
                 <AlertDescription>
                   {openSessionMutation.error.code === "NO_TABLE_AVAILABLE" ||
-                  openSessionMutation.error.code === "TABLE_RESERVED_SOON"
+                    openSessionMutation.error.code === "TABLE_RESERVED_SOON"
                     ? "Không thể mở bàn lúc này (bàn không khả dụng / sắp có đặt trước)."
                     : openSessionMutation.error.code === "TABLE_OUT_OF_SERVICE"
                       ? "Bàn đang tạm ngưng phục vụ."
