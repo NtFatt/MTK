@@ -2,7 +2,7 @@
  * Route and action guards: RequireAuth, Can.
  */
 import type { ReactNode } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useStore } from "zustand";
 import { authStore, selectIsAuthed } from "./authStore";
 
@@ -18,6 +18,7 @@ function useIsAuthed(): boolean {
 export function RequireAuth({ children }: { children: ReactNode }) {
   const hydrated = useIsHydrated();
   const authed = useIsAuthed();
+  const loc = useLocation();
 
   if (!hydrated) {
     return (
@@ -27,7 +28,8 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     );
   }
   if (!authed) {
-    return <Navigate to="/i/login" replace />;
+    const next = encodeURIComponent(`${loc.pathname}${loc.search}`);
+    return <Navigate to={`/i/login?next=${next}`} replace />;
   }
   return <>{children}</>;
 }

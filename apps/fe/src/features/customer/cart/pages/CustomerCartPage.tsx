@@ -1,3 +1,6 @@
+import { useMemo } from "react";
+import { useMenuQuery } from "../../menu/hooks/useMenuQuery";
+import { useCustomerSessionStore, selectBranchId } from "../../../../shared/customer/session/sessionStore";
 import { useStore } from "zustand";
 import { Link } from "react-router-dom";
 import { RequireCustomerSession } from "../../../../shared/customer/session/guards";
@@ -11,7 +14,7 @@ import { Button, buttonVariants } from "../../../../shared/ui/button";
 import { Card, CardContent, CardHeader } from "../../../../shared/ui/card";
 import { Skeleton } from "../../../../shared/ui/skeleton";
 
-function CartPageContent() {
+function CartPageContent({ menuNameById }: { menuNameById: Map<string, string> }) {
   const sessionKey = useStore(customerSessionStore, selectSessionKey);
   const cartQuery = useCartQuery(sessionKey);
 
@@ -77,6 +80,7 @@ function CartPageContent() {
               item={item}
               cartKey={cart.cartKey}
               sessionKey={sessionKey}
+              displayName={item.name ?? menuNameById.get(String(item.itemId)) ?? `Món #${String(item.itemId)}`}
             />
           ))}
           <CartSummary subtotal={subtotal} total={cart.total} />
@@ -87,6 +91,17 @@ function CartPageContent() {
 }
 
 export function CustomerCartPage() {
+  const branchId = useCustomerSessionStore(selectBranchId);
+  const menuQuery = useMenuQuery(branchId ? { branchId } : {});
+
+  const menuNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    const items = menuQuery.data?.items ?? [];
+    for (const it of items as any[]) {
+      m.set(String(it.id), String(it.name ?? ""));
+    }
+    return m;
+  }, [menuQuery.data]);
   return (
     <RequireCustomerSession>
       <div className="flex min-h-screen flex-col">
@@ -98,8 +113,7 @@ export function CustomerCartPage() {
           </div>
         </header>
         <main className="flex-1">
-          <CartPageContent />
-        </main>
+          <CartPageContent menuNameById={menuNameById} />        </main>
       </div>
     </RequireCustomerSession>
   );

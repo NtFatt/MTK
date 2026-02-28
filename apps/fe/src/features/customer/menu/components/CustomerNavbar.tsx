@@ -14,9 +14,8 @@ export function CustomerNavbar() {
   const resetSession = useStore(customerSessionStore, (s: any) => s.reset?.bind(s));
 
   const cartQuery = useCartQuery(sessionKey);
-  const cartCount = cartQuery.data?.items?.length ?? 0;
-
-  const onSwitchBranch = () => {
+const cartCount =
+  (cartQuery.data?.items ?? []).reduce((acc: number, it: any) => acc + Number(it.qty ?? it.quantity ?? 1), 0);  const onSwitchBranch = () => {
     // 1) reset store (nếu có)
     resetSession?.();
 
@@ -37,14 +36,6 @@ export function CustomerNavbar() {
         </Link>
 
         <nav className="flex items-center gap-2">
-          <button
-            type="button"
-            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-            onClick={onSwitchBranch}
-          >
-            Đổi chi nhánh
-          </button>
-
           <Link to="/c/cart" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "relative")}>
             Giỏ hàng
             {cartCount > 0 && (

@@ -25,6 +25,7 @@ export type MenuItemDto = {
   imageUrl?: string;
   description?: string;
   isAvailable?: boolean;
+  remainingQty?: number;
   tags?: string[];
 };
 

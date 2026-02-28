@@ -11,4 +11,5 @@ export interface MenuItem {
   categoryId: string;
   tags?: string[];
   isAvailable: boolean;
+  remainingQty?: number;
 }

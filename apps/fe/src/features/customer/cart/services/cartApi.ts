@@ -71,8 +71,29 @@ export async function openCartForSession(
 
 export async function getCart(cartKey: string): Promise<Cart> {
   if (!cartKey) throw new Error("Cart key is missing");
-  const res = await apiFetch<Cart>(`/carts/${encodeURIComponent(cartKey)}`);
-  return withCartKey(res, cartKey);
+
+  const res = await apiFetch<any>(`/carts/${encodeURIComponent(cartKey)}`);
+  const cart = withCartKey(res, cartKey) as any;
+
+  if (Array.isArray(cart.items)) {
+    cart.items = cart.items.map((it: any) => {
+      const qtyRaw = it.qty ?? it.quantity;
+      const qtyNum = Number(qtyRaw);
+
+      const unitPriceRaw = it.unitPrice ?? it.unit_price ?? it.price;
+      const unitPriceNum = Number(unitPriceRaw);
+
+      return {
+        ...it,
+        itemId: it.itemId ?? it.item_id ?? it.id,
+        name: it.name ?? it.itemName ?? it.item_name,
+        qty: Number.isFinite(qtyNum) ? Math.max(1, Math.trunc(qtyNum)) : 1,
+        unitPrice: Number.isFinite(unitPriceNum) ? unitPriceNum : 0,
+      };
+    });
+  }
+
+  return cart as Cart;
 }
 
 /** ✅ open -> get detail (luôn trả Cart có cartKey) */

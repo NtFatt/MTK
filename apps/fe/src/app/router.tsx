@@ -9,17 +9,25 @@ import { CustomerOrderStatusPage } from '../features/customer/order/pages/Custom
 
 import { RequireAuth } from '../shared/auth/guards';
 import { RequireCustomerSession } from '../shared/customer/session/guards';
-
+import { AppEntryPage } from "../features/entry/pages/AppEntryPage";
 import { InternalLoginPage } from '../features/internal/auth/pages/InternalLoginPage';
 import { InternalLogoutPage } from '../features/internal/auth/pages/InternalLogoutPage';
 import { InternalTablesPage } from '../features/internal/ops/tables/pages/InternalTablesPage';
 import { InternalPosMenuPage } from '../features/internal/pos/pages/InternalPosMenuPage';
 import { InternalKitchenPage } from "../features/internal/kitchen/pages/InternalKitchenPage";
-
+import { InternalAdminPage } from "../features/internal/admin/pages/InternalAdminPage";
+import { InternalCashierPage } from "../features/internal/cashier/pages/InternalCashierPage";
 export const router = createBrowserRouter([
   // ✅ App entry: vào menu trước
-  { path: '/', element: <Navigate to="/c/menu" replace /> },
-
+{ path: "/", element: <AppEntryPage /> },
+{
+  path: "i/:branchId/admin",
+  element: (
+    <RequireAuth>
+      <InternalAdminPage />
+    </RequireAuth>
+  ),
+},
   // ✅ Customer public routes
   {
     path: "c/menu",
@@ -82,6 +90,14 @@ export const router = createBrowserRouter([
     ),
   },
   {
+  path: "i/:branchId/cashier",
+  element: (
+    <RequireAuth>
+      <InternalCashierPage />
+    </RequireAuth>
+  ),
+},
+  {
     path: "i/pos/tables",
     element: (
       <RequireAuth>
@@ -103,7 +119,6 @@ export const router = createBrowserRouter([
   },
 
   // ✅ Catch-all (đỡ 404 trắng)
-  { path: '*', element: <Navigate to="/c/menu" replace /> },
-
+{ path: "*", element: <Navigate to="/" replace /> },
 
 ]);

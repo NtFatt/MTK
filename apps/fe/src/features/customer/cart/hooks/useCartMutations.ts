@@ -1,8 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useAppMutation } from "../../../../shared/http/useAppMutation";
 import { qk } from "@hadilao/contracts";
-import { useStore } from "zustand";
-import { customerSessionStore } from "../../../../shared/customer/session/sessionStore";
 import { useCustomerSessionStore, selectBranchId } from "../../../../shared/customer/session/sessionStore";
 
 import {
@@ -46,8 +44,7 @@ const branchId = useCustomerSessionStore(selectBranchId);
 
 export function useUpdateCartItem(sessionKey: string | null) {
   const queryClient = useQueryClient();
-  const branchId = useStore(customerSessionStore, (s: any) => s.branchId);
-
+const branchId = useCustomerSessionStore(selectBranchId);
   return useAppMutation({
     mutationFn: async ({ itemId, qty }: { itemId: string | number; qty: number }) => {
       if (!sessionKey) throw new Error("No session");

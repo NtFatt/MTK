@@ -1,9 +1,8 @@
-import { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppMutation } from "../../../../shared/http/useAppMutation";
 import { authStore } from "../../../../shared/auth/authStore";
 import { adminLogin } from "../../../../shared/auth/authApi";
-import type { AuthSession } from "../../../../shared/auth/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../shared/ui/card";
 import { Label } from "../../../../shared/ui/label";
 import { Input } from "../../../../shared/ui/input";
@@ -12,29 +11,48 @@ import { isHttpError } from "../../../../shared/http/errors";
 
 export function InternalLoginPage() {
   const navigate = useNavigate();
+  const [sp] = useSearchParams();
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
-  const onSuccess = useCallback(
-    (session: AuthSession) => {
+  const next = sp.get("next");
+  const safeNext = next && next.startsWith("/i/") ? next : null;
+
+  const loginMutation = useAppMutation({
+    mutationFn: async () => adminLogin({ username: username.trim(), password }),
+    onSuccess: (session) => {
       authStore.getState().setSession(session);
-      if (session.branchId != null) navigate(`/i/${session.branchId}/tables`, { replace: true });
-      else navigate("/i/admin/system", { replace: true });
+
+      // ✅ ưu tiên quay lại route đang định vào (tables/kitchen/...)
+      if (safeNext) {
+        navigate(safeNext, { replace: true });
+        return;
+      }
+
+      const role = String(session.role ?? "").toUpperCase();
+      const bid = Number(session.branchId ?? 1);
+
+      if (role === "ADMIN") {
+        navigate(`/i/${bid}/admin`, { replace: true });
+        return;
+      }
+
+      if (role === "KITCHEN") {
+        navigate(`/i/${bid}/kitchen`, { replace: true });
+        return;
+      }
+
+      // Nếu chưa có cashier page thì tạm về tables
+      if (role === "CASHIER") {
+        navigate(`/i/${bid}/cashiermm`, { replace: true });
+        return;
+      }
+
+      // ADMIN / BRANCH_MANAGER / STAFF
+      navigate(`/i/${bid}/tables`, { replace: true });
     },
-    [navigate]
-  );
-
-const loginMutation = useAppMutation({
-  mutationFn: async () => adminLogin({ username: username.trim(), password }),
-onSuccess: (session) => {
-  authStore.getState().setSession(session);
-
-  const bid = session.branchId ?? (session.role === "ADMIN" ? "1" : undefined);
-
-  if (bid) navigate(`/i/${bid}/tables`, { replace: true });
-  else navigate("/i/login?reason=missing_branch", { replace: true });
-},
-});
+  });
 
   const err = loginMutation.error;
   const errMsg = isHttpError(err) ? err.message : err ? "Đăng nhập thất bại" : null;
@@ -63,6 +81,7 @@ onSuccess: (session) => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="admin"
+                disabled={loginMutation.isPending}
               />
             </div>
 
@@ -75,6 +94,7 @@ onSuccess: (session) => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
+                disabled={loginMutation.isPending}
               />
             </div>
 

@@ -54,7 +54,10 @@ function defaultPermissionsForRole(role: Role): string[] {
         "orders.status.change",
         "reservations.confirm",
         "reservations.checkin",
+        "staff.read",
+        "staff.manage",
       ];
+
     case "BRANCH_MANAGER":
       return [
         "ops.tables.read",
@@ -69,6 +72,7 @@ function defaultPermissionsForRole(role: Role): string[] {
         "orders.status.change",
         "reservations.confirm",
         "reservations.checkin",
+        "staff.read",
       ];
     case "STAFF":
       return [
@@ -309,8 +313,7 @@ export async function adminLogin(payload: AdminLoginPayload): Promise<AuthSessio
         ? new Date(res.expiresAt).getTime()
         : Number(res.expiresAt)
       : getExpiresAtFromClaims(claims);
-  const effectivePermissions = permissions.length ? permissions : defaultPermissionsForRole(role);
-
+const effectivePermissions = Array.from(new Set([...defaultPermissionsForRole(role), ...permissions]));
   return {
     accessToken,
     refreshToken: undefined, // internal: no refresh in contract
