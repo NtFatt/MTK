@@ -24,33 +24,28 @@ export function InternalLoginPage() {
     onSuccess: (session) => {
       authStore.getState().setSession(session);
 
-      // ✅ ưu tiên quay lại route đang định vào (tables/kitchen/...)
       if (safeNext) {
         navigate(safeNext, { replace: true });
         return;
       }
 
       const role = String(session.role ?? "").toUpperCase();
-      const bid = Number(session.branchId ?? 1);
 
-      if (role === "ADMIN") {
-        navigate(`/i/${bid}/admin`, { replace: true });
+      // ✅ admin có thể không có branchId -> fallback mặc định
+      const rawBid = session.branchId;
+      const bid =
+        rawBid != null && String(rawBid).trim()
+          ? String(rawBid).trim()
+          : role === "ADMIN"
+            ? "1"
+            : "";
+
+      if (!bid) {
+        navigate("/i/login?reason=missing_branch", { replace: true });
         return;
       }
 
-      if (role === "KITCHEN") {
-        navigate(`/i/${bid}/kitchen`, { replace: true });
-        return;
-      }
-
-      // Nếu chưa có cashier page thì tạm về tables
-      if (role === "CASHIER") {
-        navigate(`/i/${bid}/cashiermm`, { replace: true });
-        return;
-      }
-
-      // ADMIN / BRANCH_MANAGER / STAFF
-      navigate(`/i/${bid}/tables`, { replace: true });
+      navigate(`/i/${bid}`, { replace: true });
     },
   });
 

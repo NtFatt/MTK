@@ -1,16 +1,20 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useStore } from "zustand";
 
+import { authStore } from "../../../../shared/auth/authStore";
 import { useAppQuery } from "../../../../shared/http/useAppQuery";
 import { useAppMutation } from "../../../../shared/http/useAppMutation";
 import { apiFetchAuthed } from "../../../../shared/http/authedFetch";
 import { Can } from "../../../../shared/auth/guards";
+import { useRealtimeRoom } from "../../../../shared/realtime";
 
 import { Card, CardContent, CardHeader, CardTitle } from "../../../../shared/ui/card";
 import { Input } from "../../../../shared/ui/input";
 import { Button } from "../../../../shared/ui/button";
 import { Badge } from "../../../../shared/ui/badge";
 import { Alert, AlertDescription } from "../../../../shared/ui/alert";
+import { qk } from "@hadilao/contracts";
 
 type OrderRow = {
   orderCode: string;
@@ -26,6 +30,7 @@ type OrderRow = {
   totalAmount?: number;
   amount?: number;
 };
+
 type SettleCashResponse = {
   orderCode: string;
   txnRef?: string;
@@ -33,8 +38,11 @@ type SettleCashResponse = {
   alreadyPaid?: boolean;
 };
 
+function isAdminRole(role: unknown): boolean {
+  return String(role ?? "").toUpperCase() === "ADMIN";
+}
+
 function uuid(): string {
-  // idempotency key
   const c = globalThis.crypto as Crypto | undefined;
   if (c?.randomUUID) return c.randomUUID();
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -45,13 +53,7 @@ function formatVnd(n: number): string {
 }
 
 function getTotal(it: any): number {
-  const raw =
-    it?.total ??
-    it?.totalAmount ??
-    it?.payableTotal ??
-    it?.subtotal ??
-    it?.amount ??
-    it?.grandTotal;
+  const raw = it?.total ?? it?.totalAmount ?? it?.payableTotal ?? it?.subtotal ?? it?.amount ?? it?.grandTotal;
   const v = Number(raw);
   return Number.isFinite(v) ? v : 0;
 }
@@ -82,21 +84,49 @@ function clearIdemKey(scope: string) {
 }
 
 export function InternalCashierPage() {
+  const session = useStore(authStore, (s) => s.session);
   const { branchId } = useParams<{ branchId: string }>();
   const bid = String(branchId ?? "").trim();
 
+  const role = session?.role;
+  const userBranch = session?.branchId;
+
+  const isBranchMismatch =
+    !isAdminRole(role) && userBranch != null && bid && String(userBranch) !== String(bid);
+
+  const canRead = useMemo(() => {
+    const perms = session?.permissions ?? [];
+    return perms.includes("cashier.unpaid.read");
+  }, [session?.permissions]);
+
+  const enabled = !!session && !!bid && !isBranchMismatch && canRead;
+
+  // ✅ PR-09: join cashier room để nhận realtime invalidate
+  useRealtimeRoom(
+    bid ? `cashier:${bid}` : null,
+    enabled && !!bid,
+    session
+      ? {
+        kind: "internal",
+        userKey: session.user?.id ? String(session.user.id) : "internal",
+        branchId: bid ? String(bid) : session?.branchId != null ? String(session.branchId) : undefined,
+        token: session.accessToken,
+      }
+      : undefined
+  );
+
   const [q, setQ] = useState("");
   const [paying, setPaying] = useState<OrderRow | null>(null);
-  const [payMethod, setPayMethod] = useState<
-    "CASH" | "SHOPEEPAY" | "VISA" | "MASTER" | "JCB" | "ATM" | "OTHER"
-  >("CASH");
+  const [payMethod, setPayMethod] = useState<"CASH" | "SHOPEEPAY" | "VISA" | "MASTER" | "JCB" | "ATM" | "OTHER">(
+    "CASH"
+  );
   const [received, setReceived] = useState<number>(0);
-  const listKey = useMemo(() => ["cashier", "unpaid", { branchId: bid }] as const, [bid]);
 
+  const listKey = useMemo(() => qk.orders.cashierUnpaid({ branchId: bid }), [bid]);
 
   const listQuery = useAppQuery<{ items: OrderRow[] }>({
     queryKey: listKey,
-    enabled: !!bid,
+    enabled,
     queryFn: async () => {
       const qs = new URLSearchParams();
       qs.set("branchId", bid);
@@ -105,12 +135,8 @@ export function InternalCashierPage() {
     staleTime: 3000,
   });
 
-  const settleMutation = useAppMutation<
-    SettleCashResponse,
-    any,
-    { orderCode: string }
-  >({
-    invalidateKeys: [listKey as unknown as unknown[]],
+  const settleMutation = useAppMutation<SettleCashResponse, any, { orderCode: string }>({
+    invalidateKeys: [[...listKey] as unknown as unknown[]],
     mutationFn: async ({ orderCode }) => {
       const scope = `cashier.settle:${orderCode}`;
       const idem = getIdemKey(scope);
@@ -123,6 +149,7 @@ export function InternalCashierPage() {
         }
       );
 
+      // ✅ chỉ clear khi thành công để retry còn reuse idem key
       clearIdemKey(scope);
       return res;
     },
@@ -133,10 +160,7 @@ export function InternalCashierPage() {
     const s = q.trim().toLowerCase();
     if (!s) return items;
     return items.filter((it) => {
-      return (
-        String(it.orderCode ?? "").toLowerCase().includes(s) ||
-        String(it.tableCode ?? "").toLowerCase().includes(s)
-      );
+      return String(it.orderCode ?? "").toLowerCase().includes(s) || String(it.tableCode ?? "").toLowerCase().includes(s);
     });
   }, [listQuery.data, q]);
 
@@ -146,7 +170,7 @@ export function InternalCashierPage() {
         <div>
           <h1 className="text-2xl font-semibold">Cashier — Unpaid</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Chi nhánh: <span className="font-mono">{bid}</span>
+            Chi nhánh: <span className="font-mono">{bid || "—"}</span>
           </p>
         </div>
 
@@ -160,266 +184,293 @@ export function InternalCashierPage() {
         </div>
       </div>
 
-      <Can
-        perm="cashier.unpaid.read"
-        fallback={
-          <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-            Không có quyền cashier (cần <span className="font-mono">cashier.unpaid.read</span>).
-          </div>
-        }
-      >
-        <section className="mt-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Input
-              className="max-w-sm"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Tìm ORD... / mã bàn..."
-            />
-            <Button variant="secondary" onClick={() => listQuery.refetch()} disabled={listQuery.isFetching}>
-              {listQuery.isFetching ? "Đang tải..." : "Refresh"}
-            </Button>
-          </div>
+      {isBranchMismatch && (
+        <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+          Bạn không được phép truy cập dữ liệu chi nhánh khác.
+        </div>
+      )}
 
-          {listQuery.error && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertDescription>
-                {listQuery.error.message}
-                {listQuery.error.correlationId && <span className="mt-1 block text-xs">Mã: {listQuery.error.correlationId}</span>}
-              </AlertDescription>
-            </Alert>
-          )}
+      {!isBranchMismatch && (
+        <Can
+          perm="cashier.unpaid.read"
+          fallback={
+            <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+              Không có quyền cashier (cần <span className="font-mono">cashier.unpaid.read</span>).
+            </div>
+          }
+        >
+          <section className="mt-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Input
+                className="max-w-sm"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Tìm ORD... / mã bàn..."
+              />
+              <Button variant="secondary" onClick={() => listQuery.refetch()} disabled={!enabled || listQuery.isFetching}>
+                {listQuery.isFetching ? "Đang tải..." : "Refresh"}
+              </Button>
+            </div>
 
-          {settleMutation.error && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertDescription>
-                {settleMutation.error.message}
-                {settleMutation.error.correlationId && (
-                  <span className="mt-1 block text-xs">Mã: {settleMutation.error.correlationId}</span>
-                )}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            {filtered.map((it) => (
-              <Card key={it.orderCode}>
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-base font-semibold">{it.orderCode}</CardTitle>
-                    <Badge variant="outline">{it.orderStatus}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="text-sm text-muted-foreground">
-                    Bàn: <span className="font-mono text-foreground">{it.tableCode ?? "—"}</span>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Created: {new Date(it.createdAt).toLocaleString("vi-VN")}
-                  </div>
-
-                  <Can perm="cashier.settle_cash" fallback={null}>
-                    <Button
-                      className="mt-2"
-                      disabled={settleMutation.isPending}
-                      onClick={() => {
-                        setPayMethod("CASH");
-                        const total = getTotal(it);
-                        setReceived(total || 0);
-                        setPaying(it);
-                      }}
-                    >
-                      {settleMutation.isPending ? "Đang thanh toán..." : "Thanh toán tiền mặt"}
-                    </Button>
-                  </Can>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {!listQuery.isLoading && filtered.length === 0 && (
-            <div className="mt-6 text-sm text-muted-foreground">Không có đơn nào.</div>
-          )}
-        </section>
-      </Can>
-      {paying && (() => {
-        const total = getTotal(paying);
-        const change = Math.max(0, received - total);
-        const quick = total ? [roundUp(total, 1000), roundUp(total, 5000), roundUp(total, 10000)] : [];
-        const canConfirm =
-          payMethod === "CASH" && (total === 0 || received >= total) && !settleMutation.isPending;
-
-        const pressDigit = (d: number) => setReceived((v) => v * 10 + d);
-        const press00 = () => setReceived((v) => v * 100);
-        const press000 = () => setReceived((v) => v * 1000);
-        const backspace = () => setReceived((v) => Math.floor(v / 10));
-        const clear = () => setReceived(0);
-
-        return (
-          <div className="fixed inset-0 z-[60] bg-black/40 p-4">
-            <div className="mx-auto w-full max-w-5xl rounded-xl bg-background shadow-xl">
-              {/* Header */}
-              <div className="flex items-center justify-between border-b p-4">
-                <div className="text-lg font-semibold">
-                  Thanh toán {paying.tableCode ? `BÀN - ${paying.tableCode}` : ""} {total ? `- ${formatVnd(total)}` : ""}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setPaying(null)}
-                  className="rounded-md border px-3 py-1.5 text-sm hover:bg-muted"
-                >
-                  Đóng
-                </button>
-              </div>
-
-              <div className="grid gap-4 p-4 md:grid-cols-[260px_1fr]">
-                {/* Left: methods */}
-                <div className="space-y-2">
-                  {[
-                    ["CASH", "Tiền mặt"],
-                    ["SHOPEEPAY", "ShopeePay"],
-                    ["VISA", "VISA"],
-                    ["MASTER", "Master"],
-                    ["JCB", "JCB"],
-                    ["ATM", "ATM"],
-                    ["OTHER", "Khác"],
-                  ].map(([k, label]) => {
-                    const disabled = k !== "CASH"; // hiện tại BE settle-cash => chỉ cash
-                    const active = payMethod === (k as any);
-                    return (
-                      <button
-                        key={k}
-                        type="button"
-                        disabled={disabled}
-                        onClick={() => setPayMethod(k as any)}
-                        className={[
-                          "w-full rounded-lg border px-3 py-3 text-left text-sm font-medium",
-                          active ? "border-primary bg-primary/5" : "hover:bg-muted",
-                          disabled ? "opacity-50 cursor-not-allowed" : "",
-                        ].join(" ")}
-                        title={disabled ? "Chưa hỗ trợ method này (hiện chỉ cash)" : ""}
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Right: calculator */}
-                <div className="space-y-3">
-                  <div className="grid gap-3 md:grid-cols-3">
-                    <div className="rounded-lg border p-3">
-                      <div className="text-xs text-muted-foreground">Đã nhận</div>
-                      <input
-                        className="mt-1 w-full rounded-md border px-3 py-2 text-base"
-                        value={String(received)}
-                        onChange={(e) => {
-                          const digits = e.target.value.replace(/[^\d]/g, "");
-                          setReceived(digits ? Number(digits) : 0);
-                        }}
-                      />
-                      <div className="mt-1 text-xs text-muted-foreground">{formatVnd(received)}</div>
-                    </div>
-
-                    <div className="rounded-lg border p-3">
-                      <div className="text-xs text-muted-foreground">Tổng tiền thanh toán</div>
-                      <div className="mt-2 text-lg font-semibold">{total ? formatVnd(total) : "—"}</div>
-                      {!total && (
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          (API chưa trả tổng tiền, vẫn có thể xác nhận)
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="rounded-lg border p-3">
-                      <div className="text-xs text-muted-foreground">Tiền thừa</div>
-                      <div className="mt-2 text-lg font-semibold">{total ? formatVnd(change) : "—"}</div>
-                    </div>
-                  </div>
-
-                  {/* Quick amounts */}
-                  {quick.length > 0 && (
-                    <div className="grid grid-cols-3 gap-2">
-                      {quick.map((a) => (
-                        <button
-                          key={a}
-                          type="button"
-                          className="rounded-lg border px-3 py-2 text-sm font-semibold hover:bg-muted"
-                          onClick={() => setReceived(a)}
-                        >
-                          {formatVnd(a)}
-                        </button>
-                      ))}
-                    </div>
+            {listQuery.error && (
+              <Alert variant="destructive" className="mt-4">
+                <AlertDescription>
+                  {listQuery.error.message}
+                  {listQuery.error.correlationId && (
+                    <span className="mt-1 block text-xs">Mã: {listQuery.error.correlationId}</span>
                   )}
+                </AlertDescription>
+              </Alert>
+            )}
 
-                  {/* Keypad */}
-                  <div className="grid grid-cols-4 gap-2">
-                    {[7, 8, 9].map((n) => (
-                      <button key={n} type="button" className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted" onClick={() => pressDigit(n)}>
-                        {n}
-                      </button>
-                    ))}
-                    <button type="button" className="rounded-lg border py-4 text-sm font-semibold hover:bg-muted" onClick={backspace}>
-                      ⌫
-                    </button>
+            {settleMutation.error && (
+              <Alert variant="destructive" className="mt-4">
+                <AlertDescription>
+                  {settleMutation.error.message}
+                  {settleMutation.error.correlationId && (
+                    <span className="mt-1 block text-xs">Mã: {settleMutation.error.correlationId}</span>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
 
-                    {[4, 5, 6].map((n) => (
-                      <button key={n} type="button" className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted" onClick={() => pressDigit(n)}>
-                        {n}
-                      </button>
-                    ))}
-                    <button type="button" className="rounded-lg border py-4 text-sm font-semibold hover:bg-muted" onClick={clear}>
-                      C
-                    </button>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              {filtered.map((it) => (
+                <Card key={it.orderCode}>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <CardTitle className="text-base font-semibold">{it.orderCode}</CardTitle>
+                      <Badge variant="outline">{String(it.orderStatus ?? "").toUpperCase()}</Badge>
+                    </div>
+                  </CardHeader>
 
-                    {[1, 2, 3].map((n) => (
-                      <button key={n} type="button" className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted" onClick={() => pressDigit(n)}>
-                        {n}
-                      </button>
-                    ))}
-                    <div className="rounded-lg border py-4" />
+                  <CardContent className="space-y-2">
+                    <div className="text-sm text-muted-foreground">
+                      Bàn: <span className="font-mono text-foreground">{it.tableCode ?? "—"}</span>
+                    </div>
 
-                    <button type="button" className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted" onClick={() => pressDigit(0)}>
-                      0
-                    </button>
-                    <button type="button" className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted" onClick={press00}>
-                      00
-                    </button>
-                    <button type="button" className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted" onClick={press000}>
-                      000
-                    </button>
-                    <div className="rounded-lg border py-4" />
+                    <div className="text-xs text-muted-foreground">
+                      Created: {it.createdAt ? new Date(it.createdAt).toLocaleString("vi-VN") : "—"}
+                    </div>
+
+                    {getTotal(it) > 0 && (
+                      <div className="text-sm">
+                        Tổng: <span className="font-semibold">{formatVnd(getTotal(it))}</span>
+                      </div>
+                    )}
+
+                    <Can perm="cashier.settle_cash" fallback={null}>
+                      <Button
+                        className="mt-2"
+                        disabled={!enabled || settleMutation.isPending}
+                        onClick={() => {
+                          setPayMethod("CASH");
+                          const total = getTotal(it);
+                          setReceived(total || 0);
+                          setPaying(it);
+                        }}
+                      >
+                        {settleMutation.isPending ? "Đang thanh toán..." : "Thanh toán tiền mặt"}
+                      </Button>
+                    </Can>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {!listQuery.isLoading && filtered.length === 0 && (
+              <div className="mt-6 text-sm text-muted-foreground">Không có đơn nào.</div>
+            )}
+          </section>
+        </Can>
+      )}
+
+      {paying &&
+        (() => {
+          const total = getTotal(paying);
+          const change = Math.max(0, received - total);
+          const quick = total ? [roundUp(total, 1000), roundUp(total, 5000), roundUp(total, 10000)] : [];
+          const canConfirm = payMethod === "CASH" && (total === 0 || received >= total) && !settleMutation.isPending;
+
+          const pressDigit = (d: number) => setReceived((v) => v * 10 + d);
+          const press00 = () => setReceived((v) => v * 100);
+          const press000 = () => setReceived((v) => v * 1000);
+          const backspace = () => setReceived((v) => Math.floor(v / 10));
+          const clear = () => setReceived(0);
+
+          return (
+            <div className="fixed inset-0 z-[60] bg-black/40 p-4">
+              <div className="mx-auto w-full max-w-5xl rounded-xl bg-background shadow-xl">
+                <div className="flex items-center justify-between border-b p-4">
+                  <div className="text-lg font-semibold">
+                    Thanh toán {paying.tableCode ? `BÀN - ${paying.tableCode}` : ""}{" "}
+                    {total ? `- ${formatVnd(total)}` : ""}
                   </div>
-
                   <button
                     type="button"
-                    className={[
-                      "mt-2 w-full rounded-lg py-4 text-base font-semibold",
-                      canConfirm ? "bg-green-600 text-white hover:bg-green-700" : "bg-muted text-muted-foreground cursor-not-allowed",
-                    ].join(" ")}
-                    disabled={!canConfirm}
-                    onClick={() => {
-                      const ok = window.confirm(`Xác nhận thanh toán cho ${paying.orderCode}?`);
-                      if (!ok) return;
-                      settleMutation.mutate(
-                        { orderCode: paying.orderCode },
-                        { onSuccess: () => setPaying(null) }
-                      );
-                    }}
+                    onClick={() => setPaying(null)}
+                    className="rounded-md border px-3 py-1.5 text-sm hover:bg-muted"
                   >
-                    {settleMutation.isPending ? "Đang thanh toán..." : "Xác nhận thanh toán"}
+                    Đóng
                   </button>
+                </div>
 
-                  <div className="text-xs text-muted-foreground">
-                    * Hiện chỉ hỗ trợ <b>Tiền mặt</b> (API settle-cash).
+                <div className="grid gap-4 p-4 md:grid-cols-[260px_1fr]">
+                  <div className="space-y-2">
+                    {[
+                      ["CASH", "Tiền mặt"],
+                      ["SHOPEEPAY", "ShopeePay"],
+                      ["VISA", "VISA"],
+                      ["MASTER", "Master"],
+                      ["JCB", "JCB"],
+                      ["ATM", "ATM"],
+                      ["OTHER", "Khác"],
+                    ].map(([k, label]) => {
+                      const disabled = k !== "CASH";
+                      const active = payMethod === (k as any);
+                      return (
+                        <button
+                          key={k}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => setPayMethod(k as any)}
+                          className={[
+                            "w-full rounded-lg border px-3 py-3 text-left text-sm font-medium",
+                            active ? "border-primary bg-primary/5" : "hover:bg-muted",
+                            disabled ? "opacity-50 cursor-not-allowed" : "",
+                          ].join(" ")}
+                          title={disabled ? "Chưa hỗ trợ method này (hiện chỉ cash)" : ""}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <div className="rounded-lg border p-3">
+                        <div className="text-xs text-muted-foreground">Đã nhận</div>
+                        <input
+                          className="mt-1 w-full rounded-md border px-3 py-2 text-base"
+                          value={String(received)}
+                          onChange={(e) => {
+                            const digits = e.target.value.replace(/[^\d]/g, "");
+                            setReceived(digits ? Number(digits) : 0);
+                          }}
+                        />
+                        <div className="mt-1 text-xs text-muted-foreground">{formatVnd(received)}</div>
+                      </div>
+
+                      <div className="rounded-lg border p-3">
+                        <div className="text-xs text-muted-foreground">Tổng tiền thanh toán</div>
+                        <div className="mt-2 text-lg font-semibold">{total ? formatVnd(total) : "—"}</div>
+                        {!total && (
+                          <div className="mt-1 text-xs text-muted-foreground">(API chưa trả tổng tiền, vẫn có thể xác nhận)</div>
+                        )}
+                      </div>
+
+                      <div className="rounded-lg border p-3">
+                        <div className="text-xs text-muted-foreground">Tiền thừa</div>
+                        <div className="mt-2 text-lg font-semibold">{total ? formatVnd(change) : "—"}</div>
+                      </div>
+                    </div>
+
+                    {quick.length > 0 && (
+                      <div className="grid grid-cols-3 gap-2">
+                        {quick.map((a) => (
+                          <button
+                            key={a}
+                            type="button"
+                            className="rounded-lg border px-3 py-2 text-sm font-semibold hover:bg-muted"
+                            onClick={() => setReceived(a)}
+                          >
+                            {formatVnd(a)}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-4 gap-2">
+                      {[7, 8, 9].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted"
+                          onClick={() => pressDigit(n)}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                      <button type="button" className="rounded-lg border py-4 text-sm font-semibold hover:bg-muted" onClick={backspace}>
+                        ⌫
+                      </button>
+
+                      {[4, 5, 6].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted"
+                          onClick={() => pressDigit(n)}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                      <button type="button" className="rounded-lg border py-4 text-sm font-semibold hover:bg-muted" onClick={clear}>
+                        C
+                      </button>
+
+                      {[1, 2, 3].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted"
+                          onClick={() => pressDigit(n)}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                      <div className="rounded-lg border py-4" />
+
+                      <button type="button" className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted" onClick={() => pressDigit(0)}>
+                        0
+                      </button>
+                      <button type="button" className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted" onClick={press00}>
+                        00
+                      </button>
+                      <button type="button" className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted" onClick={press000}>
+                        000
+                      </button>
+                      <div className="rounded-lg border py-4" />
+                    </div>
+
+                    <button
+                      type="button"
+                      className={[
+                        "mt-2 w-full rounded-lg py-4 text-base font-semibold",
+                        canConfirm
+                          ? "bg-green-600 text-white hover:bg-green-700"
+                          : "bg-muted text-muted-foreground cursor-not-allowed",
+                      ].join(" ")}
+                      disabled={!canConfirm}
+                      onClick={() => {
+                        const ok = window.confirm(`Xác nhận thanh toán cho ${paying.orderCode}?`);
+                        if (!ok) return;
+                        settleMutation.mutate({ orderCode: paying.orderCode }, { onSuccess: () => setPaying(null) });
+                      }}
+                    >
+                      {settleMutation.isPending ? "Đang thanh toán..." : "Xác nhận thanh toán"}
+                    </button>
+
+                    <div className="text-xs text-muted-foreground">
+                      * Hiện chỉ hỗ trợ <b>Tiền mặt</b> (API settle-cash).
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
     </main>
   );
 }

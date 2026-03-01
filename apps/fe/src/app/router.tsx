@@ -17,9 +17,18 @@ import { InternalPosMenuPage } from '../features/internal/pos/pages/InternalPosM
 import { InternalKitchenPage } from "../features/internal/kitchen/pages/InternalKitchenPage";
 import { InternalAdminPage } from "../features/internal/admin/pages/InternalAdminPage";
 import { InternalCashierPage } from "../features/internal/cashier/pages/InternalCashierPage";
+import { InternalIndexRedirect } from "../features/internal/auth/pages/InternalIndexRedirect";
 export const router = createBrowserRouter([
   // ✅ App entry: vào menu trước
 { path: "/", element: <AppEntryPage /> },
+{
+  path: "i/:branchId",
+  element: (
+    <RequireAuth>
+      <InternalIndexRedirect />
+    </RequireAuth>
+  ),
+},
 {
   path: "i/:branchId/admin",
   element: (
