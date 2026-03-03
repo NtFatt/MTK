@@ -18,6 +18,8 @@ import { InternalKitchenPage } from "../features/internal/kitchen/pages/Internal
 import { InternalAdminPage } from "../features/internal/admin/pages/InternalAdminPage";
 import { InternalCashierPage } from "../features/internal/cashier/pages/InternalCashierPage";
 import { InternalIndexRedirect } from "../features/internal/auth/pages/InternalIndexRedirect";
+import { InternalInventoryStockPage } from "../features/internal/inventory/pages/InternalInventoryStockPage";
+
 export const router = createBrowserRouter([
   // ✅ App entry: vào menu trước
 { path: "/", element: <AppEntryPage /> },
@@ -34,6 +36,15 @@ export const router = createBrowserRouter([
   element: (
     <RequireAuth>
       <InternalAdminPage />
+    </RequireAuth>
+  ),
+  
+},
+{
+  path: "i/:branchId/admin/inventory/stock",
+  element: (
+    <RequireAuth>
+      <InternalInventoryStockPage />
     </RequireAuth>
   ),
 },

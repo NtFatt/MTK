@@ -19,5 +19,5 @@ export const realtimeConfig = {
   internalBranchRoomPrefix:
     (import.meta.env.VITE_RT_INTERNAL_BRANCH_ROOM_PREFIX as string | undefined) || "branch",
   internalOpsRoomPrefix:
-    (import.meta.env.VITE_RT_INTERNAL_OPS_ROOM_PREFIX as string | undefined) || "ops",
+    (import.meta.env.VITE_RT_INTERNAL_BRANCH_ROOM_PREFIX as string | undefined) || "branch",
 } as const;

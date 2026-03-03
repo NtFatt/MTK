@@ -56,6 +56,17 @@ function defaultPermissionsForRole(role: Role): string[] {
         "reservations.checkin",
         "staff.read",
         "staff.manage",
+      
+        
+
+           "inventory.read",
+        "inventory.adjust",
+        "inventory.holds.read",
+        "menu.manage",
+        "payments.mock_success",
+        "maintenance.run",
+        "observability.admin.read",
+        "realtime.admin",
       ];
 
     case "BRANCH_MANAGER":

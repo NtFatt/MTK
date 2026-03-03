@@ -134,8 +134,11 @@ export function routeRealtimeEvent(env: EventEnvelope) {
 
     const branchId = tryExtractBranchId(env);
     if (branchId != null) {
-      // ✅ prefix invalidate (exact=false) để match cả key có thêm filters object
+      // kitchen auto refresh
       enqueueInvalidate(qk.orders.kitchenQueue({ branchId }), false);
+
+      // cashier unpaid auto refresh (để case BE chỉ emit order.* mà không emit payment.success)
+      enqueueInvalidate(qk.orders.cashierUnpaid({ branchId }), false);
     }
     return;
   }
@@ -143,6 +146,12 @@ export function routeRealtimeEvent(env: EventEnvelope) {
   if (type === "payment.success") {
     const orderCode = tryExtractOrderCode(env);
     if (orderCode) enqueueInvalidate(qk.orders.byCode(orderCode), true);
+
+    const branchId = tryExtractBranchId(env);
+    if (branchId != null) {
+      // exact=false để match cả key có thêm filters trong tương lai
+      enqueueInvalidate(qk.orders.cashierUnpaid({ branchId }), false);
+    }
     return;
   }
 

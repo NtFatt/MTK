@@ -71,8 +71,7 @@ export function InternalTablesPage() {
   const setTable = useStore(posStore, (s) => s.setTable);
   const setPosSession = useStore(posStore, (s) => s.setSession);
 
-  // PR-07: join ops room (không join branch room)
-  const room = branchParam ? `${realtimeConfig.internalOpsRoomPrefix}:${branchParam}` : null;
+const room = branchParam ? `${realtimeConfig.internalBranchRoomPrefix}:${branchParam}` : null;
 
   useRealtimeRoom(
     room,
