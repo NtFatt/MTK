@@ -21,8 +21,7 @@ function normalizeStockRow(x: any): InventoryStockRow | null {
   const itemId = x.itemId ?? x.item_id ?? x.id ?? x.menuItemId ?? x.menu_item_id;
   if (itemId == null) return null;
 
-  const available = Number(x.available ?? x.qty ?? x.stock ?? 0);
-  const onHold = Number(x.onHold ?? x.on_hold ?? x.hold ?? 0);
+const available = Number(x.quantity ?? x.available ?? x.qty ?? x.stock ?? 0);  const onHold = Number(x.onHold ?? x.on_hold ?? x.hold ?? 0);
 
   return {
     itemId,
@@ -61,4 +60,61 @@ export async function adjustInventoryStock(input: AdjustStockInput): Promise<unk
       quantity: input.quantity,
     }),
   });
+}
+
+export type InventoryHoldRow = {
+  holdKey: string;
+  cartKey: string;
+  branchId: string;
+  itemId: string;
+  optionsHash: string;
+  noteHash: string;
+  qty: number;
+  expireAtMs: number;
+};
+
+function normalizeHoldRow(x: any): InventoryHoldRow | null {
+  if (!x || typeof x !== "object") return null;
+
+  const holdKey = String(x.holdKey ?? x.hold_key ?? "");
+  const cartKey = String(x.cartKey ?? x.cart_key ?? "");
+  const branchId = String(x.branchId ?? x.branch_id ?? "");
+  const itemId = String(x.itemId ?? x.item_id ?? "");
+  if (!holdKey || !cartKey || !branchId || !itemId) return null;
+
+  const qty = Number(x.qty ?? x.quantity ?? 0);
+  const expireAtMs = Number(x.expireAtMs ?? x.expire_at_ms ?? x.expireAt ?? 0);
+
+  return {
+    holdKey,
+    cartKey,
+    branchId,
+    itemId,
+    optionsHash: String(x.optionsHash ?? x.options_hash ?? ""),
+    noteHash: String(x.noteHash ?? x.note_hash ?? ""),
+    qty: Number.isFinite(qty) ? Math.max(0, Math.floor(qty)) : 0,
+    expireAtMs: Number.isFinite(expireAtMs) ? Math.max(0, Math.floor(expireAtMs)) : 0,
+  };
+}
+
+function normalizeHoldList(raw: unknown): InventoryHoldRow[] {
+  if (Array.isArray(raw)) return raw.map(normalizeHoldRow).filter((v): v is InventoryHoldRow => !!v);
+  if (raw && typeof raw === "object") {
+    const o: any = raw as any;
+    const items = Array.isArray(o.items) ? o.items : Array.isArray(o.data) ? o.data : null;
+    if (items) return items.map(normalizeHoldRow).filter((v: any) => !!v);
+  }
+  return [];
+}
+
+export async function fetchInventoryHolds(input: {
+  branchId: string | number;
+  limit?: number;
+}): Promise<InventoryHoldRow[]> {
+  const qs = new URLSearchParams();
+  qs.set("branchId", String(input.branchId));
+  if (input.limit != null) qs.set("limit", String(input.limit));
+
+  const res = await apiFetchAuthed<unknown>(`/admin/inventory/holds?${qs.toString()}`);
+  return normalizeHoldList(res);
 }

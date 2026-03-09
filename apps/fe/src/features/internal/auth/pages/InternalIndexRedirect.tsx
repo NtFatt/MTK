@@ -17,6 +17,14 @@ function resolveInternalHomePath(session: any, branchId: string) {
 
   if (isAdmin) return `/i/${branchId}/admin`;
 
+  // ✅ Branch Manager / Inventory operator
+  const isBranchManager =
+    role === "BRANCH_MANAGER" ||
+    perms.includes("inventory.read") ||
+    perms.includes("inventory.adjust") ||
+    perms.includes("inventory.holds.read");
+
+  if (isBranchManager) return `/i/${branchId}/inventory/stock`;
   if (perms.includes("cashier.unpaid.read") || role === "CASHIER") return `/i/${branchId}/cashier`;
   if (perms.includes("kitchen.queue.read") || role === "KITCHEN") return `/i/${branchId}/kitchen`;
   if (perms.includes("ops.tables.read") || role === "OPS") return `/i/${branchId}/tables`;

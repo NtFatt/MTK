@@ -56,10 +56,10 @@ function defaultPermissionsForRole(role: Role): string[] {
         "reservations.checkin",
         "staff.read",
         "staff.manage",
-      
-        
 
-           "inventory.read",
+
+
+        "inventory.read",
         "inventory.adjust",
         "inventory.holds.read",
         "menu.manage",
@@ -84,6 +84,10 @@ function defaultPermissionsForRole(role: Role): string[] {
         "reservations.confirm",
         "reservations.checkin",
         "staff.read",
+        "inventory.read",
+        "inventory.adjust",
+        "inventory.holds.read",
+        "menu.manage",
       ];
     case "STAFF":
       return [
@@ -324,7 +328,7 @@ export async function adminLogin(payload: AdminLoginPayload): Promise<AuthSessio
         ? new Date(res.expiresAt).getTime()
         : Number(res.expiresAt)
       : getExpiresAtFromClaims(claims);
-const effectivePermissions = Array.from(new Set([...defaultPermissionsForRole(role), ...permissions]));
+  const effectivePermissions = Array.from(new Set([...defaultPermissionsForRole(role), ...permissions]));
   return {
     accessToken,
     refreshToken: undefined, // internal: no refresh in contract
