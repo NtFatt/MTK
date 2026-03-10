@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useStore } from "zustand";
 
@@ -42,7 +42,7 @@ function formatElapsed(iso?: string) {
 type LiveInfo = {
   sessionKey?: string;
   cartKey?: string;
-  startedAt?: string; // fallback từ cart.createdAt
+  startedAt?: string;
   items?: { itemId: string; name?: string; qty: number; note?: string }[];
 };
 
@@ -50,7 +50,6 @@ export function InternalTablesPage() {
   const session = useStore(authStore, (s) => s.session);
   const { branchId } = useParams<{ branchId: string }>();
 
-  // fallback branch cho route /i/pos/tables (không có :branchId)
   const branchParam = branchId ?? (session?.branchId != null ? String(session.branchId) : "");
   const branchKey = Number.isFinite(Number(branchParam)) ? Number(branchParam) : branchParam;
 
@@ -71,7 +70,7 @@ export function InternalTablesPage() {
   const setTable = useStore(posStore, (s) => s.setTable);
   const setPosSession = useStore(posStore, (s) => s.setSession);
 
-const room = branchParam ? `${realtimeConfig.internalBranchRoomPrefix}:${branchParam}` : null;
+  const room = branchParam ? `${realtimeConfig.internalBranchRoomPrefix}:${branchParam}` : null;
 
   useRealtimeRoom(
     room,
@@ -86,12 +85,22 @@ const room = branchParam ? `${realtimeConfig.internalBranchRoomPrefix}:${branchP
       : undefined
   );
 
-  const { data, isLoading, error, refetch } = useOpsTablesQuery(branchKey, enabled);
+  const { data, isLoading, error, refetch, isFetching } = useOpsTablesQuery(branchKey, enabled);
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const handler: EventListener = () => {
+      void refetch();
+    };
+
+    window.addEventListener("internal.refresh", handler);
+    return () => window.removeEventListener("internal.refresh", handler);
+  }, [enabled, refetch]);
 
   const [live, setLive] = useState<Record<string, LiveInfo>>({});
   const [noSessionFor, setNoSessionFor] = useState<string | null>(null);
 
-  // ========= Live detail (READ ONLY) =========
   const loadLive = useAppMutation({
     mutationFn: async (t: { tableId: string | number; sessionKey?: string | null; cartKey?: string | null }) => {
       const sessionKey = String(t.sessionKey ?? "").trim();
@@ -112,7 +121,6 @@ const room = branchParam ? `${realtimeConfig.internalBranchRoomPrefix}:${branchP
       const items = normalizeOpsCartItems(cartDetail);
       const startedAt = extractCartCreatedAt(cartDetail);
 
-      // map itemId -> name
       const menuRes = await apiFetch<any>(
         `/menu/items?branchId=${encodeURIComponent(String(branchParam))}&limit=500`
       );
@@ -151,7 +159,6 @@ const room = branchParam ? `${realtimeConfig.internalBranchRoomPrefix}:${branchP
     },
   });
 
-  // ========= Close session =========
   const closeMut = useAppMutation({
     mutationFn: async (p: { tableId: string | number; sessionKey: string }) => {
       await closeOpsSession({ sessionKey: p.sessionKey });
@@ -170,7 +177,6 @@ const room = branchParam ? `${realtimeConfig.internalBranchRoomPrefix}:${branchP
   async function selectTableAndGoMenu(t: any, directionId?: string) {
     if (!t?.id) return;
 
-    // lưu bàn vào store
     setTable({
       branchId: branchKey,
       tableId: String(t.id),
@@ -178,41 +184,22 @@ const room = branchParam ? `${realtimeConfig.internalBranchRoomPrefix}:${branchP
       directionId,
     });
 
-    // open ops session (đúng chỗ: chỉ khi user "Gọi món")
     const s = await openOpsSession({ tableId: t.id, directionId });
     const sessionKey = extractSessionKey(s);
     if (!sessionKey) throw new Error("Missing sessionKey from /admin/ops/sessions/open");
 
-    // get/create ops cart
     const c = await getOrCreateOpsCartBySessionKey(sessionKey);
     const cartKey = extractCartKey(c) ?? undefined;
 
-    // lưu session/cart vào store
     setPosSession({ sessionKey, cartKey });
 
-    // qua menu POS
     nav("/i/pos/menu");
   }
 
   return (
-    <main className="mx-auto max-w-5xl p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Ops — Danh sách bàn</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Chi nhánh: {branchParam || "—"}</p>
-        </div>
-        <button
-          className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-          onClick={() => void refetch()}
-          disabled={!enabled}
-          type="button"
-        >
-          Refresh
-        </button>
-      </div>
-
+    <div className="mx-auto max-w-6xl space-y-6">
       {isBranchMismatch && (
-        <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
           Bạn không được phép truy cập dữ liệu chi nhánh khác.
         </div>
       )}
@@ -221,12 +208,16 @@ const room = branchParam ? `${realtimeConfig.internalBranchRoomPrefix}:${branchP
         <Can
           perm="ops.tables.read"
           fallback={
-            <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+            <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
               Không đủ quyền: <span className="font-mono">ops.tables.read</span>
             </div>
           }
         >
-          <section className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+          {isFetching && !isLoading && (
+            <div className="text-sm text-muted-foreground">Đang làm mới...</div>
+          )}
+
+          <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {isLoading && (
               <>
                 <Card>
@@ -240,6 +231,7 @@ const room = branchParam ? `${realtimeConfig.internalBranchRoomPrefix}:${branchP
                     </div>
                   </CardContent>
                 </Card>
+
                 <Card>
                   <CardHeader>
                     <Skeleton className="h-5 w-40" />
@@ -274,7 +266,6 @@ const room = branchParam ? `${realtimeConfig.internalBranchRoomPrefix}:${branchP
               const liveInfo = tableIdStr && live[tableIdStr] ? live[tableIdStr] : {};
               const directionId = (t as any).directionId as string | undefined;
 
-              // best-effort mapping (BE có thể đặt tên field khác)
               const sessionKeyFromRow =
                 (t as any).sessionKey ?? (t as any).activeSessionKey ?? (t as any).currentSessionKey ?? null;
 
@@ -325,7 +316,6 @@ const room = branchParam ? `${realtimeConfig.internalBranchRoomPrefix}:${branchP
                         </div>
                       )}
 
-                      {/* 1) Ưu tiên preview order từ BE */}
                       {t.activeItemsPreview ? (
                         <div className="mt-1 text-xs opacity-80">
                           {t.activeItemsPreview}
@@ -339,7 +329,6 @@ const room = branchParam ? `${realtimeConfig.internalBranchRoomPrefix}:${branchP
                         <div className="mt-1 text-xs opacity-70">Chưa có món (khách chưa gọi)</div>
                       )}
 
-                      {/* 2) Nếu đã load ops cart thì show thêm */}
                       {(liveInfo?.items?.length ?? 0) > 0 && (
                         <>
                           <div className="mt-2 text-[11px] uppercase tracking-wide opacity-60">Chi tiết (ops cart)</div>
@@ -358,9 +347,7 @@ const room = branchParam ? `${realtimeConfig.internalBranchRoomPrefix}:${branchP
                       )}
                     </div>
 
-                    {/* Actions */}
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {/* Chi tiết: read-only, không phụ thuộc ops.sessions.open */}
                       <button
                         className="inline-flex items-center justify-center rounded-md border px-3 py-1 text-sm"
                         onClick={() => {
@@ -383,7 +370,6 @@ const room = branchParam ? `${realtimeConfig.internalBranchRoomPrefix}:${branchP
                         {loadLive.isPending ? "Đang tải..." : "Chi tiết"}
                       </button>
 
-                      {/* Gọi món */}
                       <Can perm="ops.sessions.open">
                         <button
                           className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-1 text-sm text-primary-foreground hover:opacity-90"
@@ -395,7 +381,6 @@ const room = branchParam ? `${realtimeConfig.internalBranchRoomPrefix}:${branchP
                         </button>
                       </Can>
 
-                      {/* Đóng phiên */}
                       {sessionKeyFromRow ? (
                         <Can perm="ops.sessions.close">
                           <button
@@ -421,6 +406,6 @@ const room = branchParam ? `${realtimeConfig.internalBranchRoomPrefix}:${branchP
           </section>
         </Can>
       )}
-    </main>
+    </div>
   );
 }

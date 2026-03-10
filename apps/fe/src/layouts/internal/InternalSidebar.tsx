@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { NavLink, useLocation, useParams } from "react-router-dom";
 import { cn } from "../../shared/utils/cn";
 
@@ -31,11 +31,10 @@ export function InternalSidebar() {
   const invHolds = `${adminBase}/inventory/holds`;
   const invAdj = `${adminBase}/inventory/adjustments`;
 
-  const [invOpen, setInvOpen] = useState(false);
+  const isInventoryRoute = loc.pathname.includes("/admin/inventory/");
+  const [invOpen, setInvOpen] = useState(isInventoryRoute);
 
-  useEffect(() => {
-    if (loc.pathname.includes("/admin/inventory/")) setInvOpen(true);
-  }, [loc.pathname]);
+  const showInventoryChildren = invOpen || isInventoryRoute;
 
   return (
     <aside className="sticky top-0 h-screen w-[280px] border-r bg-background">
@@ -57,16 +56,16 @@ export function InternalSidebar() {
             onClick={() => setInvOpen((v) => !v)}
             className={cn(
               "mt-2 flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition",
-              loc.pathname.includes("/admin/inventory/")
+              isInventoryRoute
                 ? "bg-muted text-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
             <span>Kho nguyên liệu</span>
-            <span className="text-xs">{invOpen ? "▾" : "▸"}</span>
+            <span className="text-xs">{showInventoryChildren ? "▾" : "▸"}</span>
           </button>
 
-          {invOpen && (
+          {showInventoryChildren && (
             <div className="ml-2 mt-1 space-y-1 border-l pl-2">
               <NavItem to={invStock} label="Tồn kho" />
               <NavItem to={invHolds} label="Holds" />
@@ -75,9 +74,7 @@ export function InternalSidebar() {
           )}
         </nav>
 
-        <div className="border-t px-3 py-3 text-xs text-muted-foreground">
-          v0.1 • internal
-        </div>
+        <div className="border-t px-3 py-3 text-xs text-muted-foreground">v0.1 • internal</div>
       </div>
     </aside>
   );

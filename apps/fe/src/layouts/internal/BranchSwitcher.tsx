@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const KEY = "hadilao.admin.recentBranches";
@@ -16,11 +16,12 @@ function loadRecent(): string[] {
 function saveRecent(next: string[]) {
   try {
     localStorage.setItem(KEY, JSON.stringify(next.slice(0, 8)));
-  } catch {}
+  } catch {
+    return;
+  }
 }
 
 function replaceBranch(pathname: string, newBranchId: string) {
-  // /i/1/...  -> /i/NEW/...
   if (pathname.startsWith("/i/")) return pathname.replace(/^\/i\/[^/]+/, `/i/${newBranchId}`);
   return `/i/${newBranchId}/admin/dashboard`;
 }
@@ -31,17 +32,17 @@ export function BranchSwitcher({ branchId }: { branchId: string }) {
 
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
-
-  const recent = useMemo(() => loadRecent(), [open]);
+  const [recent, setRecent] = useState<string[]>(() => loadRecent());
 
   function go(id: string) {
     const bid = String(id).trim();
     if (!bid) return;
 
     const nextPath = replaceBranch(loc.pathname, bid);
-    const nextRecent = [bid, ...recent.filter((x) => x !== bid)];
-    saveRecent(nextRecent);
+    const nextRecent = [bid, ...recent.filter((x) => x !== bid)].slice(0, 8);
 
+    saveRecent(nextRecent);
+    setRecent(nextRecent);
     setOpen(false);
     setInput("");
     nav(nextPath);

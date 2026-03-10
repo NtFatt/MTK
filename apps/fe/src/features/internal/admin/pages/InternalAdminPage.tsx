@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useStore } from "zustand";
 
 import { authStore } from "../../../../shared/auth/authStore";
@@ -56,7 +56,6 @@ export function InternalAdminPage() {
     staleTime: 5000,
   });
 
-  // ---- Create staff (admin creates account) ----
   const [username, setUsername] = useState("");
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
@@ -84,7 +83,6 @@ export function InternalAdminPage() {
     },
   });
 
-  // ---- Update role/status/reset password ----
   const updateRoleMutation = useAppMutation({
     invalidateKeys: [listKey as unknown as unknown[]],
     mutationFn: async (v: { staffId: string; role: StaffRole }) => {
@@ -117,25 +115,11 @@ export function InternalAdminPage() {
 
   return (
     <main className="mx-auto max-w-6xl p-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Admin Console</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Chi nhánh: <span className="font-mono">{branchParam || "—"}</span>
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Link to={`/i/${branchParam}/tables`} className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted">
-            Tables
-          </Link>
-          <Link to={`/i/${branchParam}/kitchen`} className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted">
-            Kitchen
-          </Link>
-          <Link to={`/i/pos/menu`} className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted">
-            POS
-          </Link>
-        </div>
+      <div>
+        <h1 className="text-2xl font-semibold">Admin Console</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Chi nhánh: <span className="font-mono">{branchParam || "—"}</span>
+        </p>
       </div>
 
       {!canRead && (
@@ -144,7 +128,6 @@ export function InternalAdminPage() {
         </div>
       )}
 
-      {/* Create staff */}
       {canManage && (
         <section className="mt-6">
           <Card>
@@ -171,7 +154,12 @@ export function InternalAdminPage() {
 
                 <div className="space-y-2">
                   <Label>Mật khẩu tạm</Label>
-                  <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder=">= 4 ký tự" />
+                  <Input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder=">= 4 ký tự"
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -212,7 +200,6 @@ export function InternalAdminPage() {
         </section>
       )}
 
-      {/* Staff list */}
       <section className="mt-6">
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">Danh sách nhân viên</h2>
@@ -240,7 +227,9 @@ export function InternalAdminPage() {
             {listQuery.error && (
               <div className="text-sm text-destructive">
                 {listQuery.error.message}
-                {listQuery.error.correlationId && <span className="ml-2 text-xs">({listQuery.error.correlationId})</span>}
+                {listQuery.error.correlationId && (
+                  <span className="ml-2 text-xs">({listQuery.error.correlationId})</span>
+                )}
               </div>
             )}
 
@@ -248,7 +237,10 @@ export function InternalAdminPage() {
               <div className="space-y-2">
                 {(listQuery.data?.items ?? []).map((u) => {
                   const id = String(u.staffId);
-                  const pending = updateRoleMutation.isPending || updateStatusMutation.isPending || resetPassMutation.isPending;
+                  const pending =
+                    updateRoleMutation.isPending ||
+                    updateStatusMutation.isPending ||
+                    resetPassMutation.isPending;
 
                   return (
                     <div key={id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-3">
@@ -270,7 +262,12 @@ export function InternalAdminPage() {
                               className="h-9 rounded-md border bg-background px-2 text-sm"
                               value={u.role}
                               disabled={pending}
-                              onChange={(e) => updateRoleMutation.mutate({ staffId: id, role: e.target.value as StaffRole })}
+                              onChange={(e) =>
+                                updateRoleMutation.mutate({
+                                  staffId: id,
+                                  role: e.target.value as StaffRole,
+                                })
+                              }
                             >
                               <option value="STAFF">STAFF</option>
                               <option value="KITCHEN">KITCHEN</option>
@@ -282,7 +279,12 @@ export function InternalAdminPage() {
                               className="h-9 rounded-md border bg-background px-2 text-sm"
                               value={u.status}
                               disabled={pending}
-                              onChange={(e) => updateStatusMutation.mutate({ staffId: id, status: e.target.value as StaffStatus })}
+                              onChange={(e) =>
+                                updateStatusMutation.mutate({
+                                  staffId: id,
+                                  status: e.target.value as StaffStatus,
+                                })
+                              }
                             >
                               <option value="ACTIVE">ACTIVE</option>
                               <option value="DISABLED">DISABLED</option>

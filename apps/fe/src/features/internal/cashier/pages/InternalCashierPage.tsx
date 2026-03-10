@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import { useStore } from "zustand";
 
 import { authStore } from "../../../../shared/auth/authStore";
@@ -23,7 +23,6 @@ type OrderRow = {
   updatedAt: string;
   branchId: string | null;
   tableCode: string | null;
-
   total?: number;
   subtotal?: number;
   payableTotal?: number;
@@ -79,7 +78,7 @@ function clearIdemKey(scope: string) {
   try {
     sessionStorage.removeItem(`idem:${scope}`);
   } catch {
-    // noop: sessionStorage may be unavailable (private mode)
+    // noop
   }
 }
 
@@ -101,17 +100,16 @@ export function InternalCashierPage() {
 
   const enabled = !!session && !!bid && !isBranchMismatch && canRead;
 
-  // ✅ PR-09: join cashier room để nhận realtime invalidate
   useRealtimeRoom(
     bid ? `cashier:${bid}` : null,
     enabled && !!bid,
     session
       ? {
-        kind: "internal",
-        userKey: session.user?.id ? String(session.user.id) : "internal",
-        branchId: bid ? String(bid) : session?.branchId != null ? String(session.branchId) : undefined,
-        token: session.accessToken,
-      }
+          kind: "internal",
+          userKey: session.user?.id ? String(session.user.id) : "internal",
+          branchId: bid ? String(bid) : session?.branchId != null ? String(session.branchId) : undefined,
+          token: session.accessToken,
+        }
       : undefined
   );
 
@@ -135,6 +133,17 @@ export function InternalCashierPage() {
     staleTime: 3000,
   });
 
+  useEffect(() => {
+    if (!enabled) return;
+
+    const handler: EventListener = () => {
+      void listQuery.refetch();
+    };
+
+    window.addEventListener("internal.refresh", handler);
+    return () => window.removeEventListener("internal.refresh", handler);
+  }, [enabled, listQuery]);
+
   const settleMutation = useAppMutation<SettleCashResponse, any, { orderCode: string }>({
     invalidateKeys: [[...listKey] as unknown as unknown[]],
     mutationFn: async ({ orderCode }) => {
@@ -149,7 +158,6 @@ export function InternalCashierPage() {
         }
       );
 
-      // ✅ chỉ clear khi thành công để retry còn reuse idem key
       clearIdemKey(scope);
       return res;
     },
@@ -160,32 +168,17 @@ export function InternalCashierPage() {
     const s = q.trim().toLowerCase();
     if (!s) return items;
     return items.filter((it) => {
-      return String(it.orderCode ?? "").toLowerCase().includes(s) || String(it.tableCode ?? "").toLowerCase().includes(s);
+      return (
+        String(it.orderCode ?? "").toLowerCase().includes(s) ||
+        String(it.tableCode ?? "").toLowerCase().includes(s)
+      );
     });
   }, [listQuery.data, q]);
 
   return (
-    <main className="mx-auto max-w-6xl p-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Cashier — Unpaid</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Chi nhánh: <span className="font-mono">{bid || "—"}</span>
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Link to={`/i/${bid}/tables`} className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted">
-            Tables
-          </Link>
-          <Link to={`/i/${bid}/kitchen`} className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted">
-            Kitchen
-          </Link>
-        </div>
-      </div>
-
+    <div className="mx-auto max-w-6xl space-y-6">
       {isBranchMismatch && (
-        <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
           Bạn không được phép truy cập dữ liệu chi nhánh khác.
         </div>
       )}
@@ -194,12 +187,12 @@ export function InternalCashierPage() {
         <Can
           perm="cashier.unpaid.read"
           fallback={
-            <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+            <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
               Không có quyền cashier (cần <span className="font-mono">cashier.unpaid.read</span>).
             </div>
           }
         >
-          <section className="mt-6">
+          <section className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <Input
                 className="max-w-sm"
@@ -207,13 +200,13 @@ export function InternalCashierPage() {
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Tìm ORD... / mã bàn..."
               />
-              <Button variant="secondary" onClick={() => listQuery.refetch()} disabled={!enabled || listQuery.isFetching}>
-                {listQuery.isFetching ? "Đang tải..." : "Refresh"}
-              </Button>
+              {listQuery.isFetching && (
+                <div className="text-sm text-muted-foreground">Đang làm mới...</div>
+              )}
             </div>
 
             {listQuery.error && (
-              <Alert variant="destructive" className="mt-4">
+              <Alert variant="destructive">
                 <AlertDescription>
                   {listQuery.error.message}
                   {listQuery.error.correlationId && (
@@ -224,7 +217,7 @@ export function InternalCashierPage() {
             )}
 
             {settleMutation.error && (
-              <Alert variant="destructive" className="mt-4">
+              <Alert variant="destructive">
                 <AlertDescription>
                   {settleMutation.error.message}
                   {settleMutation.error.correlationId && (
@@ -234,7 +227,7 @@ export function InternalCashierPage() {
               </Alert>
             )}
 
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               {filtered.map((it) => (
                 <Card key={it.orderCode}>
                   <CardHeader className="pb-2">
@@ -279,7 +272,7 @@ export function InternalCashierPage() {
             </div>
 
             {!listQuery.isLoading && filtered.length === 0 && (
-              <div className="mt-6 text-sm text-muted-foreground">Không có đơn nào.</div>
+              <div className="text-sm text-muted-foreground">Không có đơn nào.</div>
             )}
           </section>
         </Can>
@@ -337,7 +330,7 @@ export function InternalCashierPage() {
                           className={[
                             "w-full rounded-lg border px-3 py-3 text-left text-sm font-medium",
                             active ? "border-primary bg-primary/5" : "hover:bg-muted",
-                            disabled ? "opacity-50 cursor-not-allowed" : "",
+                            disabled ? "cursor-not-allowed opacity-50" : "",
                           ].join(" ")}
                           title={disabled ? "Chưa hỗ trợ method này (hiện chỉ cash)" : ""}
                         >
@@ -366,7 +359,9 @@ export function InternalCashierPage() {
                         <div className="text-xs text-muted-foreground">Tổng tiền thanh toán</div>
                         <div className="mt-2 text-lg font-semibold">{total ? formatVnd(total) : "—"}</div>
                         {!total && (
-                          <div className="mt-1 text-xs text-muted-foreground">(API chưa trả tổng tiền, vẫn có thể xác nhận)</div>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            (API chưa trả tổng tiền, vẫn có thể xác nhận)
+                          </div>
                         )}
                       </div>
 
@@ -402,7 +397,11 @@ export function InternalCashierPage() {
                           {n}
                         </button>
                       ))}
-                      <button type="button" className="rounded-lg border py-4 text-sm font-semibold hover:bg-muted" onClick={backspace}>
+                      <button
+                        type="button"
+                        className="rounded-lg border py-4 text-sm font-semibold hover:bg-muted"
+                        onClick={backspace}
+                      >
                         ⌫
                       </button>
 
@@ -416,7 +415,11 @@ export function InternalCashierPage() {
                           {n}
                         </button>
                       ))}
-                      <button type="button" className="rounded-lg border py-4 text-sm font-semibold hover:bg-muted" onClick={clear}>
+                      <button
+                        type="button"
+                        className="rounded-lg border py-4 text-sm font-semibold hover:bg-muted"
+                        onClick={clear}
+                      >
                         C
                       </button>
 
@@ -432,13 +435,25 @@ export function InternalCashierPage() {
                       ))}
                       <div className="rounded-lg border py-4" />
 
-                      <button type="button" className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted" onClick={() => pressDigit(0)}>
+                      <button
+                        type="button"
+                        className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted"
+                        onClick={() => pressDigit(0)}
+                      >
                         0
                       </button>
-                      <button type="button" className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted" onClick={press00}>
+                      <button
+                        type="button"
+                        className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted"
+                        onClick={press00}
+                      >
                         00
                       </button>
-                      <button type="button" className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted" onClick={press000}>
+                      <button
+                        type="button"
+                        className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted"
+                        onClick={press000}
+                      >
                         000
                       </button>
                       <div className="rounded-lg border py-4" />
@@ -450,7 +465,7 @@ export function InternalCashierPage() {
                         "mt-2 w-full rounded-lg py-4 text-base font-semibold",
                         canConfirm
                           ? "bg-green-600 text-white hover:bg-green-700"
-                          : "bg-muted text-muted-foreground cursor-not-allowed",
+                          : "cursor-not-allowed bg-muted text-muted-foreground",
                       ].join(" ")}
                       disabled={!canConfirm}
                       onClick={() => {
@@ -471,6 +486,6 @@ export function InternalCashierPage() {
             </div>
           );
         })()}
-    </main>
+    </div>
   );
 }

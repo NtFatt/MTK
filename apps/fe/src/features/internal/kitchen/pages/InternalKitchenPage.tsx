@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useStore } from "zustand";
 
@@ -24,7 +24,6 @@ function normStatus(s: string | undefined) {
 
 function canKitchenAction(s: string) {
   const x = normStatus(s);
-  // Kitchen endpoint only allows RECEIVED / READY (BE enforce)
   if (x === "NEW") return { to: "RECEIVED" as const, label: "Nhận đơn" };
   if (x === "RECEIVED" || x === "PREPARING") return { to: "READY" as const, label: "Sẵn sàng" };
   return null;
@@ -46,10 +45,8 @@ export function InternalKitchenPage() {
     return perms.includes("kitchen.queue.read");
   }, [session?.permissions]);
 
-  // ✅ chỉ enable khi có quyền read + không mismatch
   const enabled = !!session && !isBranchMismatch && canReadKitchen;
 
-  // join kitchen room (prefix "kitchen:" đã được eventRouter parse branchId)
   useRealtimeRoom(
     branchParam ? `kitchen:${branchParam}` : null,
     enabled && !!branchParam,
@@ -79,6 +76,17 @@ export function InternalKitchenPage() {
     limit: 50,
   });
 
+  useEffect(() => {
+    if (!enabled) return;
+
+    const handler: EventListener = () => {
+      void refetch();
+    };
+
+    window.addEventListener("internal.refresh", handler);
+    return () => window.removeEventListener("internal.refresh", handler);
+  }, [enabled, refetch]);
+
   const { mutateAsync, isPending } = useChangeOrderStatusMutation(branchParam);
 
   const list = useMemo(() => {
@@ -95,22 +103,9 @@ export function InternalKitchenPage() {
   }, [data, q]);
 
   return (
-    <main className="mx-auto max-w-6xl p-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Kitchen — Queue</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Chi nhánh: <span className="font-mono">{branchParam || "—"}</span>
-          </p>
-        </div>
-
-        <Button variant="secondary" onClick={() => void refetch()} disabled={!enabled || isFetching}>
-          {isFetching ? "Đang tải..." : "Refresh"}
-        </Button>
-      </div>
-
+    <div className="mx-auto max-w-6xl space-y-6">
       {isBranchMismatch && (
-        <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
           Bạn không được phép truy cập dữ liệu chi nhánh khác.
         </div>
       )}
@@ -119,28 +114,31 @@ export function InternalKitchenPage() {
         <Can
           perm="kitchen.queue.read"
           fallback={
-            <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+            <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
               Không đủ quyền: <span className="font-mono">kitchen.queue.read</span>
             </div>
           }
         >
-          <section className="mt-6 flex flex-col gap-3 rounded-xl border bg-card p-4 md:flex-row md:items-center md:justify-between">
+          <section className="flex flex-col gap-3 rounded-xl border bg-card p-4 md:flex-row md:items-center md:justify-between">
             <div className="w-full md:max-w-sm">
               <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm ORD… / mã bàn…" />
             </div>
 
-            <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
-              <TabsList className="flex flex-wrap gap-1">
-                <TabsTrigger value="ALL">Tất cả</TabsTrigger>
-                <TabsTrigger value="NEW">NEW</TabsTrigger>
-                <TabsTrigger value="RECEIVED">RECEIVED</TabsTrigger>
-                <TabsTrigger value="PREPARING">PREPARING</TabsTrigger>
-                <TabsTrigger value="READY">READY</TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <div className="flex items-center gap-3">
+              {isFetching && <div className="text-sm text-muted-foreground">Đang làm mới...</div>}
+              <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
+                <TabsList className="flex flex-wrap gap-1">
+                  <TabsTrigger value="ALL">Tất cả</TabsTrigger>
+                  <TabsTrigger value="NEW">NEW</TabsTrigger>
+                  <TabsTrigger value="RECEIVED">RECEIVED</TabsTrigger>
+                  <TabsTrigger value="PREPARING">PREPARING</TabsTrigger>
+                  <TabsTrigger value="READY">READY</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </section>
 
-          <section className="mt-4">
+          <section>
             {isLoading && <div className="text-sm text-muted-foreground">Đang tải queue…</div>}
 
             {!isLoading && error && (
@@ -208,6 +206,6 @@ export function InternalKitchenPage() {
           </section>
         </Can>
       )}
-    </main>
+    </div>
   );
 }
