@@ -22,7 +22,7 @@ export type SetDevStockOutput = {
 };
 
 export class SetDevStock {
-  constructor(private readonly repo: IMaintenanceRepository, private readonly redis?: RedisClient | null) {}
+  constructor(private readonly repo: IMaintenanceRepository, private readonly redis?: RedisClient | null) { }
 
   async exec(input: SetDevStockInput): Promise<SetDevStockOutput> {
     if (!env.DEV_RESET_ENABLED) {
@@ -54,10 +54,10 @@ export class SetDevStock {
     try {
       // Clear any existing holds for this item.
       const pattern = `hold:*:${branchId}:${itemId}:*`;
-      let cursor = "0";
+      let cursor = 0;
       do {
-        const res: any = await this.redis.scan(cursor, { MATCH: pattern, COUNT: 200 } as any);
-        const nextCursor = Array.isArray(res) ? String(res[0]) : String(res?.cursor ?? "0");
+        const res: any = await (this.redis as any).scan(cursor, { MATCH: pattern, COUNT: 200 });
+        const nextCursor = Array.isArray(res) ? Number(res[0] ?? 0) : Number(res?.cursor ?? 0);
         const keys = Array.isArray(res) ? (res[1] ?? []) : (res?.keys ?? []);
         cursor = nextCursor;
 
@@ -73,8 +73,7 @@ export class SetDevStock {
             this.redis.zRem("holdidx", key),
           ]);
         }
-      } while (cursor !== "0");
-
+      } while (cursor !== 0);
       await Promise.all([
         this.redis.set(stockKey, String(quantity)),
         this.redis.set(reservedKey, "0"),

@@ -43,11 +43,18 @@ export class ResetDevState {
       ? undefined
       : Number(input.restockQty);
 
-    const db = await this.repo.resetDevState(now, input.branchId ?? null, {
-      restock,
-      restockQty: Number.isFinite(restockQty) && Number.isInteger(restockQty) ? restockQty : undefined,
-    });
+const resetOpts: { restock?: boolean; restockQty?: number } = {};
+resetOpts.restock = restock;
 
+if (
+  typeof restockQty === "number" &&
+  Number.isFinite(restockQty) &&
+  Number.isInteger(restockQty)
+) {
+  resetOpts.restockQty = restockQty;
+}
+
+const db = await this.repo.resetDevState(now, input.branchId ?? null, resetOpts);
     let redisFlushed = false;
     if (input.flushRedis && this.deps.flushRedis) {
       try {

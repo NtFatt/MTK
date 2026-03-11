@@ -3,7 +3,8 @@ import type {
   AdjustBranchStockOutput,
   BranchStockRow,
   IInventoryRepository,
-} from "../../../application/ports/repositories/IInventoryRepository.js";
+}
+  from "../../../../application/ports/repositories/IInventoryRepository.js";
 import { pool } from "../connection.js";
 
 function toIntQty(v: unknown): number {

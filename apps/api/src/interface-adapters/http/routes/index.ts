@@ -30,12 +30,14 @@ export function registerRoutes(
   app: Express,
   deps?: { eventBus?: IEventBus; redis?: RedisClient },
 ) {
-  // Inject deps vào buildControllers
   const diDeps: { eventBus?: IEventBus; redis?: RedisClient } = {};
   if (deps?.eventBus) diDeps.eventBus = deps.eventBus;
   if (deps?.redis) diDeps.redis = deps.redis;
 
   const redis = deps?.redis;
+
+  const routerDeps: { redis?: RedisClient } = {};
+  if (redis) routerDeps.redis = redis;
 
   const {
     tableController,
@@ -65,10 +67,10 @@ export function registerRoutes(
 
   app.get(`${v1}/health`, (_req, res) => res.json({ ok: true }));
 
-  // [NEW] Client Auth Routes (OTP Login/Register)
-  app.use(`${v1}/client`, createClientAuthRouter(clientAuthController, { redis }));
+  // Client auth
+  app.use(`${v1}/client`, createClientAuthRouter(clientAuthController, routerDeps));
 
-  // Business Routes
+  // Business routes
   app.use(`${v1}/tables`, createTableRouter(tableController));
   app.use(`${v1}/sessions`, createTableSessionRouter(tableSessionController));
   app.use(`${v1}/carts`, createCartRouter(cartController));
@@ -78,31 +80,21 @@ export function registerRoutes(
   app.use(`${v1}/menu`, createMenuRouter(menuController));
   app.use(`${v1}/realtime`, createRealtimeRouter(realtimeSnapshotController));
 
-  // Admin Routes
-  app.use(`${v1}/admin`, createAdminAuthRouter(adminAuthController, { redis }));
+  // Admin routes
+  app.use(`${v1}/admin`, createAdminAuthRouter(adminAuthController, routerDeps));
   app.use(`${v1}/admin`, createAdminStaffRouter(adminStaffController));
   app.use(`${v1}/admin`, createAdminInventoryRouter(adminInventoryController));
   app.use(`${v1}/admin`, createAdminOpsRouter(adminOpsController));
   app.use(`${v1}/admin`, createAdminKitchenRouter(adminKitchenController));
-  app.use(`${v1}/admin`, createAdminCashierRouter(adminCashierController, { redis }));
+  app.use(`${v1}/admin`, createAdminCashierRouter(adminCashierController, routerDeps));
   app.use(`${v1}/admin`, createAdminOrderRouter(adminOrderController, { legacyEnabled: env.LEGACY_API_ENABLED }));
-  app.use(
-    `${v1}/admin`,
-    createAdminReservationRouter(adminReservationController),
-  );
-  app.use(
-    `${v1}/admin`,
-    createAdminMaintenanceRouter(adminMaintenanceController),
-  );
+  app.use(`${v1}/admin`, createAdminReservationRouter(adminReservationController));
+  app.use(`${v1}/admin`, createAdminMaintenanceRouter(adminMaintenanceController));
   app.use(`${v1}/admin`, createAdminObservabilityRouter(adminObservabilityController));
   app.use(`${v1}/admin`, createAdminRealtimeRouter(adminRealtimeController));
-  app.use(`${v1}/admin`, createAdminPaymentRouter(adminPaymentController, { redis }));
+  app.use(`${v1}/admin`, createAdminPaymentRouter(adminPaymentController, routerDeps));
 
-  // ===== Legacy paths (deprecated) — behind flag (M0 contract lock) =====
-  // Policy:
-  // - Keep legacy code for migration strategy.
-  // - Default OFF: LEGACY_API_ENABLED=false.
-  // - When ON: legacy must map 1-1 to canonical and MUST be marked deprecated.
+  // Legacy paths (deprecated)
   if (env.LEGACY_API_ENABLED) {
     const legacyDeprecated = (_req: any, res: any, next: any) => {
       res.setHeader("Deprecation", "true");
@@ -110,9 +102,11 @@ export function registerRoutes(
       return next();
     };
 
-    app.get("/api/health", legacyDeprecated, (_req, res) => res.json({ ok: true, deprecated: true }));
+    app.get("/api/health", legacyDeprecated, (_req, res) =>
+      res.json({ ok: true, deprecated: true }),
+    );
 
-    app.use("/api/auth", legacyDeprecated, createClientAuthRouter(clientAuthController, { redis }));
+    app.use("/api/auth", legacyDeprecated, createClientAuthRouter(clientAuthController, routerDeps));
     app.use("/api/tables", legacyDeprecated, createTableRouter(tableController));
     app.use("/api/sessions", legacyDeprecated, createTableSessionRouter(tableSessionController));
     app.use("/api/carts", legacyDeprecated, createCartRouter(cartController));
@@ -122,17 +116,17 @@ export function registerRoutes(
     app.use("/api/menu", legacyDeprecated, createMenuRouter(menuController));
     app.use("/api/realtime", legacyDeprecated, createRealtimeRouter(realtimeSnapshotController));
 
-    app.use("/api/admin", legacyDeprecated, createAdminAuthRouter(adminAuthController, { redis }));
+    app.use("/api/admin", legacyDeprecated, createAdminAuthRouter(adminAuthController, routerDeps));
     app.use("/api/admin", legacyDeprecated, createAdminStaffRouter(adminStaffController));
     app.use("/api/admin", legacyDeprecated, createAdminInventoryRouter(adminInventoryController));
     app.use("/api/admin", legacyDeprecated, createAdminOpsRouter(adminOpsController));
     app.use("/api/admin", legacyDeprecated, createAdminKitchenRouter(adminKitchenController));
-    app.use("/api/admin", legacyDeprecated, createAdminCashierRouter(adminCashierController, { redis }));
+    app.use("/api/admin", legacyDeprecated, createAdminCashierRouter(adminCashierController, routerDeps));
     app.use("/api/admin", legacyDeprecated, createAdminOrderRouter(adminOrderController, { legacyEnabled: true }));
     app.use("/api/admin", legacyDeprecated, createAdminReservationRouter(adminReservationController));
     app.use("/api/admin", legacyDeprecated, createAdminMaintenanceRouter(adminMaintenanceController));
     app.use("/api/admin", legacyDeprecated, createAdminObservabilityRouter(adminObservabilityController));
     app.use("/api/admin", legacyDeprecated, createAdminRealtimeRouter(adminRealtimeController));
-    app.use("/api/admin", legacyDeprecated, createAdminPaymentRouter(adminPaymentController, { redis }));
+    app.use("/api/admin", legacyDeprecated, createAdminPaymentRouter(adminPaymentController, routerDeps));
   }
 }

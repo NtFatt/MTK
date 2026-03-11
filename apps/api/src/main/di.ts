@@ -99,6 +99,7 @@ import { ListActiveHolds } from "../application/use-cases/admin/inventory/ListAc
 import { GetStockDriftMetrics } from "../application/use-cases/admin/inventory/GetStockDriftMetrics.js";
 import { TriggerStockRehydrate } from "../application/use-cases/admin/inventory/TriggerStockRehydrate.js";
 import { BumpMenuVersion } from "../application/use-cases/admin/inventory/BumpMenuVersion.js";
+import { ListInventoryAdjustmentAudit } from "../application/use-cases/admin/inventory/ListInventoryAdjustmentAudit.js";
 
 // ===== 7 roles: ops/kitchen/cashier list endpoints (branch-scoped) =====
 import { ListBranchTables } from "../application/use-cases/admin/ops/ListBranchTables.js";
@@ -414,16 +415,18 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
   const getStockDriftMetrics = redis ? new GetStockDriftMetrics(redis) : null;
   const triggerStockRehydrate = redis ? new TriggerStockRehydrate(redis) : null;
   const bumpMenuVersion = redis ? new BumpMenuVersion(redis) : null;
+const listInventoryAdjustmentAudit = new ListInventoryAdjustmentAudit(auditRepo);
 
-  const adminInventoryController = new AdminInventoryController(
-    listBranchStock,
-    adjustBranchStock,
-    listActiveHolds,
-    getStockDriftMetrics,
-    triggerStockRehydrate,
-    bumpMenuVersion,
-    auditRepo,
-  );
+const adminInventoryController = new AdminInventoryController(
+  listBranchStock,
+  adjustBranchStock,
+  listActiveHolds,
+  getStockDriftMetrics,
+  triggerStockRehydrate,
+  bumpMenuVersion,
+  listInventoryAdjustmentAudit,
+  auditRepo,
+);
 
   // ===== Menu =====
   const getMenuCategories = new GetMenuCategories(menuCatalogRepo);

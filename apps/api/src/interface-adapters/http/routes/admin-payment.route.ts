@@ -17,8 +17,12 @@ export function createAdminPaymentRouter(
   r.post(
     "/payments/mock-success/:orderCode",
     requirePermission("payments.mock_success"),
-    asyncHandler(withIdempotency({ redis: deps?.redis, endpoint: "mock-success" })(controller.mockSuccess)),
-  );
+asyncHandler(
+  withIdempotency({
+    endpoint: "mock-success",
+    ...(deps?.redis ? { redis: deps.redis } : {}),
+  })(controller.mockSuccess),
+),  );
 
   return r;
 }

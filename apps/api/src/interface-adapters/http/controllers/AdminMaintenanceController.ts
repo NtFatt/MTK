@@ -70,13 +70,24 @@ export class AdminMaintenanceController {
     const restock = String(restockRaw).toLowerCase() === "true" || String(restockRaw) === "1";
     const restockQty = toInt(req.query.restockQty ?? (req.body as any)?.restockQty, "INVALID_RESTOCK_QTY");
 
-    const out = await this.resetUc.execute({
-      branchId: branchId ?? null,
-      flushRedis,
-      restock,
-      restockQty,
-      confirm,
-    });
+  const resetInput: {
+  branchId: string | null;
+  flushRedis: boolean;
+  restock: boolean;
+  restockQty?: number;
+  confirm: string;
+} = {
+  branchId: branchId ?? null,
+  flushRedis,
+  restock,
+  confirm,
+};
+
+if (restockQty !== undefined) {
+  resetInput.restockQty = restockQty;
+}
+
+const out = await this.resetUc.execute(resetInput);
 
     return res.json(out);
   };

@@ -15,6 +15,9 @@ export function createAdminInventoryRouter(ctrl: AdminInventoryController) {
   // Active holds (Redis)
   r.get("/inventory/holds", requirePermission("inventory.holds.read"), asyncHandler(ctrl.listHolds));
 
+  // Inventory adjustment audit trail
+  r.get("/inventory/adjustments", requirePermission("inventory.adjust"), asyncHandler(ctrl.listAdjustments));
+
   // Drift metrics (Redis)
   r.get("/inventory/rehydrate/metrics", requirePermission("inventory.read"), asyncHandler(ctrl.getDriftMetrics));
 

@@ -17,8 +17,12 @@ export function createAdminCashierRouter(ctrl: AdminCashierController, deps?: { 
   r.post(
     "/cashier/settle-cash/:orderCode",
     requirePermission("cashier.settle_cash"),
-    asyncHandler(withIdempotency({ redis: deps?.redis, endpoint: "settle-cash" })(ctrl.settleCash)),
-  );
+asyncHandler(
+  withIdempotency({
+    endpoint: "settle-cash",
+    ...(deps?.redis ? { redis: deps.redis } : {}),
+  })(ctrl.settleCash),
+),  );
 
   return r;
 }

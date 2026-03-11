@@ -53,7 +53,7 @@ export class AdminOpsController {
     private readonly upsertCartItemUc: UpsertCartItem,
     private readonly removeCartItemUc: RemoveCartItem,
     private readonly createOrderFromCartUc: CreateOrderFromCart,
-  ) {}
+  ) { }
 
   private actorFrom(res: Response) {
     const internal = (res.locals as any).internal;
@@ -84,7 +84,6 @@ export class AdminOpsController {
     const items = await this.listTablesUc.execute({
       actor,
       branchId: q.branchId ?? null,
-      limit: q.limit ?? null,
     });
 
     return res.json({ items });
@@ -104,10 +103,12 @@ export class AdminOpsController {
 
     await this.assertBranchScope(actor, String(table.branchId));
 
-    const out = await this.openSessionUc.execute({
-      tableId: body.tableId || undefined,
-      directionId: body.directionId || undefined,
-    });
+    const openInput: { tableId?: string; directionId?: string } = {};
+
+    if (body.tableId) openInput.tableId = body.tableId;
+    if (body.directionId) openInput.directionId = body.directionId;
+
+    const out = await this.openSessionUc.execute(openInput);
 
     return res.status(out.created ? 201 : 200).json({
       ...out,
@@ -150,13 +151,15 @@ export class AdminOpsController {
     if (!table) throw new Error("TABLE_NOT_FOUND");
     await this.assertBranchScope(actor, String(table.branchId));
 
-    const out = await this.getOrCreateCartUc.execute(sessionKey);
+    const existing = await this.cartRepo.findActiveBySessionId(s.id);
+    const out = existing ?? await this.getOrCreateCartUc.execute(sessionKey);
+
     return res.json({
       cartKey: out.cartKey,
       sessionKey,
       tableId: s.tableId,
       branchId: String(table.branchId),
-      created: out.created,
+      created: !existing,
     });
   };
 
@@ -217,9 +220,9 @@ export class AdminOpsController {
     // Anti-existence-leak rule (NEG-03): STAFF tokens must not reveal whether an order exists in another branch.
     const scope = actor.actorType === "STAFF"
       ? (() => {
-          if (!actor.branchId) throw new Error("BRANCH_SCOPE_REQUIRED");
-          return this.orderRepo.getRealtimeScopeByOrderCodeForBranch(orderCode, actor.branchId);
-        })()
+        if (!actor.branchId) throw new Error("BRANCH_SCOPE_REQUIRED");
+        return this.orderRepo.getRealtimeScopeByOrderCodeForBranch(orderCode, actor.branchId);
+      })()
       : this.orderRepo.getRealtimeScopeByOrderCode(orderCode);
 
     const resolvedScope = await scope;

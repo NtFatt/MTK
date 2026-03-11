@@ -1,4 +1,4 @@
-import { createClient, type RedisClientType } from "redis";
+import { createClient } from "redis";
 import { env } from "../config/env.js";
 import { log } from "../observability/logger.js";
 import { requestContext } from "../observability/context.js";
@@ -6,7 +6,7 @@ import { addSpanEvent } from "../observability/tracing.js";
 import { observeRedis, observeRedisSlow } from "../observability/metrics.js";
 import { fingerprintRedis, pushSlowRedisSample } from "../observability/slowRedisStore.js";
 
-export type RedisClient = RedisClientType;
+export type RedisClient = ReturnType<typeof createClient>;
 
 function truncate(s: string, max = 500): string {
   const v = String(s ?? "");
@@ -36,13 +36,13 @@ function instrumentSendCommand(client: RedisClient): void {
 
         const argsPreview = Array.isArray(args)
           ? args
-              .slice(0, 12)
-              .map((x: any) => (typeof x === "string" ? x : String(x)))
-              .join(" ")
+            .slice(0, 12)
+            .map((x: any) => (typeof x === "string" ? x : String(x)))
+            .join(" ")
           : "";
 
         pushSlowRedisSample({
-          rid: rid ?? undefined,
+          ...(rid ? { rid } : {}),
           cmd,
           durationMs: Math.round(ms * 1000) / 1000,
           fingerprint,

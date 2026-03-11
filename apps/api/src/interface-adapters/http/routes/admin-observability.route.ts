@@ -17,7 +17,7 @@ export function createAdminObservabilityRouter(controller: AdminObservabilityCon
   r.get(
     "/observability/logs",
     requirePermission("observability.admin.read"),
-    asyncHandler(controller.logs),
+    asyncHandler(controller.slowRedis),
   );
 
   return r;

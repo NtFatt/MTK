@@ -4,7 +4,7 @@
   Goal:
   - Connect to Socket.IO
   - Join rooms (admin + sessionKey) using join.v1
-- Request replay after event
+  - Request replay after event
   - Trigger at least one domain event via HTTP (cart.updated)
 
   Usage:
@@ -24,9 +24,11 @@ function readPostmanEnv(filepath) {
   const raw = fs.readFileSync(filepath, "utf8");
   const json = JSON.parse(raw);
   const map = new Map();
+
   for (const v of json.values || []) {
     map.set(String(v.key), v.value);
   }
+
   return {
     get: (k, fallback = "") => {
       const v = map.get(k);
@@ -38,6 +40,7 @@ function readPostmanEnv(filepath) {
 async function httpJson(method, url, body, headers = {}, timeoutMs = 15000) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
+
   try {
     const res = await fetch(url, {
       method,
@@ -48,13 +51,16 @@ async function httpJson(method, url, body, headers = {}, timeoutMs = 15000) {
       body: body ? JSON.stringify(body) : undefined,
       signal: ctrl.signal,
     });
+
     const text = await res.text();
     let json = null;
+
     try {
       json = text ? JSON.parse(text) : null;
     } catch {
-      // ignore
+      // ignore non-json
     }
+
     return { status: res.status, json, text };
   } finally {
     clearTimeout(t);
@@ -67,18 +73,23 @@ function isoPlusMinutes(minutes) {
 
 async function waitFor(predicate, timeoutMs, intervalMs = 50) {
   const started = Date.now();
+
   while (Date.now() - started < timeoutMs) {
     const out = predicate();
     if (out) return out;
     await new Promise((r) => setTimeout(r, intervalMs));
   }
+
   return null;
 }
 
 async function main() {
   const envPath = process.argv[2];
   const timeoutMs = Number(process.argv[3] ?? 30000);
-  if (!envPath) die("Missing postman env json. Usage: node scripts/smoke/realtime-sanity.mjs <env.json> [timeoutMs]");
+
+  if (!envPath) {
+    die("Missing postman env json. Usage: node scripts/smoke/realtime-sanity.mjs <env.json> [timeoutMs]");
+  }
 
   const env = readPostmanEnv(envPath);
 
@@ -93,13 +104,27 @@ async function main() {
 
   console.log(`\n🧪 Realtime sanity: ${baseUrl} (path=${socketPath})`);
 
-  // 1) Admin login (Bearer)
-  const login = await httpJson("POST", `${baseUrl}/api/v1/admin/login`, { username: adminUsername, password: adminPassword }, {}, timeoutMs);
+  // 1) Admin login
+  const login = await httpJson(
+    "POST",
+    `${baseUrl}/api/v1/admin/login`,
+    { username: adminUsername, password: adminPassword },
+    {},
+    timeoutMs,
+  );
+
   if (login.status !== 200) {
     console.error(login.text);
     die(`Admin login failed: HTTP ${login.status}`);
   }
-  const adminToken = String(login.json?.token || login.json?.accessToken || login.json?.data?.token || "");
+
+  const adminToken = String(
+    login.json?.token ||
+    login.json?.accessToken ||
+    login.json?.data?.token ||
+    "",
+  );
+
   if (!adminToken) die("Admin login did not return token");
 
   const authz = { Authorization: `Bearer ${adminToken}` };
@@ -113,6 +138,9 @@ async function main() {
 
   const joinedRooms = new Set();
   const receivedEvents = [];
+  const receivedV1 = [];
+  const replayBatches = [];
+  const gaps = [];
 
   socket.on("joined", (p) => {
     if (p?.room) joinedRooms.add(String(p.room));
@@ -122,73 +150,51 @@ async function main() {
     receivedEvents.push(evt);
   });
 
-  const receivedV1 = [];
-  const replayBatches = [];
-  const gaps = [];
-
-  socket.on("realtime:event.v1", (env) => {
-    receivedV1.push(env);
+  socket.on("realtime:event.v1", (evt) => {
+    receivedV1.push(evt);
   });
+
   socket.on("realtime:replay.v1", (batch) => {
     replayBatches.push(batch);
   });
+
   socket.on("realtime:gap.v1", (g) => {
     gaps.push(g);
   });
 
   const connected = await new Promise((resolve) => {
     const t = setTimeout(() => resolve(false), Math.min(timeoutMs, 15000));
+
     socket.on("connect", () => {
       clearTimeout(t);
       resolve(true);
     });
+
     socket.on("connect_error", () => {
+      // ignore here, timeout will fail the test
     });
   });
+
   if (!connected) {
     socket.close();
     die("Socket.IO connect failed (is REALTIME_ENABLED=true?)");
   }
 
-  // 3) Join admin room (v1)
+  // 3) Join admin room
   const joinAdmin = await new Promise((resolve) => {
-    socket.emit("realtime:join.v1", { adminToken, rooms: [{ room: "admin", lastSeq: 0 }] }, (out) => resolve(out));
+    socket.emit(
+      "realtime:join.v1",
+      { adminToken, rooms: [{ room: "admin", lastSeq: 0 }] },
+      (out) => resolve(out),
+    );
   });
+
   if (!joinAdmin || joinAdmin.ok !== true) {
     socket.close();
     die("Join admin room (v1) failed");
   }
 
-  // 4) Pick a menu item
-  const menu = await httpJson(
-    "GET",
-    `${baseUrl}/api/v1/menu/items?branchId=${branchId}&limit=5`,
-    null,
-    {},
-    timeoutMs
-  );
-
-
-  if (menu.status < 200 || menu.status > 299) {
-    console.error(menu.text);
-    socket.close();
-    die(`List menu failed: HTTP ${menu.status}`);
-  }
-  const items = Array.isArray(menu.json?.items)
-    ? menu.json.items
-    : Array.isArray(menu.json?.data?.items)
-      ? menu.json.data.items
-      : Array.isArray(menu.json)
-        ? menu.json
-        : [];
-  const first = items[0];
-  const menuItemId = first?.menuItemId || first?.itemId || first?.item_id || first?.id;
-  if (!menuItemId) {
-    socket.close();
-    die("Could not pick menuItemId");
-  }
-
-  // 5) Create reservation (retry once on NO_TABLE_AVAILABLE by resetting dev state)
+  // 4) Create reservation (retry once on NO_TABLE_AVAILABLE)
   const reservedFrom = isoPlusMinutes(5);
   const reservedTo = isoPlusMinutes(65);
 
@@ -213,11 +219,12 @@ async function main() {
 
   let rsv = await createReservation();
 
-  // If tables are exhausted from previous runs, reset state and retry once.
   if (rsv.status !== 201) {
     const code = pickCode(rsv.json);
+
     if (rsv.status === 409 && code === "NO_TABLE_AVAILABLE") {
       console.warn("⚠️ NO_TABLE_AVAILABLE (409). Resetting dev state then retrying once...");
+
       const reset = await httpJson(
         "POST",
         `${baseUrl}/api/v1/admin/maintenance/reset-dev-state?flushRedis=true&restock=true&restockQty=10`,
@@ -232,9 +239,7 @@ async function main() {
         die(`reset-dev-state failed: HTTP ${reset.status}`);
       }
 
-      // tiny delay so DB/Redis state settles
       await new Promise((r) => setTimeout(r, 250));
-
       rsv = await createReservation();
     }
   }
@@ -245,13 +250,15 @@ async function main() {
     die(`Create reservation failed: HTTP ${rsv.status}`);
   }
 
-  const reservationCode = rsv.json?.reservationCode || rsv.json?.data?.reservationCode;
+  const reservationCode =
+    rsv.json?.reservationCode || rsv.json?.data?.reservationCode;
+
   if (!reservationCode) {
     socket.close();
     die("Reservation did not return reservationCode");
   }
 
-  // 6) Confirm + check-in
+  // 5) Confirm + check-in
   const conf = await httpJson(
     "PATCH",
     `${baseUrl}/api/v1/admin/reservations/${reservationCode}/confirm`,
@@ -259,6 +266,7 @@ async function main() {
     authz,
     timeoutMs,
   );
+
   if (conf.status < 200 || conf.status > 299) {
     console.error(conf.text);
     socket.close();
@@ -272,33 +280,66 @@ async function main() {
     authz,
     timeoutMs,
   );
+
   if (checkin.status < 200 || checkin.status > 299) {
     console.error(checkin.text);
     socket.close();
     die(`Check-in reservation failed: HTTP ${checkin.status}`);
   }
 
-  const sessionKey = checkin.json?.sessionKey || checkin.json?.data?.sessionKey;
+  const sessionKey =
+    checkin.json?.sessionKey || checkin.json?.data?.sessionKey;
+
   if (!sessionKey) {
     socket.close();
     die("Check-in did not return sessionKey");
   }
-  const branchId =
-    checkin.json?.branchId ||
-    checkin.json?.data?.branchId ||
-    checkin.json?.reservation?.branchId ||
-    checkin.json?.data?.reservation?.branchId;
 
-  if (!branchId) {
+  // 6) Pick a menu item AFTER branchId is known
+  const menu = await httpJson(
+    "GET",
+    `${baseUrl}/api/v1/menu/items?limit=5`,
+    null,
+    {},
+    timeoutMs,
+  );
+
+  if (menu.status < 200 || menu.status > 299) {
+    console.error(menu.text);
     socket.close();
-    die("Check-in did not return branchId (required by your BE)");
+    die(`List menu failed: HTTP ${menu.status}`);
   }
 
-  // 7) Join sessionKey room (v1)
+  const items = Array.isArray(menu.json?.items)
+    ? menu.json.items
+    : Array.isArray(menu.json?.data?.items)
+      ? menu.json.data.items
+      : Array.isArray(menu.json)
+        ? menu.json
+        : [];
+
+  const first = items[0];
+  const menuItemId =
+    first?.menuItemId ||
+    first?.itemId ||
+    first?.item_id ||
+    first?.id;
+
+  if (!menuItemId) {
+    socket.close();
+    die("Could not pick menuItemId");
+  }
+
+  // 7) Join session room
   const sessionRoom = `sessionKey:${sessionKey}`;
   const joinSess = await new Promise((resolve) => {
-    socket.emit("realtime:join.v1", { rooms: [{ room: sessionRoom, lastSeq: 0 }] }, (out) => resolve(out));
+    socket.emit(
+      "realtime:join.v1",
+      { rooms: [{ room: sessionRoom, lastSeq: 0 }] },
+      (out) => resolve(out),
+    );
   });
+
   if (!joinSess || joinSess.ok !== true) {
     socket.close();
     die("Join sessionKey room (v1) failed");
@@ -307,23 +348,33 @@ async function main() {
   // 8) Get/create cart
   const cartRes = await httpJson(
     "POST",
-    `${baseUrl}/api/v1/carts/session/${sessionKey}?branchId=${branchId}`,
+    `${baseUrl}/api/v1/carts/session/${sessionKey}`,
     null,
     {},
-    timeoutMs
-  ); if (cartRes.status < 200 || cartRes.status > 299) {
+    timeoutMs,
+  );
+
+  if (cartRes.status < 200 || cartRes.status > 299) {
     console.error(cartRes.text);
     socket.close();
     die(`Get/Create cart failed: HTTP ${cartRes.status}`);
   }
-  const cartKey = cartRes.json?.cartKey || cartRes.json?.data?.cartKey || cartRes.json?.data?.cart?.cartKey || cartRes.json?.cart?.cartKey;
+
+  const cartKey =
+    cartRes.json?.cartKey ||
+    cartRes.json?.data?.cartKey ||
+    cartRes.json?.data?.cart?.cartKey ||
+    cartRes.json?.cart?.cartKey;
+
   if (!cartKey) {
     socket.close();
     die("Cart response did not return cartKey");
   }
 
   // 9) Trigger cart.updated
-  const before = receivedEvents.length;
+  const beforeLegacy = receivedEvents.length;
+  const beforeV1 = receivedV1.length;
+
   const up = await httpJson(
     "PUT",
     `${baseUrl}/api/v1/carts/${cartKey}/items`,
@@ -331,16 +382,27 @@ async function main() {
     {},
     timeoutMs,
   );
+
   if (![200, 204].includes(up.status)) {
     console.error(up.text);
     socket.close();
     die(`Upsert cart item failed: HTTP ${up.status}`);
   }
 
-  const gotCartEvent = await waitFor(
-    () => receivedEvents.slice(before).find((e) => String(e?.type) === "cart.updated"),
-    Math.min(timeoutMs, 8000),
-  );
+  const gotCartEvent = await waitFor(() => {
+    const legacyHit = receivedEvents
+      .slice(beforeLegacy)
+      .find((e) => String(e?.type) === "cart.updated");
+
+    if (legacyHit) return legacyHit;
+
+    const v1Hit = receivedV1
+      .slice(beforeV1)
+      .find((e) => String(e?.type) === "cart.updated" || String(e?.eventType) === "cart.updated");
+
+    return v1Hit || null;
+  }, Math.min(timeoutMs, 8000));
+
   if (!gotCartEvent) {
     socket.close();
     die("Did not receive cart.updated event via realtime");
@@ -348,20 +410,26 @@ async function main() {
 
   console.log("✅ Realtime sanity ok: received cart.updated");
 
-  // 10) Request replay from seq=0 (should include at least the recent cart.updated in window)
+  // 10) Replay
   const replayRes = await new Promise((resolve) => {
-    socket.emit("realtime:replay.request.v1", { room: sessionRoom, fromSeq: 0, limit: 20 }, (out) => resolve(out));
+    socket.emit(
+      "realtime:replay.request.v1",
+      { room: sessionRoom, fromSeq: 0, limit: 20 },
+      (out) => resolve(out),
+    );
   });
+
   if (!replayRes || replayRes.ok !== true) {
     socket.close();
     die(`Replay request failed: ${JSON.stringify(replayRes)}`);
   }
+
   if ((replayRes.count || 0) < 1) {
     socket.close();
     die("Replay returned 0 items (expected >= 1)");
   }
-  console.log("✅ Replay ok: got", replayRes.count, "items");
 
+  console.log("✅ Replay ok: got", replayRes.count, "items");
   socket.close();
 }
 

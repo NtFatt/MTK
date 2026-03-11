@@ -55,7 +55,7 @@ async function instrumented(op: "query" | "execute", fn: Function, args: any[]) 
       const fingerprint = fingerprintSql(sql);
       observeDbSlow(op);
       pushSlowQuerySample({
-        rid: rid ?? undefined,
+        ...(rid ? { rid } : {}),
         op,
         durationMs: Math.round(ms * 1000) / 1000,
         fingerprint,
