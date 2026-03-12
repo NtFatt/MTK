@@ -19,6 +19,14 @@ const listeners = new Set<Listener>();
 
 let wired = false;
 
+function getCursorInput(room: string) {
+  return {
+    room,
+    branchId: ctx?.branchId,
+    userKey: ctx?.userKey ?? "",
+  };
+}
+
 function wireSocket(s: Socket) {
   if (wired) return;
   wired = true;
@@ -26,9 +34,9 @@ function wireSocket(s: Socket) {
   s.on("connect", () => {
     status = "CONNECTED";
     lastError = null;
-    // Re-join rooms best-effort (and replay per room)
+
     for (const room of joinedRooms) {
-      joinRoom(room).catch(() => {});
+      void joinRoom(room).catch(() => {});
     }
   });
 
@@ -41,13 +49,10 @@ function wireSocket(s: Socket) {
     lastError = err instanceof Error ? err.message : "connect_error";
   });
 
-  // BE truth: "realtime:event.v1" + legacy "event"
   s.on("realtime:event.v1", (payload: unknown) => handleMaybeEnvelope(payload));
   s.on("event", (payload: unknown) => handleMaybeEnvelope(payload));
 
-  // Replay batch event (server can push after join/replay).
   s.on("realtime:replay.v1", (payload: unknown) => handleMaybeReplay(payload));
-  // Gap signal (out of retention window)
   s.on("realtime:gap.v1", (payload: unknown) => handleGap(payload));
 
   s.onAny((eventName, payload) => {
@@ -69,26 +74,26 @@ function handleMaybeEnvelope(payload: unknown) {
   const env = normalizeEnvelope(payload);
   if (!env) return;
 
-  // seq drop + cursor persistence
-  const cur = getCursor(env.room, ctx.branchId, ctx.userKey);
+  const cur = getCursor(getCursorInput(env.room));
   if (cur && env.seq <= cur.seq) return;
 
-  // 1) route → invalidate matrix (debounced)
   routeRealtimeEvent(env);
 
-  // 2) notify feature listeners
-  for (const fn of listeners) fn(env);
+  for (const fn of listeners) {
+    fn(env);
+  }
 
-  // 3) advance cursor
-  setCursor(env.room, ctx.branchId, ctx.userKey, { seq: env.seq, ts: env.ts });
+  setCursor(getCursorInput(env.room), { seq: env.seq, ts: env.ts });
 }
 
 function handleMaybeReplay(payload: unknown) {
   if (!ctx) return;
   if (!payload || typeof payload !== "object") return;
-  const o: any = payload as any;
+
+  const o = payload as Record<string, unknown>;
   const items = Array.isArray(o.items) ? o.items : Array.isArray(o.events) ? o.events : null;
   if (!items) return;
+
   for (const it of items) {
     handleMaybeEnvelope(it);
   }
@@ -97,15 +102,21 @@ function handleMaybeReplay(payload: unknown) {
 function handleGap(payload: unknown) {
   if (!ctx) return;
   if (!payload || typeof payload !== "object") return;
-  const o: any = payload as any;
+
+  const o = payload as Record<string, unknown>;
   const room = typeof o.room === "string" ? o.room : null;
-  const window = o.window;
-  const currentSeq = typeof window?.currentSeq === "number" ? window.currentSeq : null;
+  const windowObj =
+    o.window && typeof o.window === "object" ? (o.window as Record<string, unknown>) : null;
+  const currentSeq =
+    typeof windowObj?.currentSeq === "number" ? windowObj.currentSeq : null;
+
   if (!room || currentSeq == null) return;
 
-  // Treat as "resync required": advance cursor to currentSeq to stop repeated gaps,
-  // and invalidate data for that room (hard refetch via query keys).
-  setCursor(room, ctx.branchId, ctx.userKey, { seq: currentSeq, ts: new Date().toISOString() });
+  setCursor(getCursorInput(room), {
+    seq: currentSeq,
+    ts: new Date().toISOString(),
+  });
+
   try {
     routeRealtimeEvent({
       type: "realtime.gap",
@@ -168,7 +179,6 @@ export async function stopRealtime() {
 export async function joinRoom(room: string) {
   if (!room) return;
 
-  // Always remember the room; join after connect.
   joinedRooms.add(room);
 
   if (!ctx) return;
@@ -179,33 +189,28 @@ export async function joinRoom(room: string) {
 
   if (!socket.connected) return;
 
-  // de-dupe join per room
   const existing = joining.get(room);
   if (existing) return existing;
 
   const run = (async () => {
-    // Customer policy (BE): order:* requires that socket already joined sessionKey:<sessionKey>.
     if (ctx!.kind === "customer" && ctx!.userKey) {
       const skRoom = `sessionKey:${ctx!.userKey}`;
       if (room !== skRoom) {
-        // Always ensure sessionKey room is joined first (even if it was already scheduled).
         await joinRoom(skRoom);
       }
     }
 
-    const cur = getCursor(room, ctx!.branchId, ctx!.userKey);
+    const cur = getCursor(getCursorInput(room));
     const cursorSeq = cur?.seq ?? 0;
 
     try {
       await joinV1(socket!, room, cursorSeq, ctx!);
-      // Replay after join: best-effort (BE expects fromSeq=cursorSeq).
       await replayV1(socket!, room, cursorSeq, ctx!, handleMaybeEnvelope);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "join_failed";
       lastError = msg;
       status = "ERROR";
 
-      // If join forbidden, disconnect to avoid leaking cross-branch data.
       if (msg === "FORBIDDEN_JOIN") {
         await stopRealtime();
       }
@@ -220,8 +225,9 @@ export async function joinRoom(room: string) {
 
 export async function leaveRoom(room: string) {
   joinedRooms.delete(room);
-  // optional: tell server leave
+
   if (!socket || !socket.connected) return;
+
   try {
     socket.emit("leave.v1", { room });
   } catch {

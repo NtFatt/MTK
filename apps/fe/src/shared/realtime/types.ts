@@ -8,21 +8,13 @@ export type SocketStatus = "DISCONNECTED" | "CONNECTING" | "CONNECTED" | "ERROR"
  * - envelope: { v, room, seq, event, at, meta, data:{ scope, payload } }
  */
 export type EventEnvelope<TPayload = unknown, TScope = unknown> = {
-  /** Domain event type (e.g. "order.created", "table.session.closed") */
   type: string;
-  /** Room name (e.g. "branch:1", "order:OD123", "sessionKey:<uuid>") */
   room: string;
-  /** Per-room sequence (monotonic) */
   seq: number;
-  /** ISO timestamp */
   ts: string;
-  /** Domain payload */
   payload: TPayload;
-  /** Domain scope (may contain sessionKey, sessionId, branchId, orderId...) */
   scope?: TScope;
-  /** Metadata (eventId, correlationId...) */
   meta?: Record<string, unknown> | null;
-  /** Wire version */
   v?: number;
 };
 
@@ -34,7 +26,10 @@ export type RealtimeEnvelopeV1 = {
   event: string;
   at: string;
   meta?: Record<string, unknown> | null;
-  data?: { scope?: unknown; payload?: unknown } | null;
+  data?: {
+    scope?: unknown;
+    payload?: unknown;
+  } | null;
 };
 
 export type RealtimeContext = {
@@ -44,12 +39,47 @@ export type RealtimeContext = {
   token?: string; // internal accessToken nếu BE yêu cầu
 };
 
+export type CursorValue = {
+  seq: number;
+  ts: string;
+};
+
+export type JoinRoomInput = {
+  room: string;
+  branchId?: string | number;
+};
+
+export type ReplayInput = {
+  room: string;
+  afterSeq?: number;
+};
+
+export type JoinRoomAck = {
+  ok: boolean;
+  room: string;
+  joined?: boolean;
+  reason?: string | null;
+};
+
+export type ReplayAck = {
+  ok: boolean;
+  room: string;
+  fromSeq?: number;
+  replayed?: number;
+  reason?: string | null;
+};
+
 function isPlainObject(x: unknown): x is Record<string, unknown> {
   return !!x && typeof x === "object";
 }
 
+function getObjectField<T = unknown>(obj: Record<string, unknown>, key: string): T | undefined {
+  return obj[key] as T | undefined;
+}
+
 export function isRealtimeEnvelopeV1(x: unknown): x is RealtimeEnvelopeV1 {
   if (!isPlainObject(x)) return false;
+
   return (
     typeof x.v === "number" &&
     typeof x.room === "string" &&
@@ -59,19 +89,33 @@ export function isRealtimeEnvelopeV1(x: unknown): x is RealtimeEnvelopeV1 {
   );
 }
 
+export function isJoinRoomAck(x: unknown): x is JoinRoomAck {
+  if (!isPlainObject(x)) return false;
+  return typeof x.ok === "boolean" && typeof x.room === "string";
+}
+
+export function isReplayAck(x: unknown): x is ReplayAck {
+  if (!isPlainObject(x)) return false;
+  return typeof x.ok === "boolean" && typeof x.room === "string";
+}
+
 /**
  * Normalize incoming payload into FE EventEnvelope.
  * Only accepts payloads that contain {room, seq} to keep cursor/replay semantics correct.
  */
 export function normalizeEnvelope(x: unknown): EventEnvelope | null {
   if (isRealtimeEnvelopeV1(x)) {
+    const data = isPlainObject(x.data) ? x.data : null;
+    const payload = data ? getObjectField(data, "payload") ?? null : null;
+    const scope = data ? getObjectField(data, "scope") ?? null : null;
+
     return {
       type: x.event,
       room: x.room,
       seq: x.seq,
       ts: x.at,
-      payload: (x.data && (x.data as any).payload) ?? null,
-      scope: (x.data && (x.data as any).scope) ?? null,
+      payload,
+      scope,
       meta: x.meta ?? null,
       v: x.v,
     };
@@ -79,22 +123,26 @@ export function normalizeEnvelope(x: unknown): EventEnvelope | null {
 
   // Backward-compat: accept legacy FE envelope only if it has room+seq.
   if (isPlainObject(x)) {
-    const o = x as Record<string, unknown>;
+    const type = getObjectField<unknown>(x, "type");
+    const room = getObjectField<unknown>(x, "room");
+    const seq = getObjectField<unknown>(x, "seq");
+    const ts = getObjectField<unknown>(x, "ts");
+
     if (
-      typeof o.type === "string" &&
-      typeof o.room === "string" &&
-      typeof o.seq === "number" &&
-      typeof o.ts === "string" &&
-      "payload" in o
+      typeof type === "string" &&
+      typeof room === "string" &&
+      typeof seq === "number" &&
+      typeof ts === "string" &&
+      "payload" in x
     ) {
       return {
-        type: String(o.type),
-        room: String(o.room),
-        seq: Number(o.seq),
-        ts: String(o.ts),
-        payload: (o as any).payload,
-        scope: (o as any).scope,
-        meta: (o as any).meta,
+        type,
+        room,
+        seq,
+        ts,
+        payload: getObjectField(x, "payload") ?? null,
+        scope: getObjectField(x, "scope") ?? null,
+        meta: (getObjectField<Record<string, unknown> | null>(x, "meta")) ?? null,
       };
     }
   }

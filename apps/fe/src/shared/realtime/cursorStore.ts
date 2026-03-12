@@ -1,37 +1,67 @@
-type Cursor = { seq: number; ts?: string };
+export type CursorValue = {
+  seq: number;
+  ts?: string;
+};
 
-function key(room: string, branchId: string | number | undefined, userKey: string) {
-  const b = branchId ?? "na";
-  return `cursor:${room}:${b}:${userKey}`;
+export type CursorKeyInput = {
+  room: string;
+  branchId?: string | number;
+  userKey: string;
+};
+
+function keyOf(input: CursorKeyInput): string {
+  const b = input.branchId ?? "na";
+  return `cursor:${input.room}:${b}:${input.userKey}`;
 }
 
-export function getCursor(room: string, branchId: string | number | undefined, userKey: string): Cursor | null {
+export function getCursor(input: CursorKeyInput): CursorValue | null {
   try {
-    const raw = sessionStorage.getItem(key(room, branchId, userKey));
+    const raw = sessionStorage.getItem(keyOf(input));
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as Cursor;
-    if (typeof parsed?.seq !== "number") return null;
-    return parsed;
+
+    const parsed = JSON.parse(raw) as Partial<CursorValue>;
+    if (!Number.isFinite(parsed.seq) || Number(parsed.seq) < 0) return null;
+
+    return {
+      seq: Math.trunc(Number(parsed.seq)),
+      ts: typeof parsed.ts === "string" ? parsed.ts : undefined,
+    };
   } catch {
     return null;
   }
 }
 
-export function setCursor(room: string, branchId: string | number | undefined, userKey: string, cursor: Cursor) {
+export function setCursor(input: CursorKeyInput, cursor: CursorValue): void {
   try {
-    const k = key(room, branchId, userKey);
-    const existing = getCursor(room, branchId, userKey);
+    if (!Number.isFinite(cursor.seq) || cursor.seq < 0) return;
+
+    const next: CursorValue = {
+      seq: Math.trunc(cursor.seq),
+      ts: typeof cursor.ts === "string" ? cursor.ts : undefined,
+    };
+
+    const existing = getCursor(input);
+
     // never rollback
-    if (existing && cursor.seq <= existing.seq) return;
-    sessionStorage.setItem(k, JSON.stringify(cursor));
+    if (existing && next.seq <= existing.seq) return;
+
+    sessionStorage.setItem(keyOf(input), JSON.stringify(next));
   } catch {
     // ignore
   }
 }
 
-export function clearCursorsForUser(userKey: string) {
+export function clearCursor(input: CursorKeyInput): void {
   try {
-    const prefix = `cursor:`;
+    sessionStorage.removeItem(keyOf(input));
+  } catch {
+    // ignore
+  }
+}
+
+export function clearCursorsForUser(userKey: string): void {
+  try {
+    const prefix = "cursor:";
     for (let i = sessionStorage.length - 1; i >= 0; i--) {
       const k = sessionStorage.key(i);
       if (!k) continue;
@@ -44,13 +74,15 @@ export function clearCursorsForUser(userKey: string) {
   }
 }
 
-export function clearAllCursors() {
+export function clearAllCursors(): void {
   try {
-    const prefix = `cursor:`;
+    const prefix = "cursor:";
     for (let i = sessionStorage.length - 1; i >= 0; i--) {
       const k = sessionStorage.key(i);
       if (!k) continue;
-      if (k.startsWith(prefix)) sessionStorage.removeItem(k);
+      if (k.startsWith(prefix)) {
+        sessionStorage.removeItem(k);
+      }
     }
   } catch {
     // ignore

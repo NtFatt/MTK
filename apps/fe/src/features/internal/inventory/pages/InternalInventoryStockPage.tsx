@@ -16,6 +16,7 @@ import { Badge } from "../../../../shared/ui/badge";
 
 import { useInventoryStockQuery } from "../hooks/useInventoryStockQuery";
 import { adjustInventoryStock } from "../services/inventoryApi";
+import { useRealtimeRoom } from "../../../../shared/realtime/useRealtimeRoom";
 
 type AdjustMode = "RESTOCK" | "DEDUCT" | "SET";
 
@@ -70,6 +71,9 @@ export function InternalInventoryStockPage() {
   const enabled =
     !!session && !!bid && canRead && !shouldRedirectBranch && !shouldRedirectMissingBranch;
 
+useRealtimeRoom(bid ? `branch:${bid}` : null, enabled);
+useRealtimeRoom(bid ? `inventory:${bid}` : null, enabled);
+
   const { data, isLoading, error, refetch, isFetching } = useInventoryStockQuery(bid, enabled);
 
   useEffect(() => {
@@ -110,8 +114,10 @@ export function InternalInventoryStockPage() {
   }, [data, itemId]);
 
   const adjustMut = useAppMutation<AdjustMutationResult, any, void>({
-    invalidateKeys: [qk.inventory.stock({ branchId: bid }) as unknown as unknown[]],
-    mutationFn: async () => {
+    invalidateKeys: [
+      qk.inventory.stock({ branchId: bid }) as unknown as unknown[],
+      qk.inventory.adjustments({ branchId: bid }) as unknown as unknown[],
+    ], mutationFn: async () => {
       const iid = itemId.trim();
       const qty = Number(quantity);
 

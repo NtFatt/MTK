@@ -100,20 +100,40 @@ export const qk = {
     },
   },
 
-  inventory: {
-    stock: (params: { branchId?: string | number } = {}) => {
-      const normalized = normalizeBranchId(params);
-      return ["inventory", "stock", normalized] as const;
-    },
-    holds: (params: { branchId?: string | number } = {}) => {
-      const normalized = normalizeBranchId(params);
-      return ["inventory", "holds", normalized] as const;
-    },
-    rehydrateMetrics: (params: { branchId?: string | number } = {}) => {
-      const normalized = normalizeBranchId(params);
-      return ["inventory", "rehydrate", "metrics", normalized] as const;
-    },
+inventory: {
+  stock: (params: { branchId?: string | number } = {}) => {
+    const normalized = normalizeBranchId(params);
+    return ["inventory", "stock", normalized] as const;
   },
+  holds: (params: { branchId?: string | number } = {}) => {
+    const normalized = normalizeBranchId(params);
+    return ["inventory", "holds", normalized] as const;
+  },
+  adjustments: (
+    params: {
+      branchId?: string | number;
+      itemId?: string | number;
+      actorId?: string | number;
+      mode?: string;
+      from?: string;
+      to?: string;
+      limit?: number;
+      cursor?: string | number;
+    } = {}
+  ) => {
+    const normalized = normalizeBranchId({
+      ...params,
+      itemId: params.itemId != null ? String(params.itemId) : undefined,
+      actorId: params.actorId != null ? String(params.actorId) : undefined,
+      cursor: params.cursor != null ? String(params.cursor) : undefined,
+    });
+    return ["inventory", "adjustments", normalized] as const;
+  },
+  rehydrateMetrics: (params: { branchId?: string | number } = {}) => {
+    const normalized = normalizeBranchId(params);
+    return ["inventory", "rehydrate", "metrics", normalized] as const;
+  },
+},
 
   reservations: {
     list: (params: { branchId?: string | number; status?: string; q?: string } = {}) => {

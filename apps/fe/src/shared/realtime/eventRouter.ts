@@ -13,24 +13,39 @@ export function registerRealtimeQueryClient(client: QueryClient) {
 }
 
 function tryExtractOrderCode(env: EventEnvelope): string | null {
-  // common room naming: order:<orderCode>
   if (env.room.startsWith("order:")) {
     const rest = env.room.slice("order:".length);
     if (rest) return rest;
   }
 
-  const p: any = env.payload as any;
+  const payload =
+    env.payload && typeof env.payload === "object"
+      ? (env.payload as Record<string, unknown>)
+      : null;
+
+  const orderObj =
+    payload?.order && typeof payload.order === "object"
+      ? (payload.order as Record<string, unknown>)
+      : null;
+
+  const dataObj =
+    payload?.data && typeof payload.data === "object"
+      ? (payload.data as Record<string, unknown>)
+      : null;
+
   const candidates = [
-    p?.orderCode,
-    p?.code,
-    p?.order?.orderCode,
-    p?.order?.code,
-    p?.data?.orderCode,
-    p?.data?.code,
+    payload?.orderCode,
+    payload?.code,
+    orderObj?.orderCode,
+    orderObj?.code,
+    dataObj?.orderCode,
+    dataObj?.code,
   ];
+
   for (const c of candidates) {
     if (typeof c === "string" && c.trim()) return c;
   }
+
   return null;
 }
 
@@ -40,40 +55,64 @@ function tryExtractSessionKey(env: EventEnvelope): string | null {
     if (rest) return rest;
   }
 
-  const s: any = env.scope as any;
-  const candidates = [s?.sessionKey, s?.session_key];
+  const scope =
+    env.scope && typeof env.scope === "object"
+      ? (env.scope as Record<string, unknown>)
+      : null;
+
+  const candidates = [scope?.sessionKey, scope?.session_key];
+
   for (const c of candidates) {
     if (typeof c === "string" && c.trim()) return c;
   }
+
   return null;
 }
 
 function tryExtractBranchId(env: EventEnvelope): string | number | null {
-  const room = env.room;
-  const roomPrefixes = ["branch:", "kitchen:", "cashier:"];
-  for (const p of roomPrefixes) {
-    if (room.startsWith(p)) {
-      const rest = room.slice(p.length);
+  const roomPrefixes = ["branch:", "kitchen:", "cashier:", "inventory:", "ops:"];
+
+  for (const prefix of roomPrefixes) {
+    if (env.room.startsWith(prefix)) {
+      const rest = env.room.slice(prefix.length);
       if (!rest) break;
+
       const n = Number(rest);
       return Number.isFinite(n) ? n : rest;
     }
   }
-  const s: any = env.scope as any;
-  const b = s?.branchId ?? s?.branch_id;
-  if (typeof b === "string" && b.trim()) {
-    const n = Number(b);
-    return Number.isFinite(n) ? n : b;
+
+  const scope =
+    env.scope && typeof env.scope === "object"
+      ? (env.scope as Record<string, unknown>)
+      : null;
+
+  const payload =
+    env.payload && typeof env.payload === "object"
+      ? (env.payload as Record<string, unknown>)
+      : null;
+
+  const raw =
+    scope?.branchId ??
+    scope?.branch_id ??
+    payload?.branchId ??
+    payload?.branch_id;
+
+  if (typeof raw === "string" && raw.trim()) {
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : raw;
   }
-  if (typeof b === "number") return b;
+
+  if (typeof raw === "number") return raw;
+
   return null;
 }
 
 function enqueueInvalidate(queryKey: readonly unknown[], exact = false) {
-
   if (!debouncer) return;
   debouncer.enqueue({ queryKey, exact });
 }
+
 const ORDER_EVENTS = new Set([
   "order.created",
   "order.updated",
@@ -84,20 +123,42 @@ const ORDER_EVENTS = new Set([
   "order.status.change",
 ]);
 
+const PAYMENT_EVENTS = new Set([
+  "payment.success",
+  "payment.updated",
+  "payment.completed",
+]);
+
+const TABLE_SESSION_EVENTS = new Set([
+  "table.session.opened",
+  "table.session.closed",
+  "table.session.updated",
+]);
+
+const RESERVATION_EVENTS = new Set([
+  "reservation.created",
+  "reservation.updated",
+  "reservation.status.changed",
+  "reservation.status_changed",
+]);
+
+const INVENTORY_EVENTS = new Set([
+  "inventory.updated",
+  "inventory.stock.updated",
+  "inventory.adjusted",
+  "inventory.hold.updated",
+  "inventory.holds.updated",
+  "inventory.reserved",
+  "inventory.released",
+]);
+
 export function routeRealtimeEvent(env: EventEnvelope) {
   if (!queryClient || !debouncer) return;
 
   const type = env.type;
+  const branchId = tryExtractBranchId(env);
 
-  // ---- Strict invalidate matrix (aligned to BE event types + room naming) ----
-  // Event types observed in BE (SocketGateway + use-cases):
-  // - cart.updated | cart.abandoned
-  // - order.created | order.status_changed | order.status.changed
-  // - payment.success
-  // - table.session.opened | table.session.closed
-  // - reservation.created | reservation.status.changed
-
-  // 0) Gap (out-of-window) -> hard refetch for known room types
+  // 0) Gap -> hard refetch known room domains
   if (type === "realtime.gap") {
     const orderCode = tryExtractOrderCode(env);
     if (orderCode) enqueueInvalidate(qk.orders.byCode(orderCode), true);
@@ -108,19 +169,26 @@ export function routeRealtimeEvent(env: EventEnvelope) {
       enqueueInvalidate(qk.sessions.detail(sk), true);
     }
 
-    const branchId = tryExtractBranchId(env);
-    if (branchId != null) enqueueInvalidate(qk.ops.tables.list({ branchId }), true);
+    if (branchId != null) {
+      enqueueInvalidate(qk.ops.tables.list({ branchId }), true);
+      enqueueInvalidate(qk.orders.kitchenQueue({ branchId }), false);
+      enqueueInvalidate(qk.orders.cashierUnpaid({ branchId }), false);
+      enqueueInvalidate(qk.inventory.stock({ branchId }), false);
+      enqueueInvalidate(qk.inventory.holds({ branchId }), false);
+      enqueueInvalidate(qk.inventory.adjustments({ branchId }), false);
+      enqueueInvalidate(qk.reservations.list({ branchId }), false);
+    }
     return;
   }
 
   // 1) Cart
   if (type === "cart.updated" || type === "cart.abandoned") {
     const sk = tryExtractSessionKey(env);
-    if (!sk) return;
-    enqueueInvalidate(qk.cart.bySessionKey(sk), true);
-    // Internal ops tables view may expose cartKey/sessionKey per table.
-    const branchId = tryExtractBranchId(env);
-    if (branchId != null) enqueueInvalidate(qk.ops.tables.list({ branchId }), true);
+    if (sk) enqueueInvalidate(qk.cart.bySessionKey(sk), true);
+
+    if (branchId != null) {
+      enqueueInvalidate(qk.ops.tables.list({ branchId }), true);
+    }
     return;
   }
 
@@ -132,43 +200,53 @@ export function routeRealtimeEvent(env: EventEnvelope) {
     const sk = tryExtractSessionKey(env);
     if (sk) enqueueInvalidate(qk.cart.bySessionKey(sk), true);
 
-    const branchId = tryExtractBranchId(env);
     if (branchId != null) {
-      // kitchen auto refresh
       enqueueInvalidate(qk.orders.kitchenQueue({ branchId }), false);
-
-      // cashier unpaid auto refresh (để case BE chỉ emit order.* mà không emit payment.success)
       enqueueInvalidate(qk.orders.cashierUnpaid({ branchId }), false);
+      enqueueInvalidate(qk.ops.tables.list({ branchId }), false);
     }
     return;
   }
+
   // 3) Payment
-  if (type === "payment.success") {
+  if (PAYMENT_EVENTS.has(type)) {
     const orderCode = tryExtractOrderCode(env);
     if (orderCode) enqueueInvalidate(qk.orders.byCode(orderCode), true);
 
-    const branchId = tryExtractBranchId(env);
     if (branchId != null) {
-      // exact=false để match cả key có thêm filters trong tương lai
       enqueueInvalidate(qk.orders.cashierUnpaid({ branchId }), false);
     }
     return;
   }
 
   // 4) Table sessions
-  if (type === "table.session.opened" || type === "table.session.closed") {
-    const branchId = tryExtractBranchId(env);
-    if (branchId != null) enqueueInvalidate(qk.ops.tables.list({ branchId }), true);
+  if (TABLE_SESSION_EVENTS.has(type)) {
+    if (branchId != null) {
+      enqueueInvalidate(qk.ops.tables.list({ branchId }), true);
+    }
 
     const sk = tryExtractSessionKey(env);
     if (sk) enqueueInvalidate(qk.sessions.detail(sk), true);
+
     return;
   }
 
   // 5) Reservations
-  if (type === "reservation.created" || type === "reservation.status.changed") {
-    const branchId = tryExtractBranchId(env);
-    if (branchId != null) enqueueInvalidate(qk.ops.tables.list({ branchId }), true);
+  if (RESERVATION_EVENTS.has(type)) {
+    if (branchId != null) {
+      enqueueInvalidate(qk.ops.tables.list({ branchId }), true);
+      enqueueInvalidate(qk.reservations.list({ branchId }), false);
+    }
+    return;
+  }
+
+  // 6) Inventory
+  if (INVENTORY_EVENTS.has(type)) {
+    if (branchId != null) {
+      enqueueInvalidate(qk.inventory.stock({ branchId }), false);
+      enqueueInvalidate(qk.inventory.holds({ branchId }), false);
+      enqueueInvalidate(qk.inventory.adjustments({ branchId }), false);
+    }
     return;
   }
 }
