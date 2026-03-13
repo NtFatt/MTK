@@ -19,8 +19,7 @@ export function CustomerFooter() {
         </div>
         <Separator className="my-4" />
         <p className="text-xs text-muted-foreground">
-          Đây là giao diện mẫu. Dữ liệu đang dùng mock (PR-01).
-        </p>
+          Dữ liệu món ăn được hiển thị theo phiên hiện tại.</p>
       </div>
     </footer>
   );

@@ -21,7 +21,7 @@ export function HeroBanner() {
 
           <div className="animate-fade-in-up mt-6 [animation-delay:0.2s]">
             <Link
-              to="/c/menu?state=ready"
+to="/c/menu"
               className={cn(
                 buttonVariants({ size: "lg" }),
                 "rounded-full bg-primary-foreground px-8 font-semibold text-primary hover:bg-primary-foreground/90"

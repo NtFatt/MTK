@@ -1,0 +1,4 @@
+D:\LEARNCODE\Mẫu thiết kế cho phần mềm\Project\MTK-main - 1303 - PR17\apps\fe\src\features\customer\menu\components\CustomerFooter.tsx:22: Đây là giao diện mẫu. Dữ liệu đang dùng mock (PR-01).        </p>
+D:\LEARNCODE\Mẫu thiết kế cho phần mềm\Project\MTK-main - 1303 - PR17\apps\fe\src\features\customer\menu\pages\CustomerMenuPage.tsx:132: pageState === "mock";
+D:\LEARNCODE\Mẫu thiết kế cho phần mềm\Project\MTK-main - 1303 - PR17\apps\fe\src\features\internal\auth\pages\InternalIndexRedirect.tsx:16: perms.includes("payments.mock_success");
+D:\LEARNCODE\Mẫu thiết kế cho phần mềm\Project\MTK-main - 1303 - PR17\apps\fe\src\shared\auth\authApi.ts:66: "payments.mock_success",

@@ -3,14 +3,12 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useCustomerSessionStore, selectBranchId, selectSessionKey } from "../../../../shared/customer/session/sessionStore";
 
 import { CustomerNavbar } from "../components/CustomerNavbar";
-import { HeroBanner } from "../components/HeroBanner";
 import { CategoryTabs } from "../components/CategoryTabs";
 import { MenuGrid } from "../components/MenuGrid";
 import { MenuSkeleton } from "../components/MenuSkeleton";
 import { MenuEmpty } from "../components/MenuEmpty";
 import { CustomerFooter } from "../components/CustomerFooter";
 
-import { CATEGORIES, ITEMS } from "../data/mockMenu";
 import { useMenuQuery } from "../hooks/useMenuQuery";
 
 import { cn } from "../../../../shared/utils/cn";
@@ -18,11 +16,10 @@ import { StickyCartBar } from "../components/StickyCartBar";
 import { useCartQuery } from "../../cart/hooks/useCartQuery";
 import type { MenuCategory, MenuItem } from "../types";
 
-type PageState = "ready" | "skeleton" | "empty" | "mock";
-
+type PageState = "ready" | "skeleton" | "empty";
 function getStateFromSearchParams(searchParams: URLSearchParams): PageState {
   const state = searchParams.get("state");
-  if (state === "skeleton" || state === "empty" || state === "ready" || state === "mock") {
+  if (state === "skeleton" || state === "empty" || state === "ready") {
     return state;
   }
   return "ready";
@@ -72,7 +69,7 @@ function buildItemsForUi(items: unknown): MenuItem[] {
 }
 
 export function CustomerMenuPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const pageState = getStateFromSearchParams(searchParams);
   const branchId = useCustomerSessionStore(selectBranchId);
   const sessionKey = useCustomerSessionStore(selectSessionKey);
@@ -98,27 +95,6 @@ export function CustomerMenuPage() {
   const [activeCategoryId, setActiveCategoryId] = useState<string>("all");
 
   const { categories, filteredItems, countByCategoryId, itemsUi } = useMemo(() => {
-    // MOCK MODE
-    if (pageState === "mock") {
-      const map: Record<string, number> = {};
-      for (const item of ITEMS) {
-        map[item.categoryId] = (map[item.categoryId] ?? 0) + 1;
-      }
-      map["all"] = ITEMS.length;
-
-      const filtered =
-        activeCategoryId === "all"
-          ? ITEMS
-          : ITEMS.filter((item) => item.categoryId === activeCategoryId);
-
-      return {
-        categories: CATEGORIES,
-        filteredItems: filtered,
-        countByCategoryId: map,
-        itemsUi: ITEMS,
-      };
-    }
-
     // API MODE (safe normalize)
     const apiCategories = Array.isArray(menuData?.categories) ? menuData!.categories : [];
     const categoriesUi = buildCategoriesForUi(apiCategories);
@@ -152,9 +128,7 @@ export function CustomerMenuPage() {
     pageState === "ready" && !isLoading && !isError && itemsUi.length === 0;
 
   const showReadyContent =
-    (pageState === "ready" && !isLoading && !isError && itemsUi.length > 0) ||
-    pageState === "mock";
-
+    pageState === "ready" && !isLoading && !isError && itemsUi.length > 0;
   return (
     <div className={cn("flex min-h-screen flex-col bg-background")}>
       <CustomerNavbar />
@@ -176,13 +150,6 @@ export function CustomerMenuPage() {
                 className={cn("rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground")}
               >
                 Thử lại
-              </button>
-              <button
-                type="button"
-                onClick={() => setSearchParams({ state: "mock" })}
-                className={cn("text-sm underline underline-offset-2")}
-              >
-                Dùng dữ liệu mẫu
               </button>
             </div>
           </div>
