@@ -71,9 +71,7 @@ export function InternalInventoryStockPage() {
   const enabled =
     !!session && !!bid && canRead && !shouldRedirectBranch && !shouldRedirectMissingBranch;
 
-useRealtimeRoom(bid ? `branch:${bid}` : null, enabled);
-useRealtimeRoom(bid ? `inventory:${bid}` : null, enabled);
-
+  useRealtimeRoom(bid ? `branch:${bid}` : null, enabled);
   const { data, isLoading, error, refetch, isFetching } = useInventoryStockQuery(bid, enabled);
 
   useEffect(() => {

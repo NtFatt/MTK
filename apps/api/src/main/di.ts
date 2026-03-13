@@ -404,29 +404,32 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
   const inventoryRepo = new MySQLInventoryRepository();
   const listBranchStock = new ListBranchStock(inventoryRepo);
 
-  const adjustBranchStock = new AdjustBranchStock(inventoryRepo, {
-    redis: redis ?? null,
-    stockHoldsEnabled: Boolean(redis && env.REDIS_STOCK_HOLDS_ENABLED),
-    menuCacheEnabled: Boolean(redis && env.MENU_CACHE_ENABLED),
-    menuVersionKey: "menu:ver",
-  });
-
+  const adjustBranchStock = new AdjustBranchStock(
+    inventoryRepo,
+    {
+      redis: redis ?? null,
+      stockHoldsEnabled: Boolean(redis && env.REDIS_STOCK_HOLDS_ENABLED),
+      menuCacheEnabled: Boolean(redis && env.MENU_CACHE_ENABLED),
+      menuVersionKey: "menu:ver",
+    },
+    eventBus,
+  );
   const listActiveHolds = redis ? new ListActiveHolds(redis) : null;
   const getStockDriftMetrics = redis ? new GetStockDriftMetrics(redis) : null;
   const triggerStockRehydrate = redis ? new TriggerStockRehydrate(redis) : null;
   const bumpMenuVersion = redis ? new BumpMenuVersion(redis) : null;
-const listInventoryAdjustmentAudit = new ListInventoryAdjustmentAudit(auditRepo);
+  const listInventoryAdjustmentAudit = new ListInventoryAdjustmentAudit(auditRepo);
 
-const adminInventoryController = new AdminInventoryController(
-  listBranchStock,
-  adjustBranchStock,
-  listActiveHolds,
-  getStockDriftMetrics,
-  triggerStockRehydrate,
-  bumpMenuVersion,
-  listInventoryAdjustmentAudit,
-  auditRepo,
-);
+  const adminInventoryController = new AdminInventoryController(
+    listBranchStock,
+    adjustBranchStock,
+    listActiveHolds,
+    getStockDriftMetrics,
+    triggerStockRehydrate,
+    bumpMenuVersion,
+    listInventoryAdjustmentAudit,
+    auditRepo,
+  );
 
   // ===== Menu =====
   const getMenuCategories = new GetMenuCategories(menuCatalogRepo);

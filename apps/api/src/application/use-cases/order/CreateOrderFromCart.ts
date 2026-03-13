@@ -25,7 +25,7 @@ export class CreateOrderFromCart {
     private sessionRepo: ITableSessionRepository | null,
     private stockHold: IStockHoldService = new NoopStockHoldService(),
     private eventBus: IEventBus = new NoopEventBus(),
-  ) {}
+  ) { }
 
   async execute(cartKey: string, note: string | null = null) {
     const cart = await this.cartRepo.findByCartKey(cartKey);
@@ -87,7 +87,22 @@ export class CreateOrderFromCart {
         subtotal: items.reduce((s: number, it: any) => s + Number(it.unitPrice ?? it.unit_price) * Number(it.quantity ?? 0), 0),
       },
     });
-
+    if (cart.branchId) {
+      await this.eventBus.publish({
+        type: "inventory.updated",
+        at: new Date().toISOString(),
+        scope: {
+          branchId: cart.branchId,
+        },
+        payload: {
+          branchId: cart.branchId,
+          cartKey,
+          orderCode,
+          orderId: String(orderId),
+          source: "order.checkout.consume",
+        },
+      });
+    }
     return { orderCode, orderId: String(orderId) };
   }
 }

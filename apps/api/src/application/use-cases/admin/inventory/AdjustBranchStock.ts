@@ -1,5 +1,7 @@
 import type { IInventoryRepository, AdjustStockMode } from "../../../ports/repositories/IInventoryRepository.js";
 import type { RedisClient } from "../../../../infrastructure/redis/redisClient.js";
+import type { IEventBus } from "../../../ports/events/IEventBus.js";
+
 
 export type AdjustBranchStockResult = {
   branchId: string;
@@ -17,15 +19,16 @@ export type AdjustBranchStockResult = {
 };
 
 export class AdjustBranchStock {
-  constructor(
-    private readonly repo: IInventoryRepository,
-    private readonly deps: {
-      redis?: RedisClient | null;
-      stockHoldsEnabled: boolean;
-      menuCacheEnabled: boolean;
-      menuVersionKey?: string;
-    },
-  ) {}
+constructor(
+  private readonly repo: IInventoryRepository,
+  private readonly deps: {
+    redis?: RedisClient | null;
+    stockHoldsEnabled: boolean;
+    menuCacheEnabled: boolean;
+    menuVersionKey?: string;
+  },
+  private readonly eventBus: IEventBus,
+) {}
 
   async execute(input: {
     actor: { role: string; branchId: string | null };
@@ -82,7 +85,21 @@ export class AdjustBranchStock {
     } catch {
       // ignore
     }
-
+    await this.eventBus.publish({
+      type: "inventory.updated",
+      at: new Date().toISOString(),
+      scope: {
+        branchId,
+      },
+      payload: {
+        branchId,
+        itemId: out.itemId,
+        mode: out.mode,
+        prevQty: out.prevQty,
+        newQty: out.newQty,
+        source: "admin.inventory.adjust",
+      },
+    });
     return {
       ...out,
       redis: {

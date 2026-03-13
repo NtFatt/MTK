@@ -19,27 +19,22 @@ export function RealtimeBootstrap({ queryClient }: Props) {
 
   useEffect(() => {
     const token = session?.accessToken;
-    const rawUserKey =
-      session?.userId ??
-      session?.id ??
-      session?.username;
+    const userKey = session?.user?.id;
 
-    if (!token || rawUserKey == null) {
+    if (!token || !userKey) {
       void stopRealtime();
       return;
     }
 
     void startRealtime({
       kind: "internal",
-      userKey: String(rawUserKey),
+      userKey: String(userKey),
       branchId: session?.branchId != null ? String(session.branchId) : undefined,
       token,
     });
   }, [
     session?.accessToken,
-    session?.userId,
-    session?.id,
-    session?.username,
+    session?.user?.id,
     session?.branchId,
   ]);
 

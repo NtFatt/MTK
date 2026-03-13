@@ -50,7 +50,6 @@ export function InternalInventoryHoldsPage() {
   const enabled = !!session && !!bid && !isBranchMismatch && canRead;
 
 useRealtimeRoom(bid ? `branch:${bid}` : null, enabled);
-useRealtimeRoom(bid ? `inventory:${bid}` : null, enabled);
 
   const [q, setQ] = useState("");
   const [cartKeyFilter, setCartKeyFilter] = useState("");

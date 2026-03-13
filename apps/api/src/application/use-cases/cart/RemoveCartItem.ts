@@ -19,7 +19,7 @@ export class RemoveCartItem {
     private sessionRepo: ITableSessionRepository | null,
     private stockHold: IStockHoldService = new NoopStockHoldService(),
     private eventBus: IEventBus = new NoopEventBus(),
-  ) {}
+  ) { }
 
   async execute(cartKey: string, itemId: string, optionsHash?: string | null) {
     const cart = await this.cartRepo.findByCartKey(cartKey);
@@ -76,5 +76,24 @@ export class RemoveCartItem {
         optionsHash: optionsHash ?? null,
       },
     });
+    if (cart.branchId) {
+      await this.eventBus.publish({
+        type: "inventory.updated",
+        at: new Date().toISOString(),
+        scope: {
+          branchId: cart.branchId,
+        },
+        payload: {
+          branchId: cart.branchId,
+          cartKey,
+          cartId: cart.id,
+          sessionId: cart.sessionId ?? null,
+          itemId,
+          optionsHash: optionsHash ?? null,
+          action: "REMOVE",
+          source: "cart.hold.release",
+        },
+      });
+    }
   }
 }

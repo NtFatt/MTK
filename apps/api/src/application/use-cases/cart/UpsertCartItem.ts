@@ -31,7 +31,10 @@ function computeOptionsHash(itemOptions: any): { optionsHash: string; normalized
   return { optionsHash: hash, normalizedOptions: normalized };
 }
 
-async function resolveSessionKey(sessionRepo: ITableSessionRepository | null, sessionId?: string | null): Promise<string | null> {
+async function resolveSessionKey(
+  sessionRepo: ITableSessionRepository | null,
+  sessionId?: string | null,
+): Promise<string | null> {
   if (!sessionRepo || !sessionId) return null;
   const s = await sessionRepo.findById(sessionId);
   return s?.sessionKey ? String(s.sessionKey) : null;
@@ -56,15 +59,15 @@ export class UpsertCartItem {
 
     const { optionsHash, normalizedOptions } = computeOptionsHash(itemOptions);
 
-    // Current qty (for rollback if DB upsert fails after reserving stock)
     const currentItems = await this.cartItemRepo.listByCartId(cart.id);
     const currentQty = Number(
-      currentItems.find((it: any) => String(it.itemId) === String(itemId) && String(it.optionsHash ?? "") === String(optionsHash))
-        ?.quantity ?? 0,
+      currentItems.find(
+        (it: any) =>
+          String(it.itemId) === String(itemId) &&
+          String(it.optionsHash ?? "") === String(optionsHash),
+      )?.quantity ?? 0,
     );
 
-    // Phase-1: Redis stock holds (atomic)
-    // Apply hold first to prevent DB from reflecting quantities we cannot fulfill.
     try {
       if (cart.branchId) {
         await this.stockHold.setDesiredQty({
@@ -76,14 +79,11 @@ export class UpsertCartItem {
           desiredQty: Number(quantity),
         });
       } else {
-        // If stock holds is active, branchId is mandatory.
-        // NoopStockHoldService will ignore, but RedisStockHoldService will be used in prod.
         if (!(this.stockHold instanceof NoopStockHoldService)) {
           throw new Error("BRANCH_REQUIRED");
         }
       }
     } catch (e) {
-      // Stock is not enough / holds service rejected the update
       throw e;
     }
 
@@ -91,10 +91,16 @@ export class UpsertCartItem {
       await this.cartItemRepo.remove({ cartId: cart.id, itemId, optionsHash });
 
       const sessionKey = await resolveSessionKey(this.sessionRepo, cart.sessionId ?? null);
+
       await this.eventBus.publish({
         type: "cart.updated",
         at: new Date().toISOString(),
-        scope: { sessionId: cart.sessionId ?? null, sessionKey, clientId: cart.clientId ?? null, branchId: cart.branchId ?? null },
+        scope: {
+          sessionId: cart.sessionId ?? null,
+          sessionKey,
+          clientId: cart.clientId ?? null,
+          branchId: cart.branchId ?? null,
+        },
         payload: {
           cartKey,
           cartId: cart.id,
@@ -106,6 +112,29 @@ export class UpsertCartItem {
           itemOptions: normalizedOptions,
         },
       });
+
+      if (cart.branchId) {
+        await this.eventBus.publish({
+          type: "inventory.updated",
+          at: new Date().toISOString(),
+          scope: {
+            branchId: cart.branchId,
+          },
+          payload: {
+            branchId: cart.branchId,
+            cartKey,
+            cartId: cart.id,
+            sessionId: cart.sessionId ?? null,
+            itemId,
+            quantity: 0,
+            action: "REMOVE",
+            optionsHash,
+            itemOptions: normalizedOptions,
+            source: "cart.hold.release",
+          },
+        });
+      }
+
       return;
     }
 
@@ -122,7 +151,6 @@ export class UpsertCartItem {
         itemOptions: normalizedOptions,
       });
     } catch (err) {
-      // Rollback hold to previous qty if DB write fails
       try {
         if (cart.branchId) {
           await this.stockHold.setDesiredQty({
@@ -135,7 +163,7 @@ export class UpsertCartItem {
           });
         }
       } catch {
-        // ignore
+        // ignore rollback failure
       }
       throw err;
     }
@@ -145,7 +173,12 @@ export class UpsertCartItem {
     await this.eventBus.publish({
       type: "cart.updated",
       at: new Date().toISOString(),
-      scope: { sessionId: cart.sessionId ?? null, sessionKey, clientId: cart.clientId ?? null, branchId: cart.branchId ?? null },
+      scope: {
+        sessionId: cart.sessionId ?? null,
+        sessionKey,
+        clientId: cart.clientId ?? null,
+        branchId: cart.branchId ?? null,
+      },
       payload: {
         cartKey,
         cartId: cart.id,
@@ -158,5 +191,28 @@ export class UpsertCartItem {
         itemOptions: normalizedOptions,
       },
     });
+
+    if (cart.branchId) {
+      await this.eventBus.publish({
+        type: "inventory.updated",
+        at: new Date().toISOString(),
+        scope: {
+          branchId: cart.branchId,
+        },
+        payload: {
+          branchId: cart.branchId,
+          cartKey,
+          cartId: cart.id,
+          sessionId: cart.sessionId ?? null,
+          itemId,
+          quantity,
+          unitPrice: price,
+          action: "UPSERT",
+          optionsHash,
+          itemOptions: normalizedOptions,
+          source: "cart.hold.set",
+        },
+      });
+    }
   }
 }

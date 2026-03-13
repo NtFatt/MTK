@@ -67,9 +67,7 @@ function AdjustmentsInner({ bid, enabled }: InnerProps) {
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [archivedPages, setArchivedPages] = useState<InventoryAdjustmentRow[][]>([]);
 
-useRealtimeRoom(bid ? `branch:${bid}` : null, enabled);
-useRealtimeRoom(bid ? `inventory:${bid}` : null, enabled);
-
+  useRealtimeRoom(bid ? `branch:${bid}` : null, enabled);
   const resetPaging = useCallback(() => {
     setCursor(undefined);
     setArchivedPages([]);

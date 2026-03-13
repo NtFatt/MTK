@@ -100,17 +100,25 @@ export function InternalCashierPage() {
 
   const enabled = !!session && !!bid && !isBranchMismatch && canRead;
 
+  const rtCtx = session
+    ? {
+      kind: "internal" as const,
+      userKey: session.user?.id ? String(session.user.id) : "internal",
+      branchId: bid ? String(bid) : session?.branchId != null ? String(session.branchId) : undefined,
+      token: session.accessToken,
+    }
+    : undefined;
+
   useRealtimeRoom(
     bid ? `cashier:${bid}` : null,
     enabled && !!bid,
-    session
-      ? {
-          kind: "internal",
-          userKey: session.user?.id ? String(session.user.id) : "internal",
-          branchId: bid ? String(bid) : session?.branchId != null ? String(session.branchId) : undefined,
-          token: session.accessToken,
-        }
-      : undefined
+    rtCtx
+  );
+
+  useRealtimeRoom(
+    bid ? `branch:${bid}` : null,
+    enabled && !!bid,
+    rtCtx
   );
 
   const [q, setQ] = useState("");
