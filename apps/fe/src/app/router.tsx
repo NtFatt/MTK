@@ -1,57 +1,154 @@
+import { lazy, Suspense, type ReactNode } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
-
-import { CustomerMenuPage } from "../features/customer/menu/pages/CustomerMenuPage";
-import { CustomerQrPage } from "../features/customer/qr/pages/CustomerQrPage";
-import { CustomerSessionBootstrapPage } from "../features/customer/session/pages/CustomerSessionBootstrapPage";
-import { CustomerCartPage } from "../features/customer/cart/pages/CustomerCartPage";
-import { CustomerCheckoutPage } from "../features/customer/order/pages/CustomerCheckoutPage";
-import { CustomerOrderStatusPage } from "../features/customer/order/pages/CustomerOrderStatusPage";
 
 import { RequireAuth } from "../shared/auth/guards";
 import { RequireAdmin } from "../shared/auth/RequireAdmin";
 import { RequireCustomerSession } from "../shared/customer/session/guards";
 
-import { AppEntryPage } from "../features/entry/pages/AppEntryPage";
-import { InternalLoginPage } from "../features/internal/auth/pages/InternalLoginPage";
-import { InternalLogoutPage } from "../features/internal/auth/pages/InternalLogoutPage";
-import { InternalIndexRedirect } from "../features/internal/auth/pages/InternalIndexRedirect";
+import { InternalLayout } from "../layouts/internal/InternalLayout";
+import { InternalShellLayout } from "../layouts/internal/InternalShellLayout";
 
-import { InternalTablesPage } from "../features/internal/ops/tables/pages/InternalTablesPage";
-import { InternalPosMenuPage } from "../features/internal/pos/pages/InternalPosMenuPage";
-import { InternalKitchenPage } from "../features/internal/kitchen/pages/InternalKitchenPage";
-import { InternalCashierPage } from "../features/internal/cashier/pages/InternalCashierPage";
+const AppEntryPage = lazy(async () => ({
+  default: (await import("../features/entry/pages/AppEntryPage")).AppEntryPage,
+}));
 
-import { InternalAdminPage } from "../features/internal/admin/pages/InternalAdminPage";
-import { InternalDashboardPage } from "../features/internal/dashboard/pages/InternalDashboardPage";
-import { InternalInventoryStockPage } from "../features/internal/inventory/pages/InternalInventoryStockPage";
-import { InternalInventoryHoldsPage } from "../features/internal/inventory/pages/InternalInventoryHoldsPage";
-import { InternalInventoryAdjustmentsPage } from "../features/internal/inventory/pages/InternalInventoryAdjustmentsPage";
+const CustomerMenuPage = lazy(async () => ({
+  default: (await import("../features/customer/menu/pages/CustomerMenuPage")).CustomerMenuPage,
+}));
 
-import { InternalLayout } from "../layouts/internal/InternalLayout"; // có sidebar
-import { InternalShellLayout } from "../layouts/internal/InternalShellLayout"; // không sidebar
+const CustomerQrPage = lazy(async () => ({
+  default: (await import("../features/customer/qr/pages/CustomerQrPage")).CustomerQrPage,
+}));
 
+const CustomerSessionBootstrapPage = lazy(async () => ({
+  default: (await import("../features/customer/session/pages/CustomerSessionBootstrapPage"))
+    .CustomerSessionBootstrapPage,
+}));
 
+const CustomerCartPage = lazy(async () => ({
+  default: (await import("../features/customer/cart/pages/CustomerCartPage")).CustomerCartPage,
+}));
+
+const CustomerCheckoutPage = lazy(async () => ({
+  default: (await import("../features/customer/order/pages/CustomerCheckoutPage"))
+    .CustomerCheckoutPage,
+}));
+
+const CustomerOrderStatusPage = lazy(async () => ({
+  default: (await import("../features/customer/order/pages/CustomerOrderStatusPage"))
+    .CustomerOrderStatusPage,
+}));
+
+const CustomerPaymentPage = lazy(async () => ({
+  default: (await import("../features/customer/payment/pages/CustomerPaymentPage"))
+    .CustomerPaymentPage,
+}));
+
+const CustomerPaymentReturnPage = lazy(async () => ({
+  default: (await import("../features/customer/payment/pages/CustomerPaymentReturnPage"))
+    .CustomerPaymentReturnPage,
+}));
+
+const InternalLoginPage = lazy(async () => ({
+  default: (await import("../features/internal/auth/pages/InternalLoginPage")).InternalLoginPage,
+}));
+
+const InternalLogoutPage = lazy(async () => ({
+  default: (await import("../features/internal/auth/pages/InternalLogoutPage")).InternalLogoutPage,
+}));
+
+const InternalIndexRedirect = lazy(async () => ({
+  default: (await import("../features/internal/auth/pages/InternalIndexRedirect"))
+    .InternalIndexRedirect,
+}));
+
+const InternalTablesPage = lazy(async () => ({
+  default: (await import("../features/internal/ops/tables/pages/InternalTablesPage"))
+    .InternalTablesPage,
+}));
+
+const InternalPosMenuPage = lazy(async () => ({
+  default: (await import("../features/internal/pos/pages/InternalPosMenuPage"))
+    .InternalPosMenuPage,
+}));
+
+const InternalKitchenPage = lazy(async () => ({
+  default: (await import("../features/internal/kitchen/pages/InternalKitchenPage"))
+    .InternalKitchenPage,
+}));
+
+const InternalCashierPage = lazy(async () => ({
+  default: (await import("../features/internal/cashier/pages/InternalCashierPage"))
+    .InternalCashierPage,
+}));
+
+const InternalAdminPage = lazy(async () => ({
+  default: (await import("../features/internal/admin/pages/InternalAdminPage"))
+    .InternalAdminPage,
+}));
+
+const InternalDashboardPage = lazy(async () => ({
+  default: (await import("../features/internal/dashboard/pages/InternalDashboardPage"))
+    .InternalDashboardPage,
+}));
+
+const InternalInventoryStockPage = lazy(async () => ({
+  default: (await import("../features/internal/inventory/pages/InternalInventoryStockPage"))
+    .InternalInventoryStockPage,
+}));
+
+const InternalInventoryHoldsPage = lazy(async () => ({
+  default: (await import("../features/internal/inventory/pages/InternalInventoryHoldsPage"))
+    .InternalInventoryHoldsPage,
+}));
+
+const InternalInventoryAdjustmentsPage = lazy(async () => ({
+  default: (
+    await import("../features/internal/inventory/pages/InternalInventoryAdjustmentsPage")
+  ).InternalInventoryAdjustmentsPage,
+}));
+
+function RouteLoadingPage() {
+  return (
+    <main className="mx-auto flex min-h-[40vh] w-full max-w-3xl items-center justify-center px-4 py-10">
+      <div className="rounded-xl border bg-card px-4 py-3 text-sm text-muted-foreground">
+        Đang tải trang…
+      </div>
+    </main>
+  );
+}
+
+function withSuspense(node: ReactNode) {
+  return <Suspense fallback={<RouteLoadingPage />}>{node}</Suspense>;
+}
 
 export const router = createBrowserRouter([
-  // ✅ App entry
-  { path: "/", element: <AppEntryPage /> },
+  {
+    path: "/",
+    element: withSuspense(<AppEntryPage />),
+  },
 
-  // ✅ Customer routes
   {
     path: "c/menu",
     element: (
       <RequireCustomerSession>
-        <CustomerMenuPage />
+        {withSuspense(<CustomerMenuPage />)}
       </RequireCustomerSession>
     ),
   },
-  { path: "c/qr", element: <CustomerQrPage /> },
-  { path: "c/session/:sessionKey", element: <CustomerSessionBootstrapPage /> },
+  {
+    path: "c/qr",
+    element: withSuspense(<CustomerQrPage />),
+  },
+  {
+    path: "c/session/:sessionKey",
+    element: withSuspense(<CustomerSessionBootstrapPage />),
+  },
   {
     path: "c/cart",
     element: (
       <RequireCustomerSession>
-        <CustomerCartPage />
+        {withSuspense(<CustomerCartPage />)}
       </RequireCustomerSession>
     ),
   },
@@ -59,28 +156,39 @@ export const router = createBrowserRouter([
     path: "c/checkout",
     element: (
       <RequireCustomerSession>
-        <CustomerCheckoutPage />
+        {withSuspense(<CustomerCheckoutPage />)}
       </RequireCustomerSession>
     ),
+  },
+  {
+    path: "c/payment/return",
+    element: withSuspense(<CustomerPaymentReturnPage />),
+  },
+  {
+    path: "c/payment/:orderCode",
+    element: withSuspense(<CustomerPaymentPage />),
   },
   {
     path: "c/orders/:orderCode",
     element: (
       <RequireCustomerSession>
-        <CustomerOrderStatusPage />
+        {withSuspense(<CustomerOrderStatusPage />)}
       </RequireCustomerSession>
     ),
   },
 
-  // ✅ Back-compat redirects
   { path: "customer/menu", element: <Navigate to="/c/menu" replace /> },
   { path: "internal", element: <Navigate to="/i/login" replace /> },
 
-  // ✅ Internal auth
-  { path: "i/login", element: <InternalLoginPage /> },
-  { path: "i/logout", element: <InternalLogoutPage /> },
+  {
+    path: "i/login",
+    element: withSuspense(<InternalLoginPage />),
+  },
+  {
+    path: "i/logout",
+    element: withSuspense(<InternalLogoutPage />),
+  },
 
-  // ✅ ADMIN zone (CÓ SIDEBAR) — chỉ ADMIN vào được
   {
     path: "i/:branchId/admin",
     element: (
@@ -92,24 +200,26 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <Navigate to="dashboard" replace /> },
-      { path: "dashboard", element: <InternalDashboardPage /> },
-      { path: "tables", element: <InternalTablesPage /> },
-      { path: "kitchen", element: <InternalKitchenPage /> },
-      { path: "cashier", element: <InternalCashierPage /> },
-      { path: "staff", element: <InternalAdminPage /> },
+      { path: "dashboard", element: withSuspense(<InternalDashboardPage />) },
+      { path: "tables", element: withSuspense(<InternalTablesPage />) },
+      { path: "kitchen", element: withSuspense(<InternalKitchenPage />) },
+      { path: "cashier", element: withSuspense(<InternalCashierPage />) },
+      { path: "staff", element: withSuspense(<InternalAdminPage />) },
       {
         path: "inventory",
         children: [
           { index: true, element: <Navigate to="stock" replace /> },
-          { path: "stock", element: <InternalInventoryStockPage /> },
-          { path: "holds", element: <InternalInventoryHoldsPage /> },
-          { path: "adjustments", element: <InternalInventoryAdjustmentsPage /> },
+          { path: "stock", element: withSuspense(<InternalInventoryStockPage />) },
+          { path: "holds", element: withSuspense(<InternalInventoryHoldsPage />) },
+          {
+            path: "adjustments",
+            element: withSuspense(<InternalInventoryAdjustmentsPage />),
+          },
         ],
       },
     ],
   },
 
-  // ✅ Internal zone (KHÔNG SIDEBAR)
   {
     path: "i/:branchId",
     element: (
@@ -118,29 +228,51 @@ export const router = createBrowserRouter([
       </RequireAuth>
     ),
     children: [
-      { index: true, element: <InternalIndexRedirect /> },
-
-      { path: "tables", element: <InternalTablesPage />, handle: { title: "Tables" } },
-      { path: "kitchen", element: <InternalKitchenPage />, handle: { title: "Kitchen" } },
-      { path: "cashier", element: <InternalCashierPage />, handle: { title: "Cashier" } },
+      { index: true, element: withSuspense(<InternalIndexRedirect />) },
+      {
+        path: "tables",
+        element: withSuspense(<InternalTablesPage />),
+        handle: { title: "Tables" },
+      },
+      {
+        path: "kitchen",
+        element: withSuspense(<InternalKitchenPage />),
+        handle: { title: "Kitchen" },
+      },
+      {
+        path: "cashier",
+        element: withSuspense(<InternalCashierPage />),
+        handle: { title: "Cashier" },
+      },
       {
         path: "inventory",
         children: [
           { index: true, element: <Navigate to="stock" replace /> },
-          { path: "stock", element: <InternalInventoryStockPage />, handle: { title: "Inventory — Stock" } },
-          { path: "holds", element: <InternalInventoryHoldsPage />, handle: { title: "Inventory — Holds" } },
-          { path: "adjustments", element: <InternalInventoryAdjustmentsPage />, handle: { title: "Inventory — Lịch sử" } },
+          {
+            path: "stock",
+            element: withSuspense(<InternalInventoryStockPage />),
+            handle: { title: "Inventory — Stock" },
+          },
+          {
+            path: "holds",
+            element: withSuspense(<InternalInventoryHoldsPage />),
+            handle: { title: "Inventory — Holds" },
+          },
+          {
+            path: "adjustments",
+            element: withSuspense(<InternalInventoryAdjustmentsPage />),
+            handle: { title: "Inventory — Lịch sử" },
+          },
         ],
       },
     ],
   },
 
-  // ✅ POS routes (giữ nguyên nếu còn dùng)
   {
     path: "i/pos/tables",
     element: (
       <RequireAuth>
-        <InternalTablesPage />
+        {withSuspense(<InternalTablesPage />)}
       </RequireAuth>
     ),
   },
@@ -148,13 +280,15 @@ export const router = createBrowserRouter([
     path: "i/pos/menu",
     element: (
       <RequireAuth>
-        <InternalPosMenuPage />
+        {withSuspense(<InternalPosMenuPage />)}
       </RequireAuth>
     ),
   },
 
-  { path: "i/admin/system", element: <Navigate to="/i/login?reason=missing_branch" replace /> },
+  {
+    path: "i/admin/system",
+    element: <Navigate to="/i/login?reason=missing_branch" replace />,
+  },
 
-  // ✅ Catch-all
   { path: "*", element: <Navigate to="/" replace /> },
 ]);

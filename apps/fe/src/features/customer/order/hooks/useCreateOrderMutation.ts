@@ -36,7 +36,7 @@ export function useCreateOrderMutation() {
       queryClient.invalidateQueries({ queryKey: qk.cart.bySessionKey(variables.sessionKey) });
       queryClient.invalidateQueries({ queryKey: qk.cart.byCartKey(variables.cartKey) });
       if (data?.orderCode) {
-        navigate(`/c/orders/${encodeURIComponent(data.orderCode)}`, { replace: true });
+        navigate(`/c/payment/${encodeURIComponent(data.orderCode)}`, { replace: true });
       }
     },
   });
