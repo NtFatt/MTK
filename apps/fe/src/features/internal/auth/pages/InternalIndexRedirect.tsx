@@ -1,33 +1,47 @@
 import { Navigate, useParams } from "react-router-dom";
 import { useStore } from "zustand";
+
 import { authStore } from "../../../../shared/auth/authStore";
+import {
+  hasAnyPermission,
+  hasPermission,
+  resolveInternalBranch,
+} from "../../../../shared/auth/permissions";
 
 function resolveInternalHomePath(session: any, branchId: string) {
-  const perms: string[] = session?.permissions ?? [];
-  const role = String(session?.role ?? "").trim().toUpperCase();
+  if (
+    hasAnyPermission(session, [
+      "staff.manage",
+      "maintenance.run",
+      "observability.admin.read",
+      "realtime.admin",
+      "payments.mock_success",
+    ])
+  ) {
+    return `/i/${branchId}/admin/dashboard`;
+  }
 
-  // ✅ ADMIN detect chắc chắn (role + admin-only perms)
-  const isAdmin =
-    role === "ADMIN" ||
-    perms.includes("staff.manage") ||
-    perms.includes("maintenance.run") ||
-    perms.includes("observability.admin.read") ||
-    perms.includes("realtime.admin") ||
-    perms.includes("payments.mock_success");
+  if (
+    hasAnyPermission(session, [
+      "inventory.read",
+      "inventory.adjust",
+      "inventory.holds.read",
+    ])
+  ) {
+    return `/i/${branchId}/inventory/stock`;
+  }
 
-  if (isAdmin) return `/i/${branchId}/admin`;
+  if (hasPermission(session, "cashier.unpaid.read")) {
+    return `/i/${branchId}/cashier`;
+  }
 
-  // ✅ Branch Manager / Inventory operator
-  const isBranchManager =
-    role === "BRANCH_MANAGER" ||
-    perms.includes("inventory.read") ||
-    perms.includes("inventory.adjust") ||
-    perms.includes("inventory.holds.read");
+  if (hasPermission(session, "kitchen.queue.read")) {
+    return `/i/${branchId}/kitchen`;
+  }
 
-  if (isBranchManager) return `/i/${branchId}/inventory/stock`;
-  if (perms.includes("cashier.unpaid.read") || role === "CASHIER") return `/i/${branchId}/cashier`;
-  if (perms.includes("kitchen.queue.read") || role === "KITCHEN") return `/i/${branchId}/kitchen`;
-  if (perms.includes("ops.tables.read") || role === "OPS") return `/i/${branchId}/tables`;
+  if (hasPermission(session, "ops.tables.read")) {
+    return `/i/${branchId}/tables`;
+  }
 
   return `/i/${branchId}/tables`;
 }
@@ -35,9 +49,11 @@ function resolveInternalHomePath(session: any, branchId: string) {
 export function InternalIndexRedirect() {
   const session = useStore(authStore, (s) => s.session);
   const { branchId } = useParams<{ branchId: string }>();
-  const bid = String(branchId ?? session?.branchId ?? "").trim();
 
   if (!session) return <Navigate to="/i/login" replace />;
+
+  const bid = resolveInternalBranch(session, branchId);
+
   if (!bid) return <Navigate to="/i/login?reason=missing_branch" replace />;
 
   return <Navigate to={resolveInternalHomePath(session, bid)} replace />;
