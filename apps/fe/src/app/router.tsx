@@ -290,15 +290,7 @@ export const router = createBrowserRouter([
     ],
   },
   {
-    path: "i/pos/tables",
-    element: (
-      <RequireAuth>
-        {withSuspense(<InternalTablesPage />)}
-      </RequireAuth>
-    ),
-  },
-  {
-    path: "i/pos/menu",
+path: "i/:branchId/pos/menu",
     element: (
       <RequireAuth>
         {withSuspense(<InternalPosMenuPage />)}

@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 import { useStore } from "zustand";
 
 import { authStore } from "../../../../shared/auth/authStore";
-import { Can } from "../../../../shared/auth/guards";
 import { useAppQuery } from "../../../../shared/http/useAppQuery";
 import { useAppMutation } from "../../../../shared/http/useAppMutation";
 import { apiFetchAuthed } from "../../../../shared/http/authedFetch";
@@ -32,10 +31,10 @@ export function InternalAdminPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const session = useStore(authStore, (s) => s.session);
 
-  
 
-const canRead = hasAnyPermission(session, ["staff.read"]);
-const canManage = hasPermission(session, "staff.manage");
+
+  const canRead = hasAnyPermission(session, ["staff.read"]);
+  const canManage = hasPermission(session, "staff.manage");
   const branchParam = String(branchId ?? "").trim();
 
   const [statusFilter, setStatusFilter] = useState<"" | StaffStatus>("");
@@ -180,7 +179,9 @@ const canManage = hasPermission(session, "staff.manage");
                   <div className="md:col-span-2">
                     <Alert variant="destructive">
                       <AlertDescription>
-                        {createMutation.error.message}
+                        {createMutation.error.code === "STAFF_USERNAME_ALREADY_EXISTS"
+                          ? "Username đã tồn tại. Vui lòng chọn username khác."
+                          : createMutation.error.message}
                         {createMutation.error.correlationId && (
                           <span className="mt-1 block text-xs">Mã: {createMutation.error.correlationId}</span>
                         )}

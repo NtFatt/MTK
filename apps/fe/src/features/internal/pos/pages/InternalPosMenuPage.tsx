@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useStore } from "zustand";
 
 import { authStore } from "../../../../shared/auth/authStore";
@@ -13,6 +13,7 @@ import {
   normalizeOpsCartItems,
   putOpsCartItems,
 } from "../../ops/tables/services/opsCartsApi";
+import { resolveInternalBranch } from "../../../../shared/auth/permissions";
 
 type MenuItem = {
   id: string | number;
@@ -33,9 +34,14 @@ export function InternalPosMenuPage() {
   const setSession = useStore(posStore, (s) => s.setSession);
 
   const authSession = useStore(authStore, (s) => s.session);
-  const fallbackBranchId = authSession?.branchId ?? null;
-  const hasHydrated = useStore(posStore, (s) => s._hasHydrated);
+  const { branchId: urlBranchId } = useParams<{ branchId: string }>();
+  const effectiveBranchId = resolveInternalBranch(authSession, urlBranchId);
 
+  const tablesRoute = effectiveBranchId
+    ? `/i/${effectiveBranchId}/tables`
+    : "/i/login?reason=missing_branch";
+
+  const hasHydrated = useStore(posStore, (s) => s._hasHydrated);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loadingMenu, setLoadingMenu] = useState(false);
@@ -49,8 +55,8 @@ export function InternalPosMenuPage() {
 
   // luôn gọi hook, nhưng guard bên trong
   useEffect(() => {
-    if (hasHydrated && !sessionKey) nav("/i/pos/tables", { replace: true });
-  }, [hasHydrated, sessionKey, nav]);
+    if (hasHydrated && !sessionKey) nav(tablesRoute, { replace: true });
+  }, [hasHydrated, sessionKey, nav, tablesRoute]);
 
   // ✅ 1 effect duy nhất: ensure cart -> load cart -> lấy branchId -> fetch menu
   useEffect(() => {
@@ -76,7 +82,7 @@ export function InternalPosMenuPage() {
       const detail: any = await getOpsCart(ck);
 
       // cart response có cart.branchId => lấy cái này làm chuẩn
-      const bid = detail?.cart?.branchId ?? fallbackBranchId ?? null;
+      const bid = detail?.cart?.branchId ?? effectiveBranchId ?? null;
 
       // set cart items (normalize -> CartItem)
       const items = (normalizeOpsCartItems(detail) as any[]) ?? [];
@@ -125,7 +131,7 @@ export function InternalPosMenuPage() {
     return () => {
       cancelled = true;
     };
-  }, [ready, sessionKey, setSession, fallbackBranchId]);
+  }, [ready, sessionKey, setSession, effectiveBranchId]);
 
   const nameById = useMemo(() => {
     const m = new Map<string, string>();
@@ -184,10 +190,9 @@ export function InternalPosMenuPage() {
         </div>
 
         <button
-          className="inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm"
           onClick={() => {
             clear();
-            nav("/i/pos/tables");
+            nav(tablesRoute);
           }}
           type="button"
         >
@@ -334,8 +339,6 @@ export function InternalPosMenuPage() {
                   const c = await getOrCreateOpsCartBySessionKey(sessionKey);
                   const ck = extractCartKey(c) || cartKey;
                   if (!ck) throw new Error("Missing cartKey");
-
-                  await createOpsOrderFromCart(ck);
                   await createOpsOrderFromCart(ck);
                   const detail2: any = await getOpsCart(ck);
                   setCartItems(normalizeOpsCartItems(detail2));

@@ -35,7 +35,11 @@ const MAP: Record<string, ErrorMapping> = {
     code: "RESERVATION_NOT_IN_TIME_WINDOW",
     message: "Reservation not in check-in window",
   },
-
+  STAFF_USERNAME_ALREADY_EXISTS: {
+    status: 409,
+    code: "STAFF_USERNAME_ALREADY_EXISTS",
+    message: "Staff username already exists",
+  },
   // ===== 400 / validation & bad requests =====
   INVALID_TRANSITION: { status: 409, code: "INVALID_TRANSITION", message: "Invalid status transition" },
   FORBIDDEN_STATUS: { status: 403, code: "FORBIDDEN_STATUS", message: "Forbidden status" },

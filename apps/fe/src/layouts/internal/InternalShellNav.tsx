@@ -5,9 +5,11 @@ import { authStore } from "../../shared/auth/authStore";
 import {
   hasAnyPermission,
   hasPermission,
+  isAdminSession,
   resolveInternalBranch,
 } from "../../shared/auth/permissions";
 import { cn } from "../../shared/utils/cn";
+
 
 function Btn({ to, label }: { to: string; label: string }) {
   return (
@@ -87,13 +89,7 @@ export function InternalShellNav({ rightSlot }: { rightSlot?: React.ReactNode })
       key: "admin-dashboard",
       to: `/i/${bid}/admin/dashboard`,
       label: "Admin",
-      show: hasAnyPermission(session, [
-        "staff.manage",
-        "maintenance.run",
-        "observability.admin.read",
-        "realtime.admin",
-        "payments.mock_success",
-      ]),
+      show: isAdminSession(session),
     },
   ].filter((item) => item.show);
 

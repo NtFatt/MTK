@@ -77,23 +77,38 @@ export class MySQLStaffUserRepository implements IStaffUserRepository {
     }));
   }
 
-  async create(input: {
-    username: string;
-    passwordHash: string;
-    fullName: string | null;
-    role: StaffUserRole;
-    branchId: string;
-  }): Promise<StaffUserRecord> {
+async create(input: {
+  username: string;
+  passwordHash: string;
+  fullName: string | null;
+  role: StaffUserRole;
+  branchId: string;
+}): Promise<StaffUserRecord> {
+  try {
     const [result]: any = await pool.query(
       `INSERT INTO staff_users (username, password_hash, full_name, role, status, branch_id)
        VALUES (?, ?, ?, ?, 'ACTIVE', ?)`,
       [input.username, input.passwordHash, input.fullName, input.role, input.branchId],
     );
+
     const id = String(result.insertId);
     const created = await this.findById(id);
     if (!created) throw new Error("STAFF_CREATE_FAILED");
     return created;
+  } catch (e: any) {
+    if (
+      e?.code === "ER_DUP_ENTRY" &&
+      String(e?.message ?? "").includes("uq_staff_username")
+    ) {
+      const err: any = new Error("STAFF_USERNAME_ALREADY_EXISTS");
+      err.status = 409;
+      err.code = "STAFF_USERNAME_ALREADY_EXISTS";
+      err.details = { username: input.username };
+      throw err;
+    }
+    throw e;
   }
+}
 
   async updateRole(staffId: string, role: StaffUserRole): Promise<void> {
     await pool.query(

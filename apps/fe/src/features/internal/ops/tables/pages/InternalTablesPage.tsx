@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";import { useNavigate, useParams } from "react-router-dom";
 import { useStore } from "zustand";
 
 import { authStore } from "../../../../../shared/auth/authStore";
 import { Can } from "../../../../../shared/auth/guards";
-import { Badge } from "../../../../../shared/ui/badge";
+import {
+  hasPermission,
+  isAdminSession,
+  resolveInternalBranch,
+} from "../../../../../shared/auth/permissions";import { Badge } from "../../../../../shared/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../../../shared/ui/card";
 import { Skeleton } from "../../../../../shared/ui/skeleton";
 import { useRealtimeRoom } from "../../../../../shared/realtime";
@@ -22,10 +25,6 @@ import {
   normalizeOpsCartItems,
   extractCartCreatedAt,
 } from "../services/opsCartsApi";
-
-function isAdminRole(role: unknown): boolean {
-  return String(role ?? "").toUpperCase() === "ADMIN";
-}
 
 function formatElapsed(iso?: string) {
   if (!iso) return null;
@@ -47,31 +46,33 @@ type LiveInfo = {
 };
 
 export function InternalTablesPage() {
-  const session = useStore(authStore, (s) => s.session);
-  const { branchId } = useParams<{ branchId: string }>();
+const session = useStore(authStore, (s) => s.session);
+const { branchId: urlBranchId } = useParams<{ branchId: string }>();
 
-  const branchParam = branchId ?? (session?.branchId != null ? String(session.branchId) : "");
-  const branchKey = Number.isFinite(Number(branchParam)) ? Number(branchParam) : branchParam;
+const effectiveBranchId = resolveInternalBranch(session, urlBranchId);
 
-  const userBranch = session?.branchId;
-  const role = session?.role;
+const branchKey = Number.isFinite(Number(effectiveBranchId))
+  ? Number(effectiveBranchId)
+  : effectiveBranchId;
 
-  const isBranchMismatch =
-    !isAdminRole(role) && userBranch != null && String(userBranch) !== String(branchParam);
+const userBranch = session?.branchId;
 
-  const canReadTables = useMemo(() => {
-    const perms = session?.permissions ?? [];
-    return perms.includes("ops.tables.read");
-  }, [session?.permissions]);
+const isBranchMismatch =
+  !isAdminSession(session) &&
+  userBranch != null &&
+  urlBranchId != null &&
+  String(userBranch) !== String(urlBranchId);
 
-  const enabled = !!session && !isBranchMismatch && canReadTables;
+const canReadTables = hasPermission(session, "ops.tables.read");
 
+const enabled = !!session && !!effectiveBranchId && !isBranchMismatch && canReadTables;
   const nav = useNavigate();
   const setTable = useStore(posStore, (s) => s.setTable);
   const setPosSession = useStore(posStore, (s) => s.setSession);
 
-  const room = branchParam ? `${realtimeConfig.internalBranchRoomPrefix}:${branchParam}` : null;
-
+const room = effectiveBranchId
+  ? `${realtimeConfig.internalBranchRoomPrefix}:${effectiveBranchId}`
+  : null;
   useRealtimeRoom(
     room,
     enabled && !!room,
@@ -121,9 +122,9 @@ export function InternalTablesPage() {
       const items = normalizeOpsCartItems(cartDetail);
       const startedAt = extractCartCreatedAt(cartDetail);
 
-      const menuRes = await apiFetch<any>(
-        `/menu/items?branchId=${encodeURIComponent(String(branchParam))}&limit=500`
-      );
+     const menuRes = await apiFetch<any>(
+  `/menu/items?branchId=${encodeURIComponent(String(effectiveBranchId))}&limit=500`
+);
 
       const menuItems: any[] = Array.isArray(menuRes?.items)
         ? menuRes.items
@@ -193,8 +194,12 @@ export function InternalTablesPage() {
 
     setPosSession({ sessionKey, cartKey });
 
-    nav("/i/pos/menu");
-  }
+if (!effectiveBranchId) {
+  nav("/i/login?reason=missing_branch", { replace: true });
+  return;
+}
+
+nav(`/i/${effectiveBranchId}/pos/menu`);  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">

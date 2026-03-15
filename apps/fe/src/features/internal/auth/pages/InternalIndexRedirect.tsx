@@ -5,19 +5,12 @@ import { authStore } from "../../../../shared/auth/authStore";
 import {
   hasAnyPermission,
   hasPermission,
+  isAdminSession,
   resolveInternalBranch,
 } from "../../../../shared/auth/permissions";
 
 function resolveInternalHomePath(session: any, branchId: string) {
-  if (
-    hasAnyPermission(session, [
-      "staff.manage",
-      "maintenance.run",
-      "observability.admin.read",
-      "realtime.admin",
-      "payments.mock_success",
-    ])
-  ) {
+  if (isAdminSession(session)) {
     return `/i/${branchId}/admin/dashboard`;
   }
 

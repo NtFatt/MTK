@@ -25,7 +25,6 @@ export class CreateStaffUser {
       throw err;
     }
 
-    // Branch manager can only create staff for own branch (branch-scoped).
     if (String(input.actor.role).toUpperCase() === "BRANCH_MANAGER") {
       if (!input.actor.branchId) {
         const err: any = new Error("FORBIDDEN");
@@ -43,16 +42,26 @@ export class CreateStaffUser {
       }
     }
 
+    const normalizedUsername = input.username.trim();
+
+    const existing = await this.staffRepo.findByUsername(normalizedUsername);
+    if (existing) {
+      const err: any = new Error("STAFF_USERNAME_ALREADY_EXISTS");
+      err.status = 409;
+      err.code = "STAFF_USERNAME_ALREADY_EXISTS";
+      err.details = { username: normalizedUsername };
+      throw err;
+    }
+
     const passwordHash = hashPassword(input.password);
     const created = await this.staffRepo.create({
-      username: input.username.trim(),
+      username: normalizedUsername,
       passwordHash,
       fullName: input.fullName,
       role,
       branchId: String(input.branchId),
     });
 
-    // Never return password hash.
     return {
       staffId: created.staffId,
       username: created.username,

@@ -1,5 +1,14 @@
 import { appErrorCodeFromStatus, defaultUserMessageByAppCode, type AppErrorCode } from "./errorCodes";
 
+function defaultUserMessageByDomainCode(code?: string): string | undefined {
+  switch (code) {
+    case "STAFF_USERNAME_ALREADY_EXISTS":
+      return "Username đã tồn tại. Vui lòng chọn username khác.";
+    default:
+      return undefined;
+  }
+}
+
 /**
  * ApiErrorNormalized
  *
@@ -40,22 +49,12 @@ const tryGetHeaders = (err: any): Record<string, string> | undefined => {
   const h = err?.response?.headers;
   if (!h) return undefined;
   if (typeof h.get === "function") {
-    // Fetch Headers
     const retryAfter = h.get("retry-after");
     return retryAfter ? { "retry-after": retryAfter } : {};
   }
-  // Axios headers object
   return h;
 };
 
-/**
- * Nhận diện payload error phổ biến.
- *
- * Chấp nhận các shape:
- * - { code, message, details?, requestId? }
- * - { error: { code, message, details? }, meta: { requestId } }
- * - { message }
- */
 const parseErrorPayload = (payload: any): { code?: string; message?: string; details?: unknown; requestId?: string } => {
   if (!payload || typeof payload !== "object") return {};
 
@@ -87,8 +86,6 @@ const parseErrorPayload = (payload: any): { code?: string; message?: string; det
 };
 
 const isNetworkLike = (err: any) => {
-  // fetch: TypeError: Failed to fetch
-  // axios: err.code === 'ERR_NETWORK'
   return (
     err?.code === "ERR_NETWORK" ||
     err?.name === "TypeError" ||
@@ -102,13 +99,12 @@ export const normalizeApiError = (err: unknown): ApiErrorNormalized => {
   const status = tryGetStatus(e);
   const headers = tryGetHeaders(e);
 
-  // axios-like
   const payload = e?.response?.data ?? e?.data ?? e?.body ?? undefined;
   const parsed = parseErrorPayload(payload);
 
   const appCode = isNetworkLike(e) ? ("NETWORK_ERROR" as const) : appErrorCodeFromStatus(status);
 
-  const retryAfterSecRaw = headers?.["retry-after"] ?? headers?.["Retry-After"]; // axios may preserve casing
+  const retryAfterSecRaw = headers?.["retry-after"] ?? headers?.["Retry-After"];
   const retryAfterMs = retryAfterSecRaw
     ? Number(retryAfterSecRaw) * 1000
     : undefined;
@@ -118,7 +114,10 @@ export const normalizeApiError = (err: unknown): ApiErrorNormalized => {
     (typeof e?.message === "string" ? e.message : undefined) ??
     defaultUserMessageByAppCode[appCode];
 
-  const userMessage = defaultUserMessageByAppCode[appCode];
+  const userMessage =
+    defaultUserMessageByDomainCode(parsed.code) ??
+    parsed.message ??
+    defaultUserMessageByAppCode[appCode];
 
   return {
     status,
