@@ -123,6 +123,12 @@ const InternalObservabilityPage = lazy(async () => ({
   default: (await import("../features/internal/observability/pages/InternalObservabilityPage"))
     .InternalObservabilityPage,
 }));
+
+const InternalRealtimeAdminPage = lazy(async () => ({
+  default: (await import("../features/internal/realtime-admin/pages/InternalRealtimeAdminPage"))
+    .InternalRealtimeAdminPage,
+}));
+
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -209,6 +215,7 @@ export const router = createBrowserRouter([
       { path: "reservations", element: withSuspense(<InternalReservationsPage />) },
       { path: "maintenance", element: withSuspense(<InternalMaintenancePage />) },
       { path: "observability", element: withSuspense(<InternalObservabilityPage />) },
+      { path: "realtime", element: withSuspense(<InternalRealtimeAdminPage />) },
       {
         path: "inventory",
         children: [

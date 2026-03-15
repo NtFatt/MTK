@@ -1,7 +1,3 @@
-/**
- * Menu query — uses useAppQuery, contract-first.
- * TODO: migrate to contracts qk when menu "view" key is available (qk.menu.categories/items used by BE).
- */
 import { useAppQuery } from "../../../../shared/http/useAppQuery";
 import { fetchMenu, type MenuApiParams, type MenuViewModel } from "../services/menuApi";
 

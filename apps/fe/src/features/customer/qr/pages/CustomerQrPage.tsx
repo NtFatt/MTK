@@ -305,7 +305,7 @@ export function CustomerQrPage() {
             {/* ✅ Manual fallback */}
             <form onSubmit={handleSubmit} className="space-y-4 pt-2">
               <div className="flex items-center justify-between">
-                <Label className="text-sm">Nhập thủ công (demo)</Label>
+                <Label className="text-sm">Nhập thủ công</Label>
                 <Button
                   type="button"
                   variant="ghost"

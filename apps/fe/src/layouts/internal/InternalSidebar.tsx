@@ -54,6 +54,9 @@ export function InternalSidebar() {
   const observabilityRoute = `${adminBase}/observability`;
 
   const showObservability = hasPermission(session, "observability.admin.read");
+
+  const realtimeRoute = `${adminBase}/realtime`;
+  const showRealtime = hasPermission(session, "realtime.admin");
   return (
     <aside className="sticky top-0 h-screen w-[280px] border-r bg-background">
       <div className="flex h-full flex-col">
@@ -101,8 +104,10 @@ export function InternalSidebar() {
           {showObservability && (
             <NavItem to={observabilityRoute} label="Observability" />
           )}
+          {showRealtime && (
+            <NavItem to={realtimeRoute} label="Realtime Admin" />
+          )}
         </nav>
-
         <div className="border-t px-3 py-3 text-xs text-muted-foreground">
           v0.1 • internal
         </div>

@@ -162,5 +162,16 @@ realtime: {
     const normalized = normalizeBranchId(params);
     return ["realtime", "audit", normalized] as const;
   },
+  replay: (
+    params: {
+      branchId?: string | number;
+      room?: string;
+      fromSeq?: number;
+      limit?: number;
+    } = {},
+  ) => {
+    const normalized = normalizeBranchId(params);
+    return ["realtime", "replay", normalized] as const;
+  },
 },
 } as const;

@@ -51,6 +51,15 @@ export function InternalShellNav({ rightSlot }: { rightSlot?: React.ReactNode })
       show: hasPermission(session, "kitchen.queue.read"),
     },
     {
+      key: "reservations",
+      to: `/i/${bid}/reservations`,
+      label: "Reservations",
+      show: hasAnyPermission(session, [
+        "reservations.confirm",
+        "reservations.checkin",
+      ]),
+    },
+    {
       key: "inventory-stock",
       to: `/i/${bid}/inventory/stock`,
       label: "Tồn kho",
@@ -67,6 +76,12 @@ export function InternalShellNav({ rightSlot }: { rightSlot?: React.ReactNode })
       to: `/i/${bid}/inventory/adjustments`,
       label: "Lịch sử",
       show: hasPermission(session, "inventory.adjust"),
+    },
+    {
+      key: "maintenance",
+      to: `/i/${bid}/maintenance`,
+      label: "Maintenance",
+      show: hasPermission(session, "maintenance.run"),
     },
     {
       key: "admin-dashboard",

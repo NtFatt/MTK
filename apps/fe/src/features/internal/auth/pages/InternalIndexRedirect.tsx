@@ -43,6 +43,15 @@ function resolveInternalHomePath(session: any, branchId: string) {
     return `/i/${branchId}/tables`;
   }
 
+  if (
+    hasAnyPermission(session, [
+      "reservations.confirm",
+      "reservations.checkin",
+    ])
+  ) {
+    return `/i/${branchId}/reservations`;
+  }
+
   return `/i/${branchId}/tables`;
 }
 
