@@ -1,5 +1,12 @@
 import { useState } from "react";
 import { NavLink, useLocation, useParams } from "react-router-dom";
+import { useStore } from "zustand";
+
+import { authStore } from "../../shared/auth/authStore";
+import {
+  hasAnyPermission,
+  hasPermission,
+} from "../../shared/auth/permissions";
 import { cn } from "../../shared/utils/cn";
 
 function NavItem({ to, label }: { to: string; label: string }) {
@@ -11,7 +18,7 @@ function NavItem({ to, label }: { to: string; label: string }) {
           "block rounded-lg px-3 py-2 text-sm transition",
           isActive
             ? "bg-muted text-foreground"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground",
         )
       }
     >
@@ -23,6 +30,7 @@ function NavItem({ to, label }: { to: string; label: string }) {
 export function InternalSidebar() {
   const { branchId } = useParams<{ branchId: string }>();
   const loc = useLocation();
+  const session = useStore(authStore, (s) => s.session);
 
   const base = branchId ? `/i/${branchId}` : "/i";
   const adminBase = `${base}/admin`;
@@ -31,11 +39,21 @@ export function InternalSidebar() {
   const invHolds = `${adminBase}/inventory/holds`;
   const invAdj = `${adminBase}/inventory/adjustments`;
 
+  const reservationsRoute = `${adminBase}/reservations`;
+  const maintenanceRoute = `${adminBase}/maintenance`;
+
   const isInventoryRoute = loc.pathname.includes("/admin/inventory/");
   const [invOpen, setInvOpen] = useState(isInventoryRoute);
 
   const showInventoryChildren = invOpen || isInventoryRoute;
+  const showReservations = hasAnyPermission(session, [
+    "reservations.confirm",
+    "reservations.checkin",
+  ]);
+  const showMaintenance = hasPermission(session, "maintenance.run");
+  const observabilityRoute = `${adminBase}/observability`;
 
+  const showObservability = hasPermission(session, "observability.admin.read");
   return (
     <aside className="sticky top-0 h-screen w-[280px] border-r bg-background">
       <div className="flex h-full flex-col">
@@ -51,6 +69,8 @@ export function InternalSidebar() {
           <NavItem to={`${adminBase}/kitchen`} label="Kitchen" />
           <NavItem to={`${adminBase}/cashier`} label="Cashier" />
 
+
+
           <button
             type="button"
             onClick={() => setInvOpen((v) => !v)}
@@ -58,7 +78,7 @@ export function InternalSidebar() {
               "mt-2 flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition",
               isInventoryRoute
                 ? "bg-muted text-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >
             <span>Kho nguyên liệu</span>
@@ -72,9 +92,20 @@ export function InternalSidebar() {
               <NavItem to={invAdj} label="Lịch sử điều chỉnh" />
             </div>
           )}
+          {showReservations && (
+            <NavItem to={reservationsRoute} label="Reservations" />
+          )}
+          {showMaintenance && (
+            <NavItem to={maintenanceRoute} label="Maintenance" />
+          )}
+          {showObservability && (
+            <NavItem to={observabilityRoute} label="Observability" />
+          )}
         </nav>
 
-        <div className="border-t px-3 py-3 text-xs text-muted-foreground">v0.1 • internal</div>
+        <div className="border-t px-3 py-3 text-xs text-muted-foreground">
+          v0.1 • internal
+        </div>
       </div>
     </aside>
   );

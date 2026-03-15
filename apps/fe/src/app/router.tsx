@@ -109,6 +109,20 @@ const InternalInventoryAdjustmentsPage = lazy(async () => ({
   ).InternalInventoryAdjustmentsPage,
 }));
 
+const InternalReservationsPage = lazy(async () => ({
+  default: (await import("../features/internal/reservations/pages/InternalReservationsPage"))
+    .InternalReservationsPage,
+}));
+
+const InternalMaintenancePage = lazy(async () => ({
+  default: (await import("../features/internal/maintenance/pages/InternalMaintenancePage"))
+    .InternalMaintenancePage,
+}));
+
+const InternalObservabilityPage = lazy(async () => ({
+  default: (await import("../features/internal/observability/pages/InternalObservabilityPage"))
+    .InternalObservabilityPage,
+}));
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -192,6 +206,9 @@ export const router = createBrowserRouter([
       { path: "kitchen", element: withSuspense(<InternalKitchenPage />) },
       { path: "cashier", element: withSuspense(<InternalCashierPage />) },
       { path: "staff", element: withSuspense(<InternalAdminPage />) },
+      { path: "reservations", element: withSuspense(<InternalReservationsPage />) },
+      { path: "maintenance", element: withSuspense(<InternalMaintenancePage />) },
+      { path: "observability", element: withSuspense(<InternalObservabilityPage />) },
       {
         path: "inventory",
         children: [
@@ -232,6 +249,16 @@ export const router = createBrowserRouter([
         handle: { title: "Cashier" },
       },
       {
+        path: "reservations",
+        element: withSuspense(<InternalReservationsPage />),
+        handle: { title: "Reservations" },
+      },
+      {
+        path: "maintenance",
+        element: withSuspense(<InternalMaintenancePage />),
+        handle: { title: "Maintenance" },
+      },
+      {
         path: "inventory",
         children: [
           { index: true, element: <Navigate to="stock" replace /> },
@@ -250,11 +277,11 @@ export const router = createBrowserRouter([
             element: withSuspense(<InternalInventoryAdjustmentsPage />),
             handle: { title: "Inventory — Lịch sử" },
           },
+
         ],
       },
     ],
   },
-
   {
     path: "i/pos/tables",
     element: (

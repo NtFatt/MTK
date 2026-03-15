@@ -119,7 +119,7 @@ inventory: {
       to?: string;
       limit?: number;
       cursor?: string | number;
-    } = {}
+    } = {},
   ) => {
     const normalized = normalizeBranchId({
       ...params,
@@ -135,21 +135,32 @@ inventory: {
   },
 },
 
-  reservations: {
-    list: (params: { branchId?: string | number; status?: string; q?: string } = {}) => {
-      const normalized = normalizeBranchId(params);
-      return ["reservations", "list", normalized] as const;
-    },
+reservations: {
+  list: (params: { branchId?: string | number; status?: string; q?: string } = {}) => {
+    const normalized = normalizeBranchId(params);
+    return ["reservations", "list", normalized] as const;
   },
+},
 
-  realtime: {
-    snapshot: (params: { branchId?: string | number; sinceSeq?: number } = {}) => {
-      const normalized = normalizeBranchId(params);
-      return ["realtime", "snapshot", normalized] as const;
-    },
-    audit: (params: { branchId?: string | number; sinceSeq?: number } = {}) => {
-      const normalized = normalizeBranchId(params);
-      return ["realtime", "audit", normalized] as const;
-    },
+observability: {
+  logs: (params: { branchId?: string | number } = {}) => {
+    const normalized = normalizeBranchId(params);
+    return ["observability", "logs", normalized] as const;
   },
+  slowQueries: (params: { branchId?: string | number } = {}) => {
+    const normalized = normalizeBranchId(params);
+    return ["observability", "slowQueries", normalized] as const;
+  },
+},
+
+realtime: {
+  snapshot: (params: { branchId?: string | number; sinceSeq?: number } = {}) => {
+    const normalized = normalizeBranchId(params);
+    return ["realtime", "snapshot", normalized] as const;
+  },
+  audit: (params: { branchId?: string | number; sinceSeq?: number } = {}) => {
+    const normalized = normalizeBranchId(params);
+    return ["realtime", "audit", normalized] as const;
+  },
+},
 } as const;
