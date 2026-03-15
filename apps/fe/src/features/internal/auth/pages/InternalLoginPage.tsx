@@ -8,6 +8,8 @@ import { Label } from "../../../../shared/ui/label";
 import { Input } from "../../../../shared/ui/input";
 import { Button } from "../../../../shared/ui/button";
 import { isHttpError } from "../../../../shared/http/errors";
+import { isAdminSession } from "../../../../shared/auth/permissions";
+
 
 export function InternalLoginPage() {
   const navigate = useNavigate();
@@ -29,16 +31,13 @@ export function InternalLoginPage() {
         return;
       }
 
-      const role = String(session.role ?? "").toUpperCase();
-
-      // ✅ admin có thể không có branchId -> fallback mặc định
-      const rawBid = session.branchId;
-      const bid =
-        rawBid != null && String(rawBid).trim()
-          ? String(rawBid).trim()
-          : role === "ADMIN"
-            ? "1"
-            : "";
+const rawBid = session.branchId;
+const bid =
+  rawBid != null && String(rawBid).trim()
+    ? String(rawBid).trim()
+    : isAdminSession(session)
+      ? "1"
+      : "";
 
       if (!bid) {
         navigate("/i/login?reason=missing_branch", { replace: true });

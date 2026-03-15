@@ -3,11 +3,11 @@ import { Button } from "../../shared/ui/button";
 import { useStore } from "zustand";
 import { authStore } from "../../shared/auth/authStore";
 import { BranchSwitcher } from "./BranchSwitcher";
+import { isAdminSession } from "../../shared/auth/permissions";
 
 export function InternalTopbar({ branchId }: { branchId: string }) {
   const session = useStore(authStore, (s) => s.session);
-  const role = String(session?.role ?? "").toUpperCase();
-  const isAdmin = role === "ADMIN";
+  const isAdmin = isAdminSession(session);
 
   return (
     <header className="border-b bg-background">

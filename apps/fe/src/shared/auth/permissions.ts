@@ -1,10 +1,15 @@
 import type { AuthSession } from "./types";
 
+export function isAdminSession(session: AuthSession | null | undefined) {
+  return session?.role === "ADMIN";
+}
+
 export function hasPermission(
   session: AuthSession | null | undefined,
   permission: string,
 ) {
   if (!session) return false;
+  if (isAdminSession(session)) return true;
   return session.permissions.includes(permission);
 }
 
@@ -13,7 +18,7 @@ export function hasAnyPermission(
   permissions: string[],
 ) {
   if (!session) return false;
-  return permissions.some((permission) => session.permissions.includes(permission));
+  return permissions.some((permission) => hasPermission(session, permission));
 }
 
 export function hasAllPermissions(
@@ -21,11 +26,7 @@ export function hasAllPermissions(
   permissions: string[],
 ) {
   if (!session) return false;
-  return permissions.every((permission) => session.permissions.includes(permission));
-}
-
-export function isAdminSession(session: AuthSession | null | undefined) {
-  return session?.role === "ADMIN";
+  return permissions.every((permission) => hasPermission(session, permission));
 }
 
 export function isInternalBranchMismatch(
@@ -33,7 +34,7 @@ export function isInternalBranchMismatch(
   urlBranchId: string | null | undefined,
 ) {
   if (!session || !urlBranchId) return false;
-  if (session.role === "ADMIN") return false;
+  if (isAdminSession(session)) return false;
   return String(session.branchId) !== String(urlBranchId);
 }
 
@@ -43,8 +44,8 @@ export function resolveInternalBranch(
 ) {
   const trimmedUrlBranchId = String(urlBranchId ?? "").trim();
 
-  if (session?.role === "ADMIN") {
-    return trimmedUrlBranchId || String(session.branchId ?? "");
+  if (isAdminSession(session)) {
+    return trimmedUrlBranchId || String(session?.branchId ?? "");
   }
 
   return String(session?.branchId ?? trimmedUrlBranchId ?? "");

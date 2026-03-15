@@ -14,6 +14,9 @@ export function useChangeOrderStatusMutation(branchId: string | number | undefin
       clearIdempotencyKey(scope);
       return out;
     },
-    invalidateKeys: branchId != null ? [[...qk.orders.kitchenQueue({ branchId: b })]] : [],
+    invalidateKeys:
+      branchId != null
+        ? [[...qk.orders.kitchenQueue({ branchId: b })]]
+        : [],
   });
 }

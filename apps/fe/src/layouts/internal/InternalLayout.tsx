@@ -3,12 +3,12 @@ import { useStore } from "zustand";
 import { authStore } from "../../shared/auth/authStore";
 import { InternalSidebar } from "./InternalSidebar";
 import { InternalTopbar } from "./InternalTopbar";
+import { isAdminSession } from "../../shared/auth/permissions";
 
 export function InternalLayout() {
   const { branchId } = useParams<{ branchId: string }>();
   const session = useStore(authStore, (s) => s.session);
-  const role = String(session?.role ?? "").toUpperCase();
-  const isAdmin = role === "ADMIN";
+  const isAdmin = isAdminSession(session);
 
   return (
     <div className="min-h-screen bg-background">

@@ -118,8 +118,7 @@ export function InternalPosMenuPage() {
       } else {
         if (!cancelled) setMenuItems([]);
       }
-    })().catch((e) => {
-      console.error("[POS] load failed", e);
+    })().catch(() => {
       if (!cancelled) setLoadingMenu(false);
     });
 
@@ -336,9 +335,8 @@ export function InternalPosMenuPage() {
                   const ck = extractCartKey(c) || cartKey;
                   if (!ck) throw new Error("Missing cartKey");
 
-                  const res = await createOpsOrderFromCart(ck);
-                  console.log("ORDER CREATED", res);
-
+                  await createOpsOrderFromCart(ck);
+                  await createOpsOrderFromCart(ck);
                   const detail2: any = await getOpsCart(ck);
                   setCartItems(normalizeOpsCartItems(detail2));
                 } catch (e: any) {

@@ -14,6 +14,7 @@ import { Input } from "../../../../shared/ui/input";
 import { Button } from "../../../../shared/ui/button";
 import { Badge } from "../../../../shared/ui/badge";
 import { Alert, AlertDescription } from "../../../../shared/ui/alert";
+import { hasAnyPermission, hasPermission } from "../../../../shared/auth/permissions";
 
 type StaffRole = "BRANCH_MANAGER" | "STAFF" | "KITCHEN" | "CASHIER";
 type StaffStatus = "ACTIVE" | "DISABLED";
@@ -30,12 +31,11 @@ type StaffRow = {
 export function InternalAdminPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const session = useStore(authStore, (s) => s.session);
-  const perms = session?.permissions ?? [];
-  const role = String(session?.role ?? "").toUpperCase();
 
-  const canRead = perms.includes("staff.read") || role === "ADMIN" || role === "BRANCH_MANAGER";
-  const canManage = perms.includes("staff.manage") || role === "ADMIN";
+  
 
+const canRead = hasAnyPermission(session, ["staff.read"]);
+const canManage = hasPermission(session, "staff.manage");
   const branchParam = String(branchId ?? "").trim();
 
   const [statusFilter, setStatusFilter] = useState<"" | StaffStatus>("");

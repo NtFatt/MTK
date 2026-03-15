@@ -6,6 +6,8 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useStore } from "zustand";
 import { authStore, selectIsAuthed } from "./authStore";
 
+import { hasAnyPermission, hasPermission } from "./permissions";
+
 function useIsHydrated(): boolean {
   return useStore(authStore, (s) => s.isHydrated);
 }
@@ -43,9 +45,10 @@ type CanProps = {
 
 /** Optional component: render children only if user has perm or any of anyOf. */
 export function Can({ perm, anyOf, children, fallback = null }: CanProps) {
-  const userPerms = useStore(authStore, (s) => s.session?.permissions ?? []);
+  const session = useStore(authStore, (s) => s.session);
   const allowed =
-    (perm != null && userPerms.includes(perm)) ||
-    (anyOf != null && anyOf.length > 0 && anyOf.some((p) => userPerms.includes(p)));
+    (perm != null && hasPermission(session, perm)) ||
+    (anyOf != null && anyOf.length > 0 && hasAnyPermission(session, anyOf));
+
   return allowed ? <>{children}</> : <>{fallback}</>;
 }
