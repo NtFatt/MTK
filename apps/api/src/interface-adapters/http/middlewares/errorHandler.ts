@@ -5,7 +5,43 @@ import { ZodError } from "zod";
 type ErrorMapping = { status: number; code: string; message: string; details?: any };
 
 const MAP: Record<string, ErrorMapping> = {
-  // ===== 404 =====
+  VALIDATION_ERROR: {
+    status: 400,
+    code: "VALIDATION_ERROR",
+    message: "Invalid request",
+  },
+
+  INSUFFICIENT_INGREDIENT: {
+    status: 409,
+    code: "INSUFFICIENT_INGREDIENT",
+    message: "Không đủ nguyên liệu để bắt đầu chế biến",
+  },
+  RECIPE_NOT_CONFIGURED: {
+    status: 409,
+    code: "RECIPE_NOT_CONFIGURED",
+    message: "Món chưa có công thức nguyên liệu",
+  },
+  RECIPE_INGREDIENT_NOT_FOUND: {
+    status: 409,
+    code: "RECIPE_INGREDIENT_NOT_FOUND",
+    message: "Công thức đang tham chiếu nguyên liệu không hợp lệ trong chi nhánh",
+  },
+  DUPLICATE_CONSUMPTION: {
+    status: 409,
+    code: "DUPLICATE_CONSUMPTION",
+    message: "Thao tác bắt đầu chế biến đã được xử lý trước đó",
+  },
+  ORDER_ITEMS_EMPTY: {
+    status: 409,
+    code: "ORDER_ITEMS_EMPTY",
+    message: "Đơn hàng không có món để tiêu hao nguyên liệu",
+  },
+  DUPLICATE_RECIPE_INGREDIENT: {
+    status: 409,
+    code: "DUPLICATE_RECIPE_INGREDIENT",
+    message: "Nguyên liệu bị lặp trong công thức món",
+  },
+
   ORDER_NOT_FOUND: { status: 404, code: "ORDER_NOT_FOUND", message: "Order not found" },
   CART_NOT_FOUND: { status: 404, code: "CART_NOT_FOUND", message: "Cart not found" },
   SESSION_NOT_FOUND: { status: 404, code: "SESSION_NOT_FOUND", message: "Session not found" },
@@ -17,7 +53,6 @@ const MAP: Record<string, ErrorMapping> = {
   STOCK_NOT_FOUND: { status: 404, code: "STOCK_NOT_FOUND", message: "Stock not found" },
   RESERVATION_NOT_FOUND: { status: 404, code: "RESERVATION_NOT_FOUND", message: "Reservation not found" },
 
-  // ===== 409 / domain conflicts =====
   ORDER_NOT_PAYABLE: { status: 409, code: "ORDER_NOT_PAYABLE", message: "Order not payable" },
   CART_NOT_ACTIVE: { status: 409, code: "CART_NOT_ACTIVE", message: "Cart is not active" },
   CART_EMPTY: { status: 409, code: "CART_EMPTY", message: "Cart is empty" },
@@ -40,7 +75,7 @@ const MAP: Record<string, ErrorMapping> = {
     code: "STAFF_USERNAME_ALREADY_EXISTS",
     message: "Staff username already exists",
   },
-  // ===== 400 / validation & bad requests =====
+
   INVALID_TRANSITION: { status: 409, code: "INVALID_TRANSITION", message: "Invalid status transition" },
   FORBIDDEN_STATUS: { status: 403, code: "FORBIDDEN_STATUS", message: "Forbidden status" },
 
@@ -58,7 +93,11 @@ const MAP: Record<string, ErrorMapping> = {
   PARTY_SIZE_INVALID: { status: 400, code: "PARTY_SIZE_INVALID", message: "partySize is invalid" },
   PHONE_REQUIRED: { status: 400, code: "PHONE_REQUIRED", message: "contactPhone is required" },
   BRANCH_REQUIRED: { status: 400, code: "BRANCH_REQUIRED", message: "branchId is required" },
-  BRANCH_SCOPE_REQUIRED: { status: 403, code: "BRANCH_SCOPE_REQUIRED", message: "This token is branch-scoped and requires a branchId" },
+  BRANCH_SCOPE_REQUIRED: {
+    status: 403,
+    code: "BRANCH_SCOPE_REQUIRED",
+    message: "This token is branch-scoped and requires a branchId",
+  },
 
   INVALID_FROM: { status: 400, code: "INVALID_FROM", message: "from is invalid" },
   INVALID_TO: { status: 400, code: "INVALID_TO", message: "to is invalid" },
@@ -71,13 +110,10 @@ const MAP: Record<string, ErrorMapping> = {
     message: "directionId or tableId is required",
   },
 
-  // ===== external dependencies =====
   VNPAY_NOT_CONFIGURED: { status: 503, code: "VNPAY_NOT_CONFIGURED", message: "VNPay is not configured" },
 
-  // ===== admin/auth =====
   INVALID_CREDENTIALS: { status: 401, code: "INVALID_CREDENTIALS", message: "Invalid username or password" },
 
-  // ===== client/auth (OTP) =====
   OTP_SECRET_MISSING: { status: 500, code: "OTP_SECRET_MISSING", message: "OTP_HASH_SECRET is not configured" },
   CLIENT_TOKEN_SECRET_MISSING: { status: 500, code: "CLIENT_TOKEN_SECRET_MISSING", message: "Client token secrets are not configured" },
   CLIENT_REFRESH_HASH_SECRET_MISSING: { status: 500, code: "CLIENT_REFRESH_HASH_SECRET_MISSING", message: "CLIENT_REFRESH_HASH_SECRET is not configured" },
@@ -104,7 +140,6 @@ const MAP: Record<string, ErrorMapping> = {
   FORBIDDEN: { status: 403, code: "FORBIDDEN", message: "Forbidden" },
   REDIS_REQUIRED: { status: 503, code: "REDIS_REQUIRED", message: "Redis is required for this endpoint" },
 
-  // ===== idempotency (M2) =====
   IDEMPOTENCY_KEY_REQUIRED: {
     status: 400,
     code: "VALIDATION_ERROR",
@@ -119,11 +154,9 @@ const MAP: Record<string, ErrorMapping> = {
 
   INVALID_MODE: { status: 400, code: "INVALID_MODE", message: "mode is invalid" },
 
-  // ===== dev tools =====
   DEV_RESET_DISABLED: { status: 403, code: "DEV_RESET_DISABLED", message: "Dev reset is disabled" },
   CONFIRM_RESET_REQUIRED: { status: 400, code: "CONFIRM_RESET_REQUIRED", message: "confirm=RESET is required" },
 
-  // ===== realtime snapshot/resync (HTTP) =====
   ROOM_REQUIRED: { status: 400, code: "ROOM_REQUIRED", message: "room is required" },
   ROOMS_REQUIRED: { status: 400, code: "ROOMS_REQUIRED", message: "rooms[] is required" },
   ROOM_NOT_SUPPORTED: { status: 400, code: "ROOM_NOT_SUPPORTED", message: "room type is not supported" },
@@ -157,7 +190,6 @@ function respond(res: Response, status: number, code: string, message: string, e
 export function errorHandler(err: any, _req: Request, res: Response, _next: NextFunction) {
   const isDev = String(process.env.NODE_ENV ?? "development") !== "production";
 
-  // express.json() invalid JSON => SyntaxError with type='entity.parse.failed'
   if (err instanceof SyntaxError && (err as any)?.type === "entity.parse.failed") {
     return respond(
       res,
@@ -176,18 +208,34 @@ export function errorHandler(err: any, _req: Request, res: Response, _next: Next
 
   const mapped = MAP[key];
   if (mapped) {
-    const extra = isDev && err?.details ? { details: err.details } : undefined;
+    const details = err?.details ?? mapped.details;
+    const extra = details ? { details } : undefined;
     return respond(res, mapped.status, mapped.code, mapped.message, extra);
   }
 
-  // Generic INVALID_* -> 400 with readable field name
+  if (
+    Number.isInteger(err?.status) &&
+    err.status >= 400 &&
+    err.status < 600 &&
+    typeof err?.code === "string" &&
+    err.code.trim()
+  ) {
+    const extra = err?.details ? { details: err.details } : undefined;
+    return respond(
+      res,
+      err.status,
+      String(err.code),
+      String(err.message || err.code),
+      extra,
+    );
+  }
+
   if (key.startsWith("INVALID_")) {
     const fieldToken = key.slice("INVALID_".length);
     const fieldName = toLowerCamelFromUpperSnake(fieldToken);
     return respond(res, 400, key, `${fieldName} is required`);
   }
 
-  // Unknown errors: log once server-side (demo OK). Keep response stable.
   const rid = String(res.locals.requestId ?? "");
   log.error("unhandled_error", { rid, err: { message: String(key || err), stack: (err as any)?.stack } });
 
@@ -199,3 +247,6 @@ export function errorHandler(err: any, _req: Request, res: Response, _next: Next
     isDev ? { debug: { message: key || String(err), stack: err?.stack } } : undefined,
   );
 }
+
+
+

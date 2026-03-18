@@ -46,8 +46,22 @@ export interface IAdminOrderRepository {
     orderCode: string;
     fromStatus: OrderStatus | null;
     toStatus: OrderStatus;
-    changedByType: "ADMIN" | "CLIENT" | "SYSTEM";
+    changedByType: "ADMIN" | "STAFF" | "CLIENT" | "SYSTEM";
     changedById: string | null;
     note: string | null;
   }): Promise<void>;
+
+  transitionToPreparingWithInventoryConsumption(input: {
+    orderCode: string;
+    branchId: string;
+    changedById: string;
+    note: string | null;
+  }): Promise<{
+    orderCode: string;
+    toStatus: "PREPARING";
+    consumedLines: Array<{
+      ingredientId: string;
+      qtyConsumed: number;
+    }>;
+  }>;
 }

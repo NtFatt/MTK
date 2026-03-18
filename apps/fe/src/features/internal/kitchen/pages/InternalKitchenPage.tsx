@@ -4,6 +4,7 @@ import { useStore } from "zustand";
 
 import { authStore } from "../../../../shared/auth/authStore";
 import { Can } from "../../../../shared/auth/guards";
+import { Alert, AlertDescription } from "../../../../shared/ui/alert";
 import { Badge } from "../../../../shared/ui/badge";
 import { Button } from "../../../../shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../../shared/ui/card";
@@ -13,6 +14,7 @@ import { useRealtimeRoom } from "../../../../shared/realtime";
 
 import { useKitchenQueueQuery } from "../hooks/useKitchenQueueQuery";
 import { useChangeOrderStatusMutation } from "../hooks/useChangeOrderStatusMutation";
+import { AdminOrderStatus } from "../services/adminOrderApi";
 
 function isAdminRole(role: unknown): boolean {
   return String(role ?? "").toUpperCase() === "ADMIN";
@@ -24,9 +26,43 @@ function normStatus(s: string | undefined) {
 
 function canKitchenAction(s: string) {
   const x = normStatus(s);
-  if (x === "NEW") return { to: "RECEIVED" as const, label: "Nhận đơn" };
-  if (x === "RECEIVED" || x === "PREPARING") return { to: "READY" as const, label: "Sẵn sàng" };
+
+  if (x === "NEW") {
+    return { to: "RECEIVED" as const, label: "Nhận đơn" };
+  }
+
+  if (x === "RECEIVED") {
+    return { to: "PREPARING" as const, label: "Bắt đầu chế biến" };
+  }
+
+  if (x === "PREPARING") {
+    return { to: "READY" as const, label: "Sẵn sàng" };
+  }
+
   return null;
+}
+
+function getKitchenActionErrorMessage(error: unknown): string {
+  const e = error as any;
+  const code =
+    e?.response?.data?.code ??
+    e?.data?.code ??
+    e?.code ??
+    null;
+
+  const messageMap: Record<string, string> = {
+    INSUFFICIENT_INGREDIENT: "Không đủ nguyên liệu để bắt đầu chế biến",
+    RECIPE_NOT_CONFIGURED: "Món chưa có công thức nguyên liệu",
+    RECIPE_INGREDIENT_NOT_FOUND: "Công thức món đang tham chiếu nguyên liệu không hợp lệ",
+    DUPLICATE_CONSUMPTION: "Thao tác bắt đầu chế biến đã được xử lý trước đó",
+    ORDER_ITEMS_EMPTY: "Đơn hàng không có món để tiêu hao nguyên liệu",
+    INVALID_TRANSITION: "Trạng thái đơn hàng không hợp lệ",
+    FORBIDDEN: "Bạn không có quyền thực hiện thao tác này",
+  };
+
+  if (code && messageMap[code]) return messageMap[code];
+
+  return e?.response?.data?.message || e?.message || "Có lỗi xảy ra khi cập nhật trạng thái đơn hàng";
 }
 
 export function InternalKitchenPage() {
@@ -47,26 +83,34 @@ export function InternalKitchenPage() {
 
   const enabled = !!session && !isBranchMismatch && canReadKitchen;
 
+  const realtimeAuth = session
+    ? {
+      kind: "internal" as const,
+      userKey: session.user?.id ? String(session.user.id) : "internal",
+      branchId: branchParam
+        ? String(branchParam)
+        : session?.branchId != null
+          ? String(session.branchId)
+          : undefined,
+      token: session.accessToken,
+    }
+    : undefined;
+
   useRealtimeRoom(
     branchParam ? `kitchen:${branchParam}` : null,
     enabled && !!branchParam,
-    session
-      ? {
-          kind: "internal",
-          userKey: session.user?.id ? String(session.user.id) : "internal",
-          branchId: branchParam
-            ? String(branchParam)
-            : session?.branchId != null
-              ? String(session.branchId)
-              : undefined,
-          token: session.accessToken,
-        }
-      : undefined
+    realtimeAuth
+  );
+
+  useRealtimeRoom(
+    branchParam ? `branch:${branchParam}` : null,
+    enabled && !!branchParam,
+    realtimeAuth
   );
 
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<"ALL" | "NEW" | "RECEIVED" | "PREPARING" | "READY">("ALL");
-
+  const [actionError, setActionError] = useState<string | null>(null);
   const statuses = tab === "ALL" ? undefined : [tab];
 
   const { data, isLoading, isFetching, error, refetch } = useKitchenQueueQuery({
@@ -89,6 +133,24 @@ export function InternalKitchenPage() {
 
   const { mutateAsync, isPending } = useChangeOrderStatusMutation(branchParam);
 
+  const handleChangeStatus = async (orderCode: string, toStatus: AdminOrderStatus) => {
+    try {
+      setActionError(null);
+
+      await mutateAsync({
+        orderCode,
+        body: {
+          toStatus,
+          note: null,
+        },
+      });
+
+      await refetch();
+    } catch (error) {
+      setActionError(getKitchenActionErrorMessage(error));
+    }
+  };
+
   const list = useMemo(() => {
     const raw = data ?? [];
     const qn = q.trim().toLowerCase();
@@ -109,6 +171,12 @@ export function InternalKitchenPage() {
           Bạn không được phép truy cập dữ liệu chi nhánh khác.
         </div>
       )}
+
+      {actionError ? (
+        <Alert variant="destructive">
+          <AlertDescription>{actionError}</AlertDescription>
+        </Alert>
+      ) : null}
 
       {!isBranchMismatch && (
         <Can
@@ -183,12 +251,7 @@ export function InternalKitchenPage() {
                             <Can perm="orders.status.change">
                               <div className="mt-3">
                                 <Button
-                                  onClick={() =>
-                                    void mutateAsync({
-                                      orderCode: r.orderCode,
-                                      body: { toStatus: action.to, note: null },
-                                    }).then(() => refetch())
-                                  }
+                                  onClick={() => void handleChangeStatus(r.orderCode, action.to)}
                                   disabled={isPending}
                                 >
                                   {action.label}

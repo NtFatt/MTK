@@ -33,7 +33,8 @@ import { MySQLRealtimeAdminAuditRepository } from "../infrastructure/db/mysql/re
 import { MySQLAuditLogRepository } from "../infrastructure/db/mysql/repositories/MySQLAuditLogRepository.js";
 import { MySQLInventoryRepository } from "../infrastructure/db/mysql/repositories/MySQLInventoryRepository.js";
 import { MySQLOrderQueryRepository } from "../infrastructure/db/mysql/repositories/MySQLOrderQueryRepository.js";
-
+import { MySQLInventoryIngredientRepository } from "../infrastructure/db/mysql/repositories/MySQLInventoryIngredientRepository.js";
+import { MySQLMenuRecipeRepository } from "../infrastructure/db/mysql/repositories/MySQLMenuRecipeRepository.js";
 // ===== Client auth repositories =====
 import { MySQLClientRepository } from "../infrastructure/db/mysql/repositories/MySQLClientRepository.js";
 import { MySQLOtpRepository } from "../infrastructure/db/mysql/repositories/MySQLOtpRepository.js";
@@ -101,6 +102,13 @@ import { TriggerStockRehydrate } from "../application/use-cases/admin/inventory/
 import { BumpMenuVersion } from "../application/use-cases/admin/inventory/BumpMenuVersion.js";
 import { ListInventoryAdjustmentAudit } from "../application/use-cases/admin/inventory/ListInventoryAdjustmentAudit.js";
 
+import { ListInventoryItems } from "../application/use-cases/admin/inventory/ListInventoryItems.js";
+import { CreateInventoryItem } from "../application/use-cases/admin/inventory/CreateInventoryItem.js";
+import { UpdateInventoryItem } from "../application/use-cases/admin/inventory/UpdateInventoryItem.js";
+import { AdjustInventoryItem } from "../application/use-cases/admin/inventory/AdjustInventoryItem.js";
+import { ListInventoryAlerts } from "../application/use-cases/admin/inventory/ListInventoryAlerts.js";
+import { GetMenuItemRecipe } from "../application/use-cases/admin/menu/GetMenuItemRecipe.js";
+import { SaveMenuItemRecipe } from "../application/use-cases/admin/menu/SaveMenuItemRecipe.js";
 // ===== 7 roles: ops/kitchen/cashier list endpoints (branch-scoped) =====
 import { ListBranchTables } from "../application/use-cases/admin/ops/ListBranchTables.js";
 import { ListKitchenQueue } from "../application/use-cases/admin/kitchen/ListKitchenQueue.js";
@@ -420,6 +428,18 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
   const bumpMenuVersion = redis ? new BumpMenuVersion(redis) : null;
   const listInventoryAdjustmentAudit = new ListInventoryAdjustmentAudit(auditRepo);
 
+  const inventoryIngredientRepo = new MySQLInventoryIngredientRepository();
+  const menuRecipeRepo = new MySQLMenuRecipeRepository();
+
+  const listInventoryItems = new ListInventoryItems(inventoryIngredientRepo);
+  const createInventoryItem = new CreateInventoryItem(inventoryIngredientRepo);
+  const updateInventoryItem = new UpdateInventoryItem(inventoryIngredientRepo);
+  const adjustInventoryItem = new AdjustInventoryItem(inventoryIngredientRepo);
+  const listInventoryAlerts = new ListInventoryAlerts(inventoryIngredientRepo);
+
+  const getMenuItemRecipe = new GetMenuItemRecipe(menuRecipeRepo);
+  const saveMenuItemRecipe = new SaveMenuItemRecipe(menuRecipeRepo);
+
   const adminInventoryController = new AdminInventoryController(
     listBranchStock,
     adjustBranchStock,
@@ -428,6 +448,15 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
     triggerStockRehydrate,
     bumpMenuVersion,
     listInventoryAdjustmentAudit,
+
+    listInventoryItems,
+    createInventoryItem,
+    updateInventoryItem,
+    adjustInventoryItem,
+    listInventoryAlerts,
+    getMenuItemRecipe,
+    saveMenuItemRecipe,
+
     auditRepo,
   );
 

@@ -109,6 +109,21 @@ const InternalInventoryAdjustmentsPage = lazy(async () => ({
   ).InternalInventoryAdjustmentsPage,
 }));
 
+const InternalInventoryItemsPage = lazy(async () => ({
+  default: (await import("../features/internal/inventory/pages/InternalInventoryItemsPage"))
+    .InternalInventoryItemsPage,
+}));
+
+const InternalInventoryAlertsPage = lazy(async () => ({
+  default: (await import("../features/internal/inventory/pages/InternalInventoryAlertsPage"))
+    .InternalInventoryAlertsPage,
+}));
+
+const InternalMenuRecipesPage = lazy(async () => ({
+  default: (await import("../features/internal/menu/pages/InternalMenuRecipesPage"))
+    .InternalMenuRecipesPage,
+}));
+
 const InternalReservationsPage = lazy(async () => ({
   default: (await import("../features/internal/reservations/pages/InternalReservationsPage"))
     .InternalReservationsPage,
@@ -127,6 +142,18 @@ const InternalObservabilityPage = lazy(async () => ({
 const InternalRealtimeAdminPage = lazy(async () => ({
   default: (await import("../features/internal/realtime-admin/pages/InternalRealtimeAdminPage"))
     .InternalRealtimeAdminPage,
+}));
+
+const CustomerReservationPage = lazy(async () => ({
+  default: (
+    await import("../features/customer/reservations/pages/CustomerReservationPage")
+  ).CustomerReservationPage,
+}));
+
+const CustomerReservationDetailPage = lazy(async () => ({
+  default: (
+    await import("../features/customer/reservations/pages/CustomerReservationDetailPage")
+  ).CustomerReservationDetailPage,
 }));
 
 export const router = createBrowserRouter([
@@ -184,6 +211,15 @@ export const router = createBrowserRouter([
     ),
   },
 
+  {
+  path: "c/reservations",
+  element: withSuspense(<CustomerReservationPage />),
+},
+{
+  path: "c/reservations/:reservationCode",
+  element: withSuspense(<CustomerReservationDetailPage />),
+},
+
   { path: "customer/menu", element: <Navigate to="/c/menu" replace /> },
   { path: "internal", element: <Navigate to="/i/login" replace /> },
 
@@ -221,6 +257,9 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <Navigate to="stock" replace /> },
           { path: "stock", element: withSuspense(<InternalInventoryStockPage />) },
+          { path: "items", element: withSuspense(<InternalInventoryItemsPage />) },
+          { path: "alerts", element: withSuspense(<InternalInventoryAlertsPage />) },
+          { path: "recipes", element: withSuspense(<InternalMenuRecipesPage />) },
           { path: "holds", element: withSuspense(<InternalInventoryHoldsPage />) },
           {
             path: "adjustments",
@@ -290,7 +329,7 @@ export const router = createBrowserRouter([
     ],
   },
   {
-path: "i/:branchId/pos/menu",
+    path: "i/:branchId/pos/menu",
     element: (
       <RequireAuth>
         {withSuspense(<InternalPosMenuPage />)}

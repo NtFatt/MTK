@@ -39,6 +39,9 @@ export function InternalSidebar() {
   const invHolds = `${adminBase}/inventory/holds`;
   const invAdj = `${adminBase}/inventory/adjustments`;
 
+  const invIngredients = `${adminBase}/inventory/items`;
+  const invAlerts = `${adminBase}/inventory/alerts`;
+const recipeRoute = `${adminBase}/inventory/recipes`;
   const reservationsRoute = `${adminBase}/reservations`;
   const maintenanceRoute = `${adminBase}/maintenance`;
 
@@ -52,8 +55,10 @@ export function InternalSidebar() {
   ]);
   const showMaintenance = hasPermission(session, "maintenance.run");
   const observabilityRoute = `${adminBase}/observability`;
-
   const showObservability = hasPermission(session, "observability.admin.read");
+
+  const canReadInventory = hasPermission(session, "inventory.read");
+  const canManageMenu = hasPermission(session, "menu.manage");
 
   const realtimeRoute = `${adminBase}/realtime`;
   const showRealtime = hasPermission(session, "realtime.admin");
@@ -90,7 +95,10 @@ export function InternalSidebar() {
 
           {showInventoryChildren && (
             <div className="ml-2 mt-1 space-y-1 border-l pl-2">
-              <NavItem to={invStock} label="Tồn kho" />
+              {canReadInventory && <NavItem to={invIngredients} label="Nguyên liệu" />}
+              {canManageMenu && <NavItem to={recipeRoute} label="Công thức món" />}
+              {canReadInventory && <NavItem to={invAlerts} label="Cảnh báo tồn" />}
+              <NavItem to={invStock} label="Tồn kho món" />
               <NavItem to={invHolds} label="Holds" />
               <NavItem to={invAdj} label="Lịch sử điều chỉnh" />
             </div>

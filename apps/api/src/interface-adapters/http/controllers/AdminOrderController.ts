@@ -8,7 +8,7 @@ function mustString(v: unknown, field: string): string {
 }
 
 const BodySchema = z.object({
-  toStatus: z.enum(["RECEIVED", "READY", "COMPLETED", "CANCELED", "PAID"]),
+  toStatus: z.enum(["RECEIVED", "PREPARING", "READY", "COMPLETED", "CANCELED", "PAID"]),
   note: z.string().max(200).optional().nullable(),
 });
 

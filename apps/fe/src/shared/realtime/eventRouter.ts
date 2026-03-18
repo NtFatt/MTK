@@ -170,13 +170,17 @@ export function routeRealtimeEvent(env: EventEnvelope) {
     }
 
     if (branchId != null) {
-      enqueueInvalidate(qk.ops.tables.list({ branchId }), true);
-      enqueueInvalidate(qk.orders.kitchenQueue({ branchId }), false);
-      enqueueInvalidate(qk.orders.cashierUnpaid({ branchId }), false);
-      enqueueInvalidate(qk.inventory.stock({ branchId }), false);
-      enqueueInvalidate(qk.inventory.holds({ branchId }), false);
-      enqueueInvalidate(qk.inventory.adjustments({ branchId }), false);
-      enqueueInvalidate(qk.reservations.list({ branchId }), false);
+      const b = String(branchId);
+      enqueueInvalidate(["ops", "tables", "list"], false);
+      enqueueInvalidate(["orders", "kitchen", "queue"], false);
+      enqueueInvalidate(["orders", "cashier", "unpaid"], false);
+      enqueueInvalidate(["inventory", "stock"], false);
+      enqueueInvalidate(["inventory", "holds"], false);
+      enqueueInvalidate(["inventory", "adjustments"], false);
+      enqueueInvalidate(["reservations", "list"], false);
+
+      enqueueInvalidate(["inventory-ingredients", b], false);
+      enqueueInvalidate(["inventory-ingredient-alerts", b], false);
     }
     return;
   }
@@ -185,9 +189,8 @@ export function routeRealtimeEvent(env: EventEnvelope) {
   if (type === "cart.updated" || type === "cart.abandoned") {
     const sk = tryExtractSessionKey(env);
     if (sk) enqueueInvalidate(qk.cart.bySessionKey(sk), true);
-
     if (branchId != null) {
-      enqueueInvalidate(qk.ops.tables.list({ branchId }), true);
+      enqueueInvalidate(["ops", "tables", "list"], false);
     }
     return;
   }
@@ -201,9 +204,14 @@ export function routeRealtimeEvent(env: EventEnvelope) {
     if (sk) enqueueInvalidate(qk.cart.bySessionKey(sk), true);
 
     if (branchId != null) {
-      enqueueInvalidate(qk.orders.kitchenQueue({ branchId }), false);
-      enqueueInvalidate(qk.orders.cashierUnpaid({ branchId }), false);
-      enqueueInvalidate(qk.ops.tables.list({ branchId }), false);
+      const b = String(branchId);
+
+      enqueueInvalidate(["orders", "kitchen", "queue"], false);
+      enqueueInvalidate(["orders", "cashier", "unpaid"], false);
+      enqueueInvalidate(["ops", "tables", "list"], false);
+
+      enqueueInvalidate(["inventory-ingredients", b], false);
+      enqueueInvalidate(["inventory-ingredient-alerts", b], false);
     }
     return;
   }
@@ -214,7 +222,7 @@ export function routeRealtimeEvent(env: EventEnvelope) {
     if (orderCode) enqueueInvalidate(qk.orders.byCode(orderCode), true);
 
     if (branchId != null) {
-      enqueueInvalidate(qk.orders.cashierUnpaid({ branchId }), false);
+      enqueueInvalidate(["orders", "cashier", "unpaid"], false);
     }
     return;
   }
@@ -222,7 +230,7 @@ export function routeRealtimeEvent(env: EventEnvelope) {
   // 4) Table sessions
   if (TABLE_SESSION_EVENTS.has(type)) {
     if (branchId != null) {
-      enqueueInvalidate(qk.ops.tables.list({ branchId }), true);
+      enqueueInvalidate(["ops", "tables", "list"], false);
     }
 
     const sk = tryExtractSessionKey(env);
@@ -234,8 +242,8 @@ export function routeRealtimeEvent(env: EventEnvelope) {
   // 5) Reservations
   if (RESERVATION_EVENTS.has(type)) {
     if (branchId != null) {
-      enqueueInvalidate(qk.ops.tables.list({ branchId }), true);
-      enqueueInvalidate(qk.reservations.list({ branchId }), false);
+      enqueueInvalidate(["ops", "tables", "list"], false);
+      enqueueInvalidate(["reservations", "list"], false);
     }
     return;
   }
@@ -243,9 +251,14 @@ export function routeRealtimeEvent(env: EventEnvelope) {
   // 6) Inventory
   if (INVENTORY_EVENTS.has(type)) {
     if (branchId != null) {
-      enqueueInvalidate(qk.inventory.stock({ branchId }), false);
-      enqueueInvalidate(qk.inventory.holds({ branchId }), false);
-      enqueueInvalidate(qk.inventory.adjustments({ branchId }), false);
+      const b = String(branchId);
+
+      enqueueInvalidate(["inventory", "stock"], false);
+      enqueueInvalidate(["inventory", "holds"], false);
+      enqueueInvalidate(["inventory", "adjustments"], false);
+
+      enqueueInvalidate(["inventory-ingredients", b], false);
+      enqueueInvalidate(["inventory-ingredient-alerts", b], false);
     }
     return;
   }

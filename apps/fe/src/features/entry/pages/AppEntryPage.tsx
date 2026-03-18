@@ -18,6 +18,13 @@ export function AppEntryPage() {
           </Link>
 
           <Link
+            to="/c/reservations"
+            className="inline-flex h-11 w-full items-center justify-center rounded-md border bg-background px-4 text-sm font-medium"
+          >
+            Đặt bàn trước
+          </Link>
+
+          <Link
             to="/i/login"
             className="inline-flex h-11 w-full items-center justify-center rounded-md border px-4 text-sm font-medium"
           >

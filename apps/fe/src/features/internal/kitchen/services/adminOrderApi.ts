@@ -1,7 +1,12 @@
 import { apiFetchAuthed } from "../../../../shared/http/authedFetch";
 
-export type AdminOrderStatus = "RECEIVED" | "READY" | "COMPLETED" | "CANCELED" | "PAID";
-
+export type AdminOrderStatus =
+  | "RECEIVED"
+  | "PREPARING"
+  | "READY"
+  | "COMPLETED"
+  | "CANCELED"
+  | "PAID";
 export type AdminChangeOrderStatusBody = {
   toStatus: AdminOrderStatus;
   note?: string | null;

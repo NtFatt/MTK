@@ -1,10 +1,9 @@
 import { useAppMutation } from "../../../../shared/http/useAppMutation";
-import { qk } from "@hadilao/contracts";
 import { getOrCreateIdempotencyKey, clearIdempotencyKey } from "../../../../shared/http/idempotency";
 import { changeAdminOrderStatus, type AdminChangeOrderStatusBody } from "../services/adminOrderApi";
 
 export function useChangeOrderStatusMutation(branchId: string | number | undefined) {
-  const b = branchId ?? "";
+  const b = branchId != null ? String(branchId) : "";
 
   return useAppMutation({
     mutationFn: async (p: { orderCode: string; body: AdminChangeOrderStatusBody }) => {
@@ -16,7 +15,11 @@ export function useChangeOrderStatusMutation(branchId: string | number | undefin
     },
     invalidateKeys:
       branchId != null
-        ? [[...qk.orders.kitchenQueue({ branchId: b })]]
+        ? [
+            ["orders", "kitchen", "queue"],
+            ["inventory-ingredients", b],
+            ["inventory-ingredient-alerts", b],
+          ]
         : [],
   });
 }

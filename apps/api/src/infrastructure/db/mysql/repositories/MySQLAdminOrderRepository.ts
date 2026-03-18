@@ -157,7 +157,7 @@ export class MySQLAdminOrderRepository implements IAdminOrderRepository {
     orderCode: string;
     fromStatus: OrderStatus | null;
     toStatus: OrderStatus;
-    changedByType: "ADMIN" | "CLIENT" | "SYSTEM";
+    changedByType: "ADMIN" | "STAFF" | "CLIENT" | "SYSTEM";
     changedById: string | null;
     note: string | null;
   }): Promise<void> {
@@ -175,5 +175,211 @@ export class MySQLAdminOrderRepository implements IAdminOrderRepository {
        VALUES (?, ?, ?, ?, ?, ?)`,
       [orderId, input.fromStatus, input.toStatus, input.changedByType, input.changedById, input.note],
     );
+  }
+
+  async transitionToPreparingWithInventoryConsumption(input: {
+    orderCode: string;
+    branchId: string;
+    changedById: string;
+    note: string | null;
+  }) {
+    const conn: any = await pool.getConnection();
+
+    try {
+      await conn.beginTransaction();
+
+      // 1) Lock order
+      const [orderRows]: any = await conn.query(
+        `
+      SELECT order_id, order_code, branch_id, order_status
+      FROM orders
+      WHERE order_code = ? AND branch_id = ?
+      FOR UPDATE
+      `,
+        [input.orderCode, input.branchId],
+      );
+
+      const order = orderRows?.[0];
+      if (!order) throw new Error("ORDER_NOT_FOUND");
+
+      if (String(order.order_status) !== "RECEIVED") {
+        throw new Error("INVALID_TRANSITION");
+      }
+
+      const orderId = String(order.order_id);
+
+      // 2) Load order items
+      const [orderItemRows]: any = await conn.query(
+        `
+      SELECT order_item_id, item_id AS menu_item_id, quantity
+      FROM order_items
+      WHERE order_id = ?
+      `,
+        [orderId],
+      );
+
+      if (!orderItemRows?.length) {
+        throw new Error("ORDER_ITEMS_EMPTY");
+      }
+
+      // 3) Load recipes
+      const menuItemIds = [...new Set(orderItemRows.map((r: any) => String(r.menu_item_id)))];
+      const menuItemPlaceholders = menuItemIds.map(() => "?").join(",");
+
+      const [recipeRows]: any = await conn.query(
+        `
+      SELECT menu_item_id, ingredient_id, qty_per_item, unit
+      FROM menu_item_recipes
+      WHERE menu_item_id IN (${menuItemPlaceholders})
+      `,
+        menuItemIds,
+      );
+
+      // 4) Check missing recipe
+      for (const menuItemId of menuItemIds) {
+        const hasRecipe = recipeRows.some((r: any) => String(r.menu_item_id) === String(menuItemId));
+        if (!hasRecipe) {
+          throw new Error("RECIPE_NOT_CONFIGURED");
+        }
+      }
+
+      // 5) Build required ingredient totals
+      const requiredByIngredient = new Map<string, number>();
+      const consumptionRows: Array<{
+        orderItemId: string;
+        menuItemId: string;
+        ingredientId: string;
+        qtyConsumed: number;
+      }> = [];
+
+      for (const item of orderItemRows) {
+        const orderItemId = String(item.order_item_id);
+        const menuItemId = String(item.menu_item_id);
+        const quantity = Number(item.quantity ?? 0);
+
+        const itemRecipes = recipeRows.filter(
+          (r: any) => String(r.menu_item_id) === menuItemId,
+        );
+
+        for (const recipe of itemRecipes) {
+          const ingredientId = String(recipe.ingredient_id);
+          const qtyPerItem = Number(recipe.qty_per_item ?? 0);
+          const qtyConsumed = quantity * qtyPerItem;
+
+          requiredByIngredient.set(
+            ingredientId,
+            (requiredByIngredient.get(ingredientId) ?? 0) + qtyConsumed,
+          );
+
+          consumptionRows.push({
+            orderItemId,
+            menuItemId,
+            ingredientId,
+            qtyConsumed,
+          });
+        }
+      }
+
+      const ingredientIds = [...requiredByIngredient.keys()];
+      const ingredientPlaceholders = ingredientIds.map(() => "?").join(",");
+
+      // 6) Lock inventory rows
+      const [inventoryRows]: any = await conn.query(
+        `
+      SELECT id, current_qty
+      FROM inventory_items
+      WHERE branch_id = ?
+        AND id IN (${ingredientPlaceholders})
+      FOR UPDATE
+      `,
+        [input.branchId, ...ingredientIds],
+      );
+
+      const inventoryMap = new Map<string, any>(
+        (inventoryRows ?? []).map((r: any) => [String(r.id), r]),
+      );
+
+      for (const ingredientId of ingredientIds) {
+        const inv = inventoryMap.get(ingredientId);
+        if (!inv) {
+          throw new Error("RECIPE_INGREDIENT_NOT_FOUND");
+        }
+
+        const currentQty = Number(inv.current_qty ?? 0);
+        const requiredQty = Number(requiredByIngredient.get(ingredientId) ?? 0);
+
+        if (currentQty < requiredQty) {
+          throw new Error("INSUFFICIENT_INGREDIENT");
+        }
+      }
+
+      // 7) Insert consumption ledger
+      for (const row of consumptionRows) {
+        await conn.query(
+          `
+        INSERT INTO inventory_consumptions
+        (branch_id, order_id, order_item_id, menu_item_id, ingredient_id, qty_consumed, trigger_status)
+        VALUES (?, ?, ?, ?, ?, ?, 'PREPARING')
+        `,
+          [
+            input.branchId,
+            orderId,
+            row.orderItemId,
+            row.menuItemId,
+            row.ingredientId,
+            row.qtyConsumed,
+          ],
+        );
+      }
+
+      // 8) Deduct inventory
+      for (const [ingredientId, requiredQty] of requiredByIngredient.entries()) {
+        await conn.query(
+          `
+        UPDATE inventory_items
+        SET current_qty = current_qty - ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND branch_id = ?
+        `,
+          [requiredQty, ingredientId, input.branchId],
+        );
+      }
+
+      // 9) Update order status
+      await conn.query(
+        `
+      UPDATE orders
+      SET order_status = 'PREPARING',
+          prepared_at = COALESCE(prepared_at, NOW()),
+          updated_at = CURRENT_TIMESTAMP
+      WHERE order_id = ?
+      `,
+        [orderId],
+      );
+
+      await conn.commit();
+
+      return {
+        orderCode: input.orderCode,
+        toStatus: "PREPARING" as const,
+        consumedLines: Array.from(requiredByIngredient.entries()).map(
+          ([ingredientId, qtyConsumed]) => ({
+            ingredientId,
+            qtyConsumed,
+          }),
+        ),
+      };
+    } catch (e: any) {
+      await conn.rollback();
+
+      // unique key uq_inventory_consumption_once
+      if (e?.code === "ER_DUP_ENTRY") {
+        throw new Error("DUPLICATE_CONSUMPTION");
+      }
+
+      throw e;
+    } finally {
+      conn.release();
+    }
   }
 }
