@@ -49,6 +49,43 @@ function tryExtractOrderCode(env: EventEnvelope): string | null {
   return null;
 }
 
+function tryExtractReservationCode(env: EventEnvelope): string | null {
+  if (env.room.startsWith("reservation:")) {
+    const rest = env.room.slice("reservation:".length);
+    if (rest) return rest;
+  }
+
+  const payload =
+    env.payload && typeof env.payload === "object"
+      ? (env.payload as Record<string, unknown>)
+      : null;
+
+  const reservationObj =
+    payload?.reservation && typeof payload.reservation === "object"
+      ? (payload.reservation as Record<string, unknown>)
+      : null;
+
+  const dataObj =
+    payload?.data && typeof payload.data === "object"
+      ? (payload.data as Record<string, unknown>)
+      : null;
+
+  const candidates = [
+    payload?.reservationCode,
+    payload?.code,
+    reservationObj?.reservationCode,
+    reservationObj?.code,
+    dataObj?.reservationCode,
+    dataObj?.code,
+  ];
+
+  for (const c of candidates) {
+    if (typeof c === "string" && c.trim()) return c;
+  }
+
+  return null;
+}
+
 function tryExtractSessionKey(env: EventEnvelope): string | null {
   if (env.room.startsWith("sessionKey:")) {
     const rest = env.room.slice("sessionKey:".length);
@@ -241,10 +278,20 @@ export function routeRealtimeEvent(env: EventEnvelope) {
 
   // 5) Reservations
   if (RESERVATION_EVENTS.has(type)) {
+    const reservationCode = tryExtractReservationCode(env);
+
+    if (reservationCode) {
+      enqueueInvalidate(["public", "reservations", "detail", reservationCode], true);
+    }
+
+    // availability page không có room riêng -> broad invalidate/query refresh
+    enqueueInvalidate(["public", "reservations", "availability"], false);
+
     if (branchId != null) {
       enqueueInvalidate(["ops", "tables", "list"], false);
       enqueueInvalidate(["reservations", "list"], false);
     }
+
     return;
   }
 

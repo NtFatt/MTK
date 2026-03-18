@@ -20,7 +20,7 @@ export function InternalInventoryAlertsPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const alertsQuery = useInventoryAlertsQuery(branchId ?? null);
 
-  const rows = alertsQuery.data ?? [];
+  const rows = useMemo(() => alertsQuery.data ?? [], [alertsQuery.data]);
 
   const summary = useMemo(() => {
     const critical = rows.filter((x) => x.alertLevel === "CRITICAL").length;

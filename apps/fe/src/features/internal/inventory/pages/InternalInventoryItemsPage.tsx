@@ -63,7 +63,7 @@ export function InternalInventoryItemsPage() {
   const itemsQuery = useInventoryItemsQuery(branchId ?? null);
   const createMutation = useCreateInventoryItemMutation(branchId ?? null);
 
-  const rows = itemsQuery.data ?? [];
+const rows = useMemo(() => itemsQuery.data ?? [], [itemsQuery.data]);
 
   const filteredRows = useMemo(() => {
     const qq = q.trim().toLowerCase();

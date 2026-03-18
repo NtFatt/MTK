@@ -1,28 +1,26 @@
 import { useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 
-import type { HttpError } from "../../../../shared/http/errors";
 import { Alert, AlertDescription } from "../../../../shared/ui/alert";
 import { Badge } from "../../../../shared/ui/badge";
 import { Button, buttonVariants } from "../../../../shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../../shared/ui/card";
 import { Skeleton } from "../../../../shared/ui/skeleton";
 
-import { useReservationQuery } from "../hooks/useReservationQuery";
 import { useCancelReservationMutation } from "../hooks/useCancelReservationMutation";
-import type { PublicReservationRow, PublicReservationStatus } from "../services/reservationsApi";
+import { useReservationQuery } from "../hooks/useReservationQuery";
+import { getReservationErrorMessage } from "../reservationErrorMap";
+import { formatDateTime } from "../reservationForm";
+import { useRealtimeRoom } from "../../../../shared/realtime";
+import type {
+  PublicReservationRow,
+  PublicReservationStatus,
+} from "../services/reservationsApi";
 
 type FlashState =
   | { kind: "success"; message: string }
   | { kind: "error"; message: string }
   | null;
-
-function formatDateTime(iso?: string | null) {
-  if (!iso) return "—";
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return "—";
-  return new Date(t).toLocaleString("vi-VN");
-}
 
 function statusVariant(
   status: PublicReservationStatus,
@@ -47,31 +45,44 @@ function canCancelReservation(row: PublicReservationRow) {
   return row.status === "PENDING" || row.status === "CONFIRMED";
 }
 
-function extractReservationErrorMessage(error: unknown) {
-  const e = error as HttpError | null | undefined;
-  const code = e?.code;
-
-  const map: Record<string, string> = {
-    RESERVATION_NOT_FOUND: "Không tìm thấy reservation.",
-    RESERVATION_CANCELED: "Reservation này đã bị hủy.",
-    RESERVATION_EXPIRED: "Reservation này đã hết hạn.",
-    RESERVATION_NOT_PENDING: "Reservation này không còn ở trạng thái có thể hủy.",
-  };
-
-  if (code && map[code]) return map[code];
-  if (e?.message?.trim()) return e.message;
-  return "Không thể xử lý reservation lúc này.";
+function getReservationStatusHint(row: PublicReservationRow) {
+  switch (row.status) {
+    case "PENDING":
+      return `Reservation đang chờ xác nhận. Bàn sẽ được giữ đến ${formatDateTime(row.expiresAt)}.`;
+    case "CONFIRMED":
+      return "Reservation đã được xác nhận. Bạn có thể đến sớm tối đa 30 phút trước giờ đặt.";
+    case "CHECKED_IN":
+      return "Khách đã check-in thành công.";
+    case "COMPLETED":
+      return "Reservation đã hoàn tất.";
+    case "CANCELED":
+      return "Reservation này đã bị hủy.";
+    case "EXPIRED":
+      return "Reservation này đã hết hạn giữ bàn.";
+    case "NO_SHOW":
+      return "Reservation này đã bị đánh dấu no-show.";
+    default:
+      return "Theo dõi trạng thái reservation tại đây.";
+  }
 }
 
 export function CustomerReservationDetailPage() {
   const { reservationCode } = useParams<{ reservationCode: string }>();
   const [flash, setFlash] = useState<FlashState>(null);
 
-  const code = useMemo(
-    () => String(reservationCode ?? "").trim(),
-    [reservationCode],
+  const code = useMemo(() => String(reservationCode ?? "").trim(), [reservationCode]);
+  
+  useRealtimeRoom(
+    code ? `reservation:${code}` : null,
+    !!code,
+    code
+      ? {
+          kind: "customer",
+          userKey: `reservation:${code}`,
+        }
+      : undefined,
   );
-
+  
   const query = useReservationQuery(code || null, !!code);
   const cancelMutation = useCancelReservationMutation(code || null);
 
@@ -91,7 +102,7 @@ export function CustomerReservationDetailPage() {
     } catch (error) {
       setFlash({
         kind: "error",
-        message: extractReservationErrorMessage(error),
+        message: getReservationErrorMessage(error),
       });
     }
   };
@@ -109,7 +120,7 @@ export function CustomerReservationDetailPage() {
     return (
       <div className="mx-auto max-w-3xl space-y-4 px-4 py-6">
         <Alert variant="destructive">
-          <AlertDescription>{extractReservationErrorMessage(query.error)}</AlertDescription>
+          <AlertDescription>{getReservationErrorMessage(query.error)}</AlertDescription>
         </Alert>
 
         <div className="flex flex-wrap gap-3">
@@ -240,6 +251,12 @@ export function CustomerReservationDetailPage() {
         </CardContent>
       </Card>
 
+      <Card className="rounded-2xl">
+        <CardContent className="pt-6 text-sm text-muted-foreground">
+          {getReservationStatusHint(row)}
+        </CardContent>
+      </Card>
+
       <div className="flex flex-wrap gap-3">
         {canCancelReservation(row) && (
           <Button
@@ -258,6 +275,12 @@ export function CustomerReservationDetailPage() {
         <Link to="/c/reservations" className={buttonVariants({ variant: "outline" })}>
           Tạo reservation mới
         </Link>
+
+        {["EXPIRED", "CANCELED", "NO_SHOW"].includes(row.status) && (
+          <Link to="/c/reservations" className={buttonVariants({ variant: "default" })}>
+            Đặt reservation mới
+          </Link>
+        )}
       </div>
     </div>
   );

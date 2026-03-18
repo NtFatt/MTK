@@ -36,7 +36,10 @@ export function useReservationAvailabilityQuery(
     queryKey: reservationAvailabilityQueryKey(input),
     queryFn: () => getReservationAvailability(input ?? FALLBACK_INPUT),
     enabled: enabled && input !== null,
-    staleTime: 10_000,
+    staleTime: 5_000,
     retry: false,
+    refetchOnWindowFocus: true,
+    refetchInterval: enabled && input !== null ? 15_000 : false,
+    refetchIntervalInBackground: false,
   });
 }
