@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Navigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { useStore } from "zustand";
 
 import { authStore } from "../../../../shared/auth/authStore";
@@ -91,6 +91,7 @@ export function InternalMenuManagementPage() {
     const session = useStore(authStore, (s) => s.session);
     const { branchId } = useParams<{ branchId: string }>();
 
+    const navigate = useNavigate();
     const bid = resolveInternalBranch(session, branchId);
     const branchMismatch = isInternalBranchMismatch(session, branchId);
 
@@ -151,7 +152,7 @@ export function InternalMenuManagementPage() {
 
             setFlash({
                 kind: "success",
-                message: `Đã tạo món ${created.name}.`,
+                message: `Đã tạo món ${created.name}. Hãy bấm "Công thức" trong danh sách để cấu hình định lượng.`,
             });
 
             setForm(EMPTY_FORM);
@@ -356,60 +357,113 @@ export function InternalMenuManagementPage() {
                                             <th className="px-4 py-3 font-medium">Tên món</th>
                                             <th className="px-4 py-3 font-medium">Danh mục</th>
                                             <th className="px-4 py-3 font-medium">Giá</th>
+                                            <th className="px-4 py-3 font-medium">Có thể bán</th>
                                             <th className="px-4 py-3 font-medium">Trạng thái</th>
                                             <th className="px-4 py-3 font-medium">Ảnh</th>
                                             <th className="px-4 py-3 font-medium">Hành động</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {rows.map((item) => (
-                                            <tr key={item.id} className="border-t align-top">
-                                                <td className="px-4 py-3 font-mono text-xs">{item.id}</td>
-                                                <td className="px-4 py-3">
-                                                    <div className="font-medium">{item.name}</div>
-                                                    <div className="mt-1 max-w-[340px] text-xs text-muted-foreground line-clamp-2">
-                                                        {item.description?.trim() || "Không có mô tả."}
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3">{item.categoryName || item.categoryId}</td>
-                                                <td className="px-4 py-3">{item.price.toLocaleString("vi-VN")}</td>
-                                                <td className="px-4 py-3">
-                                                    <Badge variant={item.isActive ? "default" : "secondary"}>
-                                                        {item.isActive ? "ACTIVE" : "INACTIVE"}
-                                                    </Badge>
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    {item.imageUrl ? (
-                                                        <a
-                                                            href={item.imageUrl}
-                                                            target="_blank"
-                                                            rel="noreferrer"
-                                                            className="text-primary underline-offset-4 hover:underline"
-                                                        >
-                                                            Xem ảnh
-                                                        </a>
-                                                    ) : (
-                                                        <span className="text-muted-foreground">—</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="flex flex-wrap gap-2">
-                                                        <Button type="button" size="sm" variant="secondary" onClick={() => startEdit(item)}>
-                                                            Sửa
-                                                        </Button>
-                                                        <Button
-                                                            type="button"
-                                                            size="sm"
-                                                            variant={item.isActive ? "outline" : "default"}
-                                                            disabled={setActiveMutation.isPending}
-                                                            onClick={() => void handleToggleActive(item)}
-                                                        >
-                                                            {item.isActive ? "Ẩn món" : "Kích hoạt"}
-                                                        </Button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {rows.map((item) => {
+                                            const sellableQty =
+                                                item.stockQty == null || !Number.isFinite(Number(item.stockQty))
+                                                    ? null
+                                                    : Math.max(0, Number(item.stockQty));
+
+                                            const isOutOfStock = sellableQty !== null && sellableQty <= 0;
+
+                                            return (
+                                                <tr key={item.id} className="border-t align-top">
+                                                    <td className="px-4 py-3 font-mono text-xs">{item.id}</td>
+
+                                                    <td className="px-4 py-3">
+                                                        <div className="font-medium">{item.name}</div>
+                                                        <div className="mt-1 max-w-[340px] text-xs text-muted-foreground line-clamp-2">
+                                                            {item.description?.trim() || "Không có mô tả."}
+                                                        </div>
+                                                    </td>
+
+                                                    <td className="px-4 py-3">{item.categoryName || item.categoryId}</td>
+
+                                                    <td className="px-4 py-3">{item.price.toLocaleString("vi-VN")}</td>
+
+                                                    <td className="px-4 py-3">
+                                                        {sellableQty === null ? (
+                                                            <span className="text-muted-foreground">—</span>
+                                                        ) : (
+                                                            <div className="space-y-1">
+                                                                <div className="font-medium">{sellableQty.toLocaleString("vi-VN")}</div>
+                                                                <div className="text-xs text-muted-foreground">
+                                                                    {isOutOfStock ? "Hết hàng" : "Có thể bán"}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </td>
+
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex flex-wrap gap-2">
+                                                            <Badge variant={item.isActive ? "default" : "secondary"}>
+                                                                {item.isActive ? "ACTIVE" : "INACTIVE"}
+                                                            </Badge>
+
+                                                            {sellableQty !== null && (
+                                                                <Badge variant={isOutOfStock ? "destructive" : "outline"}>
+                                                                    {isOutOfStock ? "OUT OF STOCK" : "IN STOCK"}
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                    </td>
+
+                                                    <td className="px-4 py-3">
+                                                        {item.imageUrl ? (
+                                                            <a
+                                                                href={item.imageUrl}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="text-primary underline-offset-4 hover:underline"
+                                                            >
+                                                                Xem ảnh
+                                                            </a>
+                                                        ) : (
+                                                            <span className="text-muted-foreground">—</span>
+                                                        )}
+                                                    </td>
+
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex flex-wrap gap-2">
+                                                            <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                variant="outline"
+                                                                disabled={!branchId}
+                                                                onClick={() => {
+                                                                    if (!branchId) return;
+                                                                    navigate(
+                                                                        `/i/${branchId}/admin/inventory/recipes?itemId=${encodeURIComponent(item.id)}`,
+                                                                    );
+                                                                }}
+                                                            >
+                                                                Công thức
+                                                            </Button>
+
+                                                            <Button type="button" size="sm" variant="secondary" onClick={() => startEdit(item)}>
+                                                                Sửa
+                                                            </Button>
+
+                                                            <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                variant={item.isActive ? "outline" : "default"}
+                                                                disabled={setActiveMutation.isPending}
+                                                                onClick={() => void handleToggleActive(item)}
+                                                            >
+                                                                {item.isActive ? "Ẩn món" : "Kích hoạt"}
+                                                            </Button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>

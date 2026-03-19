@@ -1,14 +1,16 @@
 import { useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { Alert, AlertDescription } from "../../../../shared/ui/alert";
+import { Badge } from "../../../../shared/ui/badge";
 import { Button } from "../../../../shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../../shared/ui/card";
 import { Input } from "../../../../shared/ui/input";
-import { useMenuQuery } from "../../../customer/menu/hooks/useMenuQuery";
 import { useInventoryItemsQuery } from "../../inventory/hooks/useInventoryItemsQuery";
+import { useAdminMenuItemsQuery } from "../hooks/useAdminMenuItemsQuery";
 import { useMenuRecipeQuery } from "../hooks/useMenuRecipeQuery";
 import { useSaveMenuRecipeMutation } from "../hooks/useSaveMenuRecipeMutation";
+import type { AdminMenuItem } from "../services/adminMenuApi";
 import type { SaveMenuRecipeLineInput } from "../services/menuRecipesApi";
 
 type EditableRecipeLine = {
@@ -38,7 +40,9 @@ function RecipeLinesEditor({
   disabled,
   onSave,
 }: RecipeLinesEditorProps) {
-  const [lines, setLines] = useState<EditableRecipeLine[]>(initialLines);
+  const [lines, setLines] = useState<EditableRecipeLine[]>(() => initialLines);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
 
   function updateLine(idx: number, patch: Partial<EditableRecipeLine>) {
     setLines((prev) => prev.map((line, i) => (i === idx ? { ...line, ...patch } : line)));
@@ -59,18 +63,70 @@ function RecipeLinesEditor({
     setLines((prev) => prev.filter((_, i) => i !== idx));
   }
 
+  function resetLines() {
+    setLines(initialLines);
+    setErrorMessage(null);
+  }
+
   async function handleSave() {
-    const payload: SaveMenuRecipeLineInput[] = lines.map((line) => ({
-      ingredientId: line.ingredientId.trim(),
-      qtyPerItem: Number(line.qtyPerItem || "0"),
-      unit: line.unit.trim(),
-    }));
+    setErrorMessage(null);
+
+    const payload: SaveMenuRecipeLineInput[] = [];
+    const seenIngredientIds = new Set<string>();
+
+    for (let idx = 0; idx < lines.length; idx += 1) {
+      const line = lines[idx];
+      const ingredientId = line.ingredientId.trim();
+      const qtyText = line.qtyPerItem.trim();
+      const unit = line.unit.trim();
+      const rowNo = idx + 1;
+
+      const isBlankRow = !ingredientId && !qtyText && !unit;
+      if (isBlankRow) {
+        setErrorMessage(`Dòng ${rowNo} đang trống. Hãy xóa dòng này hoặc nhập đủ dữ liệu.`);
+        return;
+      }
+
+      if (!ingredientId) {
+        setErrorMessage(`Dòng ${rowNo} chưa chọn nguyên liệu.`);
+        return;
+      }
+
+      if (seenIngredientIds.has(ingredientId)) {
+        setErrorMessage(`Nguyên liệu ở dòng ${rowNo} đang bị trùng.`);
+        return;
+      }
+      seenIngredientIds.add(ingredientId);
+
+      const qtyPerItem = Number(qtyText);
+      if (!Number.isFinite(qtyPerItem) || qtyPerItem <= 0) {
+        setErrorMessage(`Định mức ở dòng ${rowNo} phải là số lớn hơn 0.`);
+        return;
+      }
+
+      if (!unit) {
+        setErrorMessage(`Dòng ${rowNo} chưa có đơn vị.`);
+        return;
+      }
+
+      payload.push({
+        ingredientId,
+        qtyPerItem,
+        unit,
+      });
+    }
 
     await onSave(payload);
   }
 
   return (
     <div className="space-y-4">
+      {errorMessage && (
+        <Alert variant="destructive">
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+      )}
+
       <div className="overflow-x-auto rounded-lg border">
         <table className="min-w-full text-sm">
           <thead className="bg-muted/40">
@@ -110,6 +166,7 @@ function RecipeLinesEditor({
                       {ingredientOptions.map((item) => (
                         <option key={item.id} value={item.id}>
                           #{item.id} — {item.ingredientName}
+                          {item.ingredientCode ? ` (${item.ingredientCode})` : ""}
                           {!item.isActive ? " (inactive)" : ""}
                         </option>
                       ))}
@@ -128,7 +185,7 @@ function RecipeLinesEditor({
                     <Input
                       value={line.qtyPerItem}
                       onChange={(e) => updateLine(idx, { qtyPerItem: e.target.value })}
-                      placeholder="qty"
+                      placeholder="Ví dụ: 200"
                       inputMode="decimal"
                       disabled={disabled}
                     />
@@ -138,7 +195,7 @@ function RecipeLinesEditor({
                     <Input
                       value={line.unit}
                       onChange={(e) => updateLine(idx, { unit: e.target.value })}
-                      placeholder="unit"
+                      placeholder="Ví dụ: gram / ml / phần"
                       disabled={disabled}
                     />
                   </td>
@@ -161,7 +218,7 @@ function RecipeLinesEditor({
             {lines.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">
-                  Chưa có recipe line cho món này.
+                  Chưa có công thức cho món này. Nhấn “Thêm dòng nguyên liệu” để bắt đầu.
                 </td>
               </tr>
             )}
@@ -169,9 +226,17 @@ function RecipeLinesEditor({
         </table>
       </div>
 
+      <div className="rounded-lg border border-dashed px-4 py-3 text-xs text-muted-foreground">
+        Muốn xóa toàn bộ công thức, hãy xóa hết các dòng rồi bấm “Lưu công thức”.
+      </div>
+
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="secondary" onClick={addLine} disabled={disabled}>
           Thêm dòng nguyên liệu
+        </Button>
+
+        <Button type="button" variant="outline" onClick={resetLines} disabled={disabled}>
+          Đặt lại
         </Button>
 
         <Button type="button" onClick={() => void handleSave()} disabled={disabled}>
@@ -184,51 +249,51 @@ function RecipeLinesEditor({
 
 export function InternalMenuRecipesPage() {
   const { branchId } = useParams<{ branchId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [q, setQ] = useState("");
-  const [selectedId, setSelectedId] = useState<string>("");
 
-  const menuQuery = useMenuQuery({
-    branchId: branchId ? Number(branchId) : undefined,
+  const selectedId = searchParams.get("itemId")?.trim() ?? "";
+
+  const itemsQuery = useAdminMenuItemsQuery({
+    branchId: branchId ?? undefined,
+    limit: 1000,
   });
 
   const inventoryItemsQuery = useInventoryItemsQuery(branchId ?? null);
 
   const ingredientOptions = useMemo<IngredientOption[]>(() => {
     const raw = inventoryItemsQuery.data ?? [];
-    return raw.map((item) => ({
-      id: String(item.id),
-      ingredientName: String(item.ingredientName ?? ""),
-      ingredientCode: String(item.ingredientCode ?? ""),
-      unit: String(item.unit ?? ""),
-      isActive: Boolean(item.isActive),
-    }));
+    return raw
+      .map((item) => ({
+        id: String(item.id),
+        ingredientName: String(item.ingredientName ?? ""),
+        ingredientCode: String(item.ingredientCode ?? ""),
+        unit: String(item.unit ?? ""),
+        isActive: Boolean(item.isActive),
+      }))
+      .sort((a, b) => a.ingredientName.localeCompare(b.ingredientName, "vi"));
   }, [inventoryItemsQuery.data]);
 
-  const items = useMemo(() => {
-    const raw = menuQuery.data?.items ?? [];
+  const allItems = useMemo<AdminMenuItem[]>(() => itemsQuery.data?.items ?? [], [itemsQuery.data]);
+
+  const filteredItems = useMemo(() => {
     const qq = q.trim().toLowerCase();
+    if (!qq) return allItems;
 
-    const normalized = raw.map((item) => ({
-      id: String(item.id),
-      name: String(item.name ?? ""),
-      categoryId: item.categoryId != null ? String(item.categoryId) : "",
-    }));
-
-    if (!qq) return normalized;
-
-    return normalized.filter((item) => {
+    return allItems.filter((item) => {
       return (
         item.id.toLowerCase().includes(qq) ||
         item.name.toLowerCase().includes(qq) ||
-        item.categoryId.toLowerCase().includes(qq)
+        String(item.categoryId ?? "").toLowerCase().includes(qq) ||
+        String(item.categoryName ?? "").toLowerCase().includes(qq)
       );
     });
-  }, [menuQuery.data?.items, q]);
+  }, [allItems, q]);
+
+  const selected = allItems.find((x) => x.id === selectedId) ?? null;
 
   const recipeQuery = useMenuRecipeQuery(branchId ?? null, selectedId || null);
   const saveMutation = useSaveMenuRecipeMutation(branchId ?? null, selectedId || null);
-
-  const selected = items.find((x) => x.id === selectedId) ?? null;
 
   const initialLines = useMemo<EditableRecipeLine[]>(() => {
     const recipeLines = recipeQuery.data ?? [];
@@ -239,38 +304,61 @@ export function InternalMenuRecipesPage() {
     }));
   }, [recipeQuery.data]);
 
+  function selectItem(itemId: string) {
+    const next = new URLSearchParams(searchParams);
+    next.set("itemId", itemId);
+    setSearchParams(next);
+  }
+
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Công thức món</h1>
           <p className="text-sm text-muted-foreground">
-            Cấu hình định mức nguyên liệu tiêu hao cho từng món trong menu.
+            Cấu hình định lượng nguyên liệu theo từng món. Đi từ Menu Management để mở đúng món cần sửa.
           </p>
         </div>
+
+        {branchId ? (
+          <Link
+            to={`/i/${branchId}/admin/menu`}
+            className="inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm font-medium transition hover:bg-muted"
+          >
+            Quay lại Menu Management
+          </Link>
+        ) : null}
       </div>
 
-      {menuQuery.isError && (
-        <Alert>
-          <AlertDescription>Không tải được danh sách món.</AlertDescription>
+      {itemsQuery.isError && (
+        <Alert variant="destructive">
+          <AlertDescription>Không tải được danh sách món admin.</AlertDescription>
         </Alert>
       )}
 
       {inventoryItemsQuery.isError && (
-        <Alert>
+        <Alert variant="destructive">
           <AlertDescription>Không tải được danh sách nguyên liệu.</AlertDescription>
         </Alert>
       )}
 
       {recipeQuery.isError && selectedId && (
-        <Alert>
-          <AlertDescription>Không tải được công thức món đã chọn.</AlertDescription>
+        <Alert variant="destructive">
+          <AlertDescription>Không tải được công thức của món đã chọn.</AlertDescription>
         </Alert>
       )}
 
       {saveMutation.isError && (
-        <Alert>
+        <Alert variant="destructive">
           <AlertDescription>Lưu công thức thất bại.</AlertDescription>
+        </Alert>
+      )}
+
+      {selectedId && !selected && !itemsQuery.isLoading && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            Không tìm thấy món đang được chọn. Món này có thể đã bị xóa hoặc không còn nằm trong danh sách admin.
+          </AlertDescription>
         </Alert>
       )}
 
@@ -281,39 +369,50 @@ export function InternalMenuRecipesPage() {
           </CardHeader>
 
           <CardContent className="space-y-3">
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm món..." />
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Tìm theo tên, ID hoặc danh mục..."
+            />
 
-            {menuQuery.isLoading ? (
+            {itemsQuery.isLoading ? (
               <div className="rounded-lg border border-dashed px-3 py-6 text-sm text-muted-foreground">
                 Đang tải danh sách món...
               </div>
             ) : (
               <div className="space-y-2">
-                {items.map((item) => {
+                {filteredItems.map((item) => {
                   const active = item.id === selectedId;
 
                   return (
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => setSelectedId(item.id)}
-                      className={`w-full rounded-lg border px-3 py-3 text-left transition ${
-                        active
+                      onClick={() => selectItem(item.id)}
+                      className={`w-full rounded-lg border px-3 py-3 text-left transition ${active
                           ? "border-foreground bg-muted"
                           : "border-border hover:bg-muted/40"
-                      }`}
+                        }`}
                     >
-                      <div className="font-medium">{item.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        category #{item.categoryId || "?"} • item #{item.id}
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-medium">{item.name}</div>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {item.categoryName || `category #${item.categoryId}`} • item #{item.id}
+                          </div>
+                        </div>
+
+                        <Badge variant={item.isActive ? "default" : "secondary"}>
+                          {item.isActive ? "ACTIVE" : "INACTIVE"}
+                        </Badge>
                       </div>
                     </button>
                   );
                 })}
 
-                {items.length === 0 && (
+                {filteredItems.length === 0 && (
                   <div className="rounded-lg border border-dashed px-3 py-6 text-sm text-muted-foreground">
-                    Không có món phù hợp.
+                    Không có món phù hợp bộ lọc hiện tại.
                   </div>
                 )}
               </div>
@@ -321,39 +420,85 @@ export function InternalMenuRecipesPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{selected ? `Recipe — ${selected.name}` : "Recipe"}</CardTitle>
-          </CardHeader>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>{selected ? `Món đang chọn — ${selected.name}` : "Chưa chọn món"}</CardTitle>
+            </CardHeader>
 
-          <CardContent className="space-y-4">
-            {!selected ? (
-              <div className="rounded-lg border border-dashed px-4 py-10 text-sm text-muted-foreground">
-                Chọn một món ở cột trái để xem recipe.
-              </div>
-            ) : recipeQuery.isLoading ? (
-              <div className="rounded-lg border border-dashed px-4 py-10 text-sm text-muted-foreground">
-                Đang tải recipe...
-              </div>
-            ) : (
-              <RecipeLinesEditor
-                key={`${selectedId}:${recipeQuery.dataUpdatedAt}`}
-                initialLines={initialLines}
-                ingredientOptions={ingredientOptions}
-                disabled={saveMutation.isPending}
-                onSave={async (lines) => {
-                  if (!branchId || !selectedId) return;
+            <CardContent>
+              {!selected ? (
+                <div className="rounded-lg border border-dashed px-4 py-10 text-sm text-muted-foreground">
+                  Chọn một món ở cột trái hoặc đi từ Menu Management bằng nút “Công thức”.
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="rounded-lg border p-4">
+                    <div className="text-xs uppercase text-muted-foreground">Tên món</div>
+                    <div className="mt-1 font-medium">{selected.name}</div>
+                  </div>
 
-                  await saveMutation.mutateAsync({
-                    branchId,
-                    menuItemId: selectedId,
-                    lines,
-                  });
-                }}
-              />
-            )}
-          </CardContent>
-        </Card>
+                  <div className="rounded-lg border p-4">
+                    <div className="text-xs uppercase text-muted-foreground">Danh mục</div>
+                    <div className="mt-1 font-medium">
+                      {selected.categoryName || selected.categoryId}
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border p-4">
+                    <div className="text-xs uppercase text-muted-foreground">Giá bán</div>
+                    <div className="mt-1 font-medium">
+                      {selected.price.toLocaleString("vi-VN")} đ
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border p-4">
+                    <div className="text-xs uppercase text-muted-foreground">Trạng thái</div>
+                    <div className="mt-1">
+                      <Badge variant={selected.isActive ? "default" : "secondary"}>
+                        {selected.isActive ? "ACTIVE" : "INACTIVE"}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{selected ? `Công thức — ${selected.name}` : "Công thức"}</CardTitle>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              {!selected ? (
+                <div className="rounded-lg border border-dashed px-4 py-10 text-sm text-muted-foreground">
+                  Chưa có món nào được chọn.
+                </div>
+              ) : recipeQuery.isLoading ? (
+                <div className="rounded-lg border border-dashed px-4 py-10 text-sm text-muted-foreground">
+                  Đang tải công thức...
+                </div>
+              ) : (
+                <RecipeLinesEditor
+                  key={`${selectedId}:${recipeQuery.dataUpdatedAt}`}
+                  initialLines={initialLines}
+                  ingredientOptions={ingredientOptions}
+                  disabled={saveMutation.isPending}
+                  onSave={async (lines) => {
+                    if (!branchId || !selectedId) return;
+
+                    await saveMutation.mutateAsync({
+                      branchId,
+                      menuItemId: selectedId,
+                      lines,
+                    });
+                  }}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

@@ -85,6 +85,8 @@ import { ResetDevState } from "../application/use-cases/maintenance/ResetDevStat
 import { SetDevStock } from "../application/use-cases/maintenance/SetDevStock.js";
 
 import { CreateMenuItem } from "../application/use-cases/admin/menu/CreateMenuItem.js";
+import { UpdateMenuItem } from "../application/use-cases/admin/menu/UpdateMenuItem.js";
+import { SetMenuItemActive } from "../application/use-cases/admin/menu/SetMenuItemActive.js";
 import { AdminMenuController } from "../interface-adapters/http/controllers/AdminMenuController.js";
 import { ListAdminRealtimeAuditEvents } from "../application/use-cases/admin/realtime/ListAdminRealtimeAuditEvents.js";
 import { ReplayAdminRealtimeAuditEvents } from "../application/use-cases/admin/realtime/ReplayAdminRealtimeAuditEvents.js";
@@ -436,11 +438,40 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
   const listInventoryItems = new ListInventoryItems(inventoryIngredientRepo);
   const createInventoryItem = new CreateInventoryItem(inventoryIngredientRepo);
   const updateInventoryItem = new UpdateInventoryItem(inventoryIngredientRepo);
-  const adjustInventoryItem = new AdjustInventoryItem(inventoryIngredientRepo);
+  const adjustInventoryItem = new AdjustInventoryItem(
+    inventoryIngredientRepo,
+    menuRecipeRepo,
+    {
+      bumpMenuVersion: bumpMenuVersion
+        ? async () => {
+          await bumpMenuVersion.execute();
+        }
+        : null,
+      triggerStockRehydrate: triggerStockRehydrate
+        ? async () => {
+          await triggerStockRehydrate.execute();
+        }
+        : null,
+    },
+  );
   const listInventoryAlerts = new ListInventoryAlerts(inventoryIngredientRepo);
 
   const getMenuItemRecipe = new GetMenuItemRecipe(menuRecipeRepo);
-  const saveMenuItemRecipe = new SaveMenuItemRecipe(menuRecipeRepo);
+  const saveMenuItemRecipe = new SaveMenuItemRecipe(
+    menuRecipeRepo,
+    {
+      bumpMenuVersion: bumpMenuVersion
+        ? async () => {
+          await bumpMenuVersion.execute();
+        }
+        : null,
+      triggerStockRehydrate: triggerStockRehydrate
+        ? async () => {
+          await triggerStockRehydrate.execute();
+        }
+        : null,
+    },
+  );
 
   const adminInventoryController = new AdminInventoryController(
     listBranchStock,
@@ -477,8 +508,18 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
     getMeatProfile,
   );
 
-const createMenuItem = new CreateMenuItem(menuItemRepo);
-const adminMenuController = new AdminMenuController(createMenuItem);
+  const createMenuItem = new CreateMenuItem(menuItemRepo);
+  const updateMenuItem = new UpdateMenuItem(menuItemRepo);
+  const setMenuItemActive = new SetMenuItemActive(menuItemRepo);
+
+  const adminMenuController = new AdminMenuController(
+    getMenuCategories,
+    listMenuItems,
+    createMenuItem,
+    updateMenuItem,
+    setMenuItemActive,
+  );
+
   // ===== Client OTP auth =====
   const clientRepo = new MySQLClientRepository();
   const otpRepo = new MySQLOtpRepository();

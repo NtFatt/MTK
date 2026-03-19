@@ -8,12 +8,13 @@ export function createAdminMenuRouter(ctrl: AdminMenuController) {
   const r = Router();
 
   r.use(requireInternal);
+  r.use(requirePermission("menu.manage"));
 
-  r.post(
-    "/menu/items",
-    requirePermission("menu.manage"),
-    asyncHandler(ctrl.createItem),
-  );
+  r.get("/menu/categories", asyncHandler(ctrl.categories));
+  r.get("/menu/items", asyncHandler(ctrl.items));
+  r.post("/menu/items", asyncHandler(ctrl.createItem));
+  r.put("/menu/items/:itemId", asyncHandler(ctrl.updateItem));
+  r.patch("/menu/items/:itemId/active", asyncHandler(ctrl.setItemActive));
 
   return r;
 }

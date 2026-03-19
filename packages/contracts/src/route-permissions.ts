@@ -1,4 +1,12 @@
 export const routePermissions = {
+  "/api/v1/admin/menu/categories": ["menu.manage"],
+
+  "/api/v1/admin/menu/items": ["menu.manage"],
+
+  "/api/v1/admin/menu/items/:itemId": ["menu.manage"],
+
+  "/api/v1/admin/menu/items/:itemId/active": ["menu.manage"],
+
   "/api/v1/admin/kitchen/queue": ["kitchen.queue.read"],
 
   "/api/v1/admin/orders/:orderCode/status": ["orders.status.change"],

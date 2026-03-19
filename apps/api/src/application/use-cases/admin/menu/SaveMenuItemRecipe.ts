@@ -3,8 +3,16 @@ import type {
   SaveMenuRecipeLineInput,
 } from "../../../ports/repositories/IMenuRecipeRepository.js";
 
+type SyncHooks = {
+  bumpMenuVersion?: (() => Promise<unknown>) | null;
+  triggerStockRehydrate?: (() => Promise<unknown>) | null;
+};
+
 export class SaveMenuItemRecipe {
-  constructor(private readonly repo: IMenuRecipeRepository) {}
+  constructor(
+    private readonly repo: IMenuRecipeRepository,
+    private readonly syncHooks: SyncHooks = {},
+  ) {}
 
   async execute(input: {
     menuItemId: string;
@@ -50,10 +58,26 @@ export class SaveMenuItemRecipe {
       seen.add(line.ingredientId);
     }
 
-    return this.repo.saveByMenuItemId({
+    const saved = await this.repo.saveByMenuItemId({
       menuItemId: String(input.menuItemId),
       branchId,
       lines: normalizedLines,
     });
+
+    await this.repo.recomputeAndSyncMenuItemStock(branchId, String(input.menuItemId));
+
+    const afterSyncJobs: Promise<unknown>[] = [];
+
+    if (this.syncHooks.bumpMenuVersion) {
+      afterSyncJobs.push(this.syncHooks.bumpMenuVersion());
+    }
+
+    if (this.syncHooks.triggerStockRehydrate) {
+      afterSyncJobs.push(this.syncHooks.triggerStockRehydrate());
+    }
+
+    await Promise.allSettled(afterSyncJobs);
+
+    return saved;
   }
 }

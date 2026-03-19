@@ -13,9 +13,14 @@ export type SaveMenuRecipeLineInput = {
 
 export interface IMenuRecipeRepository {
   getByMenuItemId(menuItemId: string, branchId: string): Promise<MenuRecipeLine[]>;
+
   saveByMenuItemId(input: {
     menuItemId: string;
     branchId: string;
     lines: SaveMenuRecipeLineInput[];
   }): Promise<MenuRecipeLine[]>;
+
+  listMenuItemIdsByIngredient(branchId: string, ingredientId: string): Promise<string[]>;
+
+  recomputeAndSyncMenuItemStock(branchId: string, menuItemId: string): Promise<number>;
 }

@@ -9,6 +9,31 @@ export const routeManifest = {
     path: "/api/v1/admin/login",
   },
 
+  adminMenuCategories: {
+    method: "GET",
+    path: "/api/v1/admin/menu/categories",
+  },
+
+  adminMenuItems: {
+    method: "GET",
+    path: "/api/v1/admin/menu/items",
+  },
+
+  adminMenuItemCreate: {
+    method: "POST",
+    path: "/api/v1/admin/menu/items",
+  },
+
+  adminMenuItemUpdate: {
+    method: "PUT",
+    path: "/api/v1/admin/menu/items/:itemId",
+  },
+
+  adminMenuItemSetActive: {
+    method: "PATCH",
+    path: "/api/v1/admin/menu/items/:itemId/active",
+  },
+
   menuItems: {
     method: "GET",
     path: "/api/v1/menu/items",

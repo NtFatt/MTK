@@ -12,6 +12,9 @@ export function useSaveMenuRecipeMutation(branchId: string | null, menuItemId: s
     { branchId: string; menuItemId: string; lines: SaveMenuRecipeLineInput[] }
   >({
     mutationFn: (input) => saveMenuRecipe(input),
-    invalidateKeys: [["menu-recipe", branchId, menuItemId]],
+    invalidateKeys: [
+      ["menu-recipe", branchId, menuItemId],
+      ["admin", "menu", "items"],
+    ],
   });
 }

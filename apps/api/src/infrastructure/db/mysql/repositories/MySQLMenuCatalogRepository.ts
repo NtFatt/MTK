@@ -54,8 +54,7 @@ export class MySQLMenuCatalogRepository implements IMenuCatalogRepository {
   async listItems(query: MenuItemListQuery): Promise<{ items: MenuItem[]; total: number }> {
     const categoryId = query.categoryId ? String(query.categoryId) : null;
     const q = query.q ? String(query.q).trim() : null;
-    const isActive = query.isActive ?? true;
-    const branchId = query.branchId ? String(query.branchId) : null;
+    const isActive = query.isActive === undefined ? true : query.isActive; const branchId = query.branchId ? String(query.branchId) : null;
     const onlyInStock = query.onlyInStock === true;
 
     const hasLimit = query.limit !== null && query.limit !== undefined;

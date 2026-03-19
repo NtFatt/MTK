@@ -95,4 +95,64 @@ export class MySQLMenuRecipeRepository implements IMenuRecipeRepository {
       conn.release();
     }
   }
+
+  async listMenuItemIdsByIngredient(branchId: string, ingredientId: string): Promise<string[]> {
+    const [rows]: any = await pool.query(
+      `SELECT DISTINCT r.menu_item_id
+       FROM menu_item_recipes r
+       JOIN inventory_items i
+         ON i.id = r.ingredient_id
+        AND i.branch_id = ?
+       WHERE r.ingredient_id = ?
+       ORDER BY r.menu_item_id ASC`,
+      [branchId, ingredientId],
+    );
+
+    return (rows ?? []).map((r: any) => String(r.menu_item_id));
+  }
+
+  async recomputeAndSyncMenuItemStock(branchId: string, menuItemId: string): Promise<number> {
+    const conn: any = await pool.getConnection();
+
+    try {
+      await conn.beginTransaction();
+
+      const [rows]: any = await conn.query(
+        `SELECT
+           COALESCE(MIN(FLOOR(i.current_qty / r.qty_per_item)), 0) AS sellable_qty
+         FROM menu_item_recipes r
+         JOIN inventory_items i
+           ON i.id = r.ingredient_id
+          AND i.branch_id = ?
+         WHERE r.menu_item_id = ?`,
+        [branchId, menuItemId],
+      );
+
+      const sellableQty = Math.max(0, toNum(rows?.[0]?.sellable_qty));
+
+      await conn.query(
+        `INSERT INTO menu_item_stock (branch_id, item_id, quantity, last_restock_at, updated_at)
+         VALUES (?, ?, ?, NOW(), NOW())
+         ON DUPLICATE KEY UPDATE
+           quantity = VALUES(quantity),
+           updated_at = VALUES(updated_at)`,
+        [branchId, menuItemId, sellableQty],
+      );
+
+      await conn.query(
+        `UPDATE menu_items
+         SET stock_qty = ?, updated_at = NOW()
+         WHERE item_id = ?`,
+        [sellableQty, menuItemId],
+      );
+
+      await conn.commit();
+      return sellableQty;
+    } catch (e) {
+      await conn.rollback();
+      throw e;
+    } finally {
+      conn.release();
+    }
+  }
 }

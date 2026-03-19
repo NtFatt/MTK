@@ -152,7 +152,7 @@ export async function fetchAdminMenuCategories(
     }
 
     const qs = search.toString();
-    const res = await apiFetchAuthed<unknown>(`/menu/categories${qs ? `?${qs}` : ""}`);
+    const res = await apiFetchAuthed<unknown>(`/admin/menu/categories${qs ? `?${qs}` : ""}`);
 
     return asArray<unknown>(res).map(normalizeCategory);
 }
@@ -166,39 +166,41 @@ export async function fetchAdminMenuItems(
         search.set("branchId", String(params.branchId).trim());
     }
 
-    // Lấy cả món inactive và ưu tiên món mới nhất lên đầu
-    search.set("includeInactive", "true");
+    if (params.categoryId != null && String(params.categoryId).trim()) {
+        search.set("categoryId", String(params.categoryId).trim());
+    }
+
+    if (params.q != null && String(params.q).trim()) {
+        search.set("q", String(params.q).trim());
+    }
+
+    if (params.isActive !== null && params.isActive !== undefined) {
+        search.set("isActive", String(params.isActive));
+    } else {
+        search.set("includeInactive", "true");
+    }
+
+    if (params.limit != null && Number.isFinite(Number(params.limit))) {
+        search.set("limit", String(params.limit));
+    }
+
+    if (params.offset != null && Number.isFinite(Number(params.offset))) {
+        search.set("offset", String(params.offset));
+    }
+
     search.set("sort", "newest");
 
     const qs = search.toString();
-    const res = await apiFetchAuthed<unknown>(`/menu/items${qs ? `?${qs}` : ""}`);
+    const res = await apiFetchAuthed<unknown>(`/admin/menu/items${qs ? `?${qs}` : ""}`);
 
-    const rows = asArray<unknown>(res)
-        .map(normalizeItem)
-        .sort((a, b) => Number(b.id) - Number(a.id));
-
-    const q = String(params.q ?? "").trim().toLowerCase();
-    const categoryId =
-        params.categoryId != null ? String(params.categoryId).trim() : "";
-    const isActive = params.isActive;
-
-    const filtered = rows.filter((row) => {
-        const matchKeyword =
-            !q ||
-            row.name.toLowerCase().includes(q) ||
-            String(row.description ?? "").toLowerCase().includes(q);
-
-        const matchCategory = !categoryId || row.categoryId === categoryId;
-
-        const matchActive =
-            isActive === null || isActive === undefined ? true : row.isActive === isActive;
-
-        return matchKeyword && matchCategory && matchActive;
-    });
+    const obj = res as Record<string, unknown> | null;
+    const rows = asArray<unknown>(obj?.items ?? res).map(normalizeItem);
+    const totalRaw = obj?.total;
+    const total = Number.isFinite(Number(totalRaw)) ? Number(totalRaw) : rows.length;
 
     return {
-        items: filtered,
-        total: filtered.length,
+        items: rows,
+        total,
     };
 }
 
