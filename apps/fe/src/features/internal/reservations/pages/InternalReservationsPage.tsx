@@ -25,6 +25,22 @@ import { useConfirmReservationMutation } from "../hooks/useConfirmReservationMut
 import { useCheckinReservationMutation } from "../hooks/useCheckinReservationMutation";
 import type { ReservationRow, ReservationStatus } from "../services/reservationsApi";
 
+import type { HttpError } from "../../../../shared/http/errors";
+
+const INTERNAL_RESERVATION_ERROR_MAP: Record<string, string> = {
+  FORBIDDEN: "Không đủ quyền thao tác reservation.",
+  BRANCH_SCOPE_REQUIRED: "Thiếu branch scope hợp lệ.",
+  RESERVATION_NOT_FOUND: "Không tìm thấy reservation.",
+  RESERVATION_CANCELED: "Reservation này đã bị hủy.",
+  RESERVATION_EXPIRED: "Reservation này đã hết hạn.",
+  RESERVATION_NOT_CONFIRMED: "Reservation chưa được confirm nên chưa thể check-in.",
+  RESERVATION_NOT_IN_TIME_WINDOW: "Chưa nằm trong khung giờ check-in hợp lệ.",
+  TABLE_NOT_FOUND: "Không tìm thấy bàn gắn với reservation.",
+  INVALID_FROM: "Giá trị bộ lọc thời gian bắt đầu không hợp lệ.",
+  INVALID_TO: "Giá trị bộ lọc thời gian kết thúc không hợp lệ.",
+  INVALID_LIMIT: "Giới hạn bản ghi không hợp lệ.",
+};
+
 const STATUS_OPTIONS: Array<{ value: "" | ReservationStatus; label: string }> = [
   { value: "", label: "Tất cả" },
   { value: "PENDING", label: "PENDING" },
@@ -76,13 +92,18 @@ function canCheckinRow(row: ReservationRow) {
 }
 
 function extractErrorMessage(error: unknown) {
-  if (typeof error === "object" && error && "message" in error) {
-    const message = (error as { message?: unknown }).message;
-    if (typeof message === "string" && message.trim()) {
-      return message;
-    }
+  const e = error as HttpError | null | undefined;
+  const code = e?.code;
+
+  if (code && INTERNAL_RESERVATION_ERROR_MAP[code]) {
+    return INTERNAL_RESERVATION_ERROR_MAP[code];
   }
-  return "Thao tác thất bại.";
+
+  if (typeof e?.message === "string" && e.message.trim()) {
+    return e.message;
+  }
+
+  return "Thao tác reservation thất bại.";
 }
 
 export function InternalReservationsPage() {
@@ -136,6 +157,53 @@ export function InternalReservationsPage() {
 
   const confirmMut = useConfirmReservationMutation(bid);
   const checkinMut = useCheckinReservationMutation(bid);
+
+  const handleConfirm = (reservationCode: string) => {
+    setFlash(null);
+
+    confirmMut.mutate(
+      { reservationCode },
+      {
+        onSuccess: () => {
+          setFlash({
+            kind: "success",
+            message: `Đã confirm reservation ${reservationCode}.`,
+          });
+          void refetch();
+        },
+        onError: (mutationError) => {
+          setFlash({
+            kind: "error",
+            message: extractErrorMessage(mutationError),
+          });
+        },
+      },
+    );
+  };
+
+  const handleCheckin = (reservationCode: string) => {
+    setFlash(null);
+
+    checkinMut.mutate(
+      { reservationCode },
+      {
+        onSuccess: (out) => {
+          const extra = out.sessionKey ? ` SessionKey: ${out.sessionKey}` : "";
+          setFlash({
+            kind: "success",
+            message: `Đã check-in reservation ${reservationCode}.${extra}`,
+          });
+          void refetch();
+        },
+        onError: (mutationError) => {
+          setFlash({
+            kind: "error",
+            message: extractErrorMessage(mutationError),
+          });
+        },
+      },
+    );
+  };
 
   const rows = useMemo(() => data ?? [], [data]);
   const queryErrorMessage = error ? extractErrorMessage(error) : null;
@@ -253,6 +321,7 @@ export function InternalReservationsPage() {
                     setTo("");
                     setLimit(50);
                     setFlash(null);
+                    void refetch();
                   }}
                 >
                   Reset
@@ -359,27 +428,7 @@ export function InternalReservationsPage() {
                         <Button
                           type="button"
                           disabled={!canConfirm || !canConfirmRow(row) || confirming || checkingIn}
-                          onClick={() => {
-                            setFlash(null);
-                            confirmMut.mutate(
-                              { reservationCode: row.reservationCode },
-                              {
-                                onSuccess: () => {
-                                  setFlash({
-                                    kind: "success",
-                                    message: `Đã confirm reservation ${row.reservationCode}.`,
-                                  });
-                                  void refetch();
-                                },
-                                onError: (mutationError) => {
-                                  setFlash({
-                                    kind: "error",
-                                    message: extractErrorMessage(mutationError),
-                                  });
-                                },
-                              },
-                            );
-                          }}
+                          onClick={() => handleConfirm(row.reservationCode)}
                         >
                           {confirming ? "Đang confirm..." : "Confirm"}
                         </Button>
@@ -390,28 +439,7 @@ export function InternalReservationsPage() {
                           type="button"
                           variant="secondary"
                           disabled={!canCheckin || !canCheckinRow(row) || checkingIn || confirming}
-                          onClick={() => {
-                            setFlash(null);
-                            checkinMut.mutate(
-                              { reservationCode: row.reservationCode },
-                              {
-                                onSuccess: (out) => {
-                                  const extra = out.sessionKey ? ` SessionKey: ${out.sessionKey}` : "";
-                                  setFlash({
-                                    kind: "success",
-                                    message: `Đã check-in reservation ${row.reservationCode}.${extra}`,
-                                  });
-                                  void refetch();
-                                },
-                                onError: (mutationError) => {
-                                  setFlash({
-                                    kind: "error",
-                                    message: extractErrorMessage(mutationError),
-                                  });
-                                },
-                              },
-                            );
-                          }}
+                          onClick={() => handleCheckin(row.reservationCode)}
                         >
                           {checkingIn ? "Đang check-in..." : "Check-in"}
                         </Button>

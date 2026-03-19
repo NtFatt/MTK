@@ -70,19 +70,22 @@ export function CustomerReservationDetailPage() {
   const { reservationCode } = useParams<{ reservationCode: string }>();
   const [flash, setFlash] = useState<FlashState>(null);
 
-  const code = useMemo(() => String(reservationCode ?? "").trim(), [reservationCode]);
-  
+  const code = useMemo(
+    () => String(reservationCode ?? "").trim().toUpperCase(),
+    [reservationCode],
+  );
+
   useRealtimeRoom(
     code ? `reservation:${code}` : null,
     !!code,
     code
       ? {
-          kind: "customer",
-          userKey: `reservation:${code}`,
-        }
+        kind: "customer",
+        userKey: `reservation:${code}`,
+      }
       : undefined,
   );
-  
+
   const query = useReservationQuery(code || null, !!code);
   const cancelMutation = useCancelReservationMutation(code || null);
 

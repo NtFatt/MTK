@@ -19,8 +19,8 @@ const ListQuerySchema = z.object({
   branchId: z.coerce.number().int().positive().optional(),
   onlyInStock: z.coerce.boolean().optional(),
   sort: z.enum(["name", "price_asc", "price_desc", "newest"]).optional(),
-  limit: z.coerce.number().int().min(1).max(200).default(50),
-  offset: z.coerce.number().int().min(0).default(0),
+  limit: z.coerce.number().int().min(1).max(2000).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
   includeInactive: z.coerce.boolean().optional().default(false),
 });
 
@@ -31,29 +31,28 @@ export class MenuController {
     private getMenuItemDetail: GetMenuItemDetail,
     private getComboDetail: GetComboDetail,
     private getMeatProfile: GetMeatProfile,
-  ) {}
+  ) { }
 
   categories = async (_req: Request, res: Response) => {
     const out = await this.getMenuCategories.execute();
     // Public read: cache short to reduce load (demo polish).
     return sendCachedJson(_req, res, out, { ttlSeconds: 60 });
   };
-
-  items = async (req: Request, res: Response) => {
-    const q = ListQuerySchema.parse(req.query);
-    const out = await this.listMenuItems.execute({
-      categoryId: q.categoryId ? String(q.categoryId) : null,
-      q: q.q ?? null,
-      isActive: q.includeInactive ? null : true,
-      branchId: q.branchId ? String(q.branchId) : null,
-      onlyInStock: q.onlyInStock ?? null,
-      sort: (q.sort as any) ?? null,
-      limit: q.limit,
-      offset: q.offset,
-    });
-    // Items list is semi-dynamic (stock/pricing): keep TTL short.
-    return sendCachedJson(req, res, out, { ttlSeconds: 15 });
-  };
+  
+items = async (req: Request, res: Response) => {
+  const q = ListQuerySchema.parse(req.query);
+  const out = await this.listMenuItems.execute({
+    categoryId: q.categoryId ? String(q.categoryId) : null,
+    q: q.q ?? null,
+    isActive: q.includeInactive ? null : true,
+    branchId: q.branchId ? String(q.branchId) : null,
+    onlyInStock: q.onlyInStock ?? null,
+    sort: (q.sort as any) ?? null,
+    limit: q.limit ?? null,
+    offset: q.limit != null ? (q.offset ?? 0) : null,
+  });
+  return sendCachedJson(req, res, out, { ttlSeconds: 15 });
+};
 
   itemDetail = async (req: Request, res: Response) => {
     const itemId = mustId(req.params.itemId as unknown, "ITEM_ID");

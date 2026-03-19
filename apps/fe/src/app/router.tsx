@@ -124,6 +124,11 @@ const InternalMenuRecipesPage = lazy(async () => ({
     .InternalMenuRecipesPage,
 }));
 
+const InternalMenuManagementPage = lazy(async () => ({
+  default: (await import("../features/internal/menu/pages/InternalMenuManagementPage"))
+    .InternalMenuManagementPage,
+}));
+
 const InternalReservationsPage = lazy(async () => ({
   default: (await import("../features/internal/reservations/pages/InternalReservationsPage"))
     .InternalReservationsPage,
@@ -212,13 +217,13 @@ export const router = createBrowserRouter([
   },
 
   {
-  path: "c/reservations",
-  element: withSuspense(<CustomerReservationPage />),
-},
-{
-  path: "c/reservations/:reservationCode",
-  element: withSuspense(<CustomerReservationDetailPage />),
-},
+    path: "c/reservations",
+    element: withSuspense(<CustomerReservationPage />),
+  },
+  {
+    path: "c/reservations/:reservationCode",
+    element: withSuspense(<CustomerReservationDetailPage />),
+  },
 
   { path: "customer/menu", element: <Navigate to="/c/menu" replace /> },
   { path: "internal", element: <Navigate to="/i/login" replace /> },
@@ -248,6 +253,7 @@ export const router = createBrowserRouter([
       { path: "kitchen", element: withSuspense(<InternalKitchenPage />) },
       { path: "cashier", element: withSuspense(<InternalCashierPage />) },
       { path: "staff", element: withSuspense(<InternalAdminPage />) },
+      { path: "menu", element: withSuspense(<InternalMenuManagementPage />) },
       { path: "reservations", element: withSuspense(<InternalReservationsPage />) },
       { path: "maintenance", element: withSuspense(<InternalMaintenancePage />) },
       { path: "observability", element: withSuspense(<InternalObservabilityPage />) },

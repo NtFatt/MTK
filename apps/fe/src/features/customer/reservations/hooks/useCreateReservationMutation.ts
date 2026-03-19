@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useAppMutation } from "../../../../shared/http/useAppMutation";
 import {
   createReservation,
@@ -6,7 +7,19 @@ import {
 } from "../services/reservationsApi";
 
 export function useCreateReservationMutation() {
-  return useAppMutation<PublicReservationRow, any, CreateReservationInput>({
+  const queryClient = useQueryClient();
+
+  return useAppMutation<PublicReservationRow, unknown, CreateReservationInput>({
     mutationFn: async (input) => createReservation(input),
+    invalidateKeys: [
+      ["public", "reservations", "availability"],
+      ["reservations", "list"],
+    ],
+    onSuccess: (row) => {
+      queryClient.setQueryData(
+        ["public", "reservations", "detail", row.reservationCode],
+        row,
+      );
+    },
   });
 }

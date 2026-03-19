@@ -57,8 +57,10 @@ export class MySQLMenuCatalogRepository implements IMenuCatalogRepository {
     const isActive = query.isActive ?? true;
     const branchId = query.branchId ? String(query.branchId) : null;
     const onlyInStock = query.onlyInStock === true;
-    const limit = Math.min(Math.max(Number(query.limit ?? 50), 1), 200);
-    const offset = Math.max(Number(query.offset ?? 0), 0);
+
+    const hasLimit = query.limit !== null && query.limit !== undefined;
+    const limit = hasLimit ? Math.min(Math.max(Number(query.limit), 1), 2000) : null;
+    const offset = hasLimit ? Math.max(Number(query.offset ?? 0), 0) : 0;
 
     const filters: string[] = [];
     const params: any[] = [];
@@ -72,7 +74,6 @@ export class MySQLMenuCatalogRepository implements IMenuCatalogRepository {
       params.push(isActive ? 1 : 0);
     }
     if (q) {
-      // Use FULLTEXT when available but keep LIKE fallback for stability.
       filters.push(
         "(MATCH(mi.item_name, mi.description) AGAINST (? IN BOOLEAN MODE) OR mi.item_name LIKE CONCAT('%', ?, '%'))"
       );
@@ -84,9 +85,6 @@ export class MySQLMenuCatalogRepository implements IMenuCatalogRepository {
       params.push(booleanQ, q);
     }
 
-    // Stock semantics:
-    // - If branchId is provided: SoT = menu_item_stock (per-branch inventory)
-    // - Else: fallback to legacy menu_items.stock_qty for backward compatibility
     const joinParams: any[] = [];
     const joinStockSql = branchId
       ? "LEFT JOIN menu_item_stock mis ON mis.branch_id = ? AND mis.item_id = mi.item_id"
@@ -103,36 +101,41 @@ export class MySQLMenuCatalogRepository implements IMenuCatalogRepository {
 
     const [countRows]: any = await pool.query(
       `SELECT COUNT(*) AS total
-       FROM menu_items mi
-       ${joinStockSql}
-       ${whereSql}`,
+     FROM menu_items mi
+     ${joinStockSql}
+     ${whereSql}`,
       [...joinParams, ...params]
     );
     const total = Number(countRows?.[0]?.total ?? 0);
 
-    const [rows]: any = await pool.query(
-      `SELECT
-        mi.item_id,
-        mi.category_id,
-        c.category_name,
-        mi.item_name,
-        mi.description,
-        mi.price,
-        mi.image_url,
-        mi.is_active,
-        ${branchId ? "COALESCE(mis.quantity, 0)" : "mi.stock_qty"} AS stock_qty,
-        (cs.combo_id IS NOT NULL) AS is_combo,
-        (mp.item_id IS NOT NULL) AS is_meat
-       FROM menu_items mi
-       JOIN menu_categories c ON c.category_id = mi.category_id
-       ${joinStockSql}
-       LEFT JOIN combo_sets cs ON cs.combo_item_id = mi.item_id
-       LEFT JOIN meat_profiles mp ON mp.item_id = mi.item_id
-       ${whereSql}
-       ORDER BY ${orderSql}
-       LIMIT ? OFFSET ?`,
-      [...joinParams, ...params, limit, offset]
-    );
+    let sql = `SELECT
+      mi.item_id,
+      mi.category_id,
+      c.category_name,
+      mi.item_name,
+      mi.description,
+      mi.price,
+      mi.image_url,
+      mi.is_active,
+      ${branchId ? "COALESCE(mis.quantity, 0)" : "mi.stock_qty"} AS stock_qty,
+      (cs.combo_id IS NOT NULL) AS is_combo,
+      (mp.item_id IS NOT NULL) AS is_meat
+     FROM menu_items mi
+     JOIN menu_categories c ON c.category_id = mi.category_id
+     ${joinStockSql}
+     LEFT JOIN combo_sets cs ON cs.combo_item_id = mi.item_id
+     LEFT JOIN meat_profiles mp ON mp.item_id = mi.item_id
+     ${whereSql}
+     ORDER BY ${orderSql}`;
+
+    const queryParams: any[] = [...joinParams, ...params];
+
+    if (limit !== null) {
+      sql += " LIMIT ? OFFSET ?";
+      queryParams.push(limit, offset);
+    }
+
+    const [rows]: any = await pool.query(sql, queryParams);
 
     const items: MenuItem[] = (rows ?? []).map(
       (r: any) =>

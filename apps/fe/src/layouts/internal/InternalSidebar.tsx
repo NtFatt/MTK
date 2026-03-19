@@ -41,7 +41,7 @@ export function InternalSidebar() {
 
   const invIngredients = `${adminBase}/inventory/items`;
   const invAlerts = `${adminBase}/inventory/alerts`;
-const recipeRoute = `${adminBase}/inventory/recipes`;
+  const recipeRoute = `${adminBase}/inventory/recipes`;
   const reservationsRoute = `${adminBase}/reservations`;
   const maintenanceRoute = `${adminBase}/maintenance`;
 
@@ -60,6 +60,8 @@ const recipeRoute = `${adminBase}/inventory/recipes`;
   const canReadInventory = hasPermission(session, "inventory.read");
   const canManageMenu = hasPermission(session, "menu.manage");
 
+  const menuManagementRoute = `${adminBase}/menu`;
+
   const realtimeRoute = `${adminBase}/realtime`;
   const showRealtime = hasPermission(session, "realtime.admin");
   return (
@@ -77,7 +79,9 @@ const recipeRoute = `${adminBase}/inventory/recipes`;
           <NavItem to={`${adminBase}/kitchen`} label="Kitchen" />
           <NavItem to={`${adminBase}/cashier`} label="Cashier" />
 
-
+          {canManageMenu && (
+            <NavItem to={menuManagementRoute} label="Quản lý món" />
+          )}
 
           <button
             type="button"

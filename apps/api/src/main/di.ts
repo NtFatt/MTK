@@ -84,6 +84,8 @@ import { SyncTableStatuses } from "../application/use-cases/maintenance/SyncTabl
 import { ResetDevState } from "../application/use-cases/maintenance/ResetDevState.js";
 import { SetDevStock } from "../application/use-cases/maintenance/SetDevStock.js";
 
+import { CreateMenuItem } from "../application/use-cases/admin/menu/CreateMenuItem.js";
+import { AdminMenuController } from "../interface-adapters/http/controllers/AdminMenuController.js";
 import { ListAdminRealtimeAuditEvents } from "../application/use-cases/admin/realtime/ListAdminRealtimeAuditEvents.js";
 import { ReplayAdminRealtimeAuditEvents } from "../application/use-cases/admin/realtime/ReplayAdminRealtimeAuditEvents.js";
 
@@ -475,6 +477,8 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
     getMeatProfile,
   );
 
+const createMenuItem = new CreateMenuItem(menuItemRepo);
+const adminMenuController = new AdminMenuController(createMenuItem);
   // ===== Client OTP auth =====
   const clientRepo = new MySQLClientRepository();
   const otpRepo = new MySQLOtpRepository();
@@ -549,5 +553,6 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
     realtimeSnapshotController,
     menuController,
     clientAuthController,
+    adminMenuController,
   };
 }
