@@ -27,7 +27,7 @@ Tai lieu nay chot lai source of truth hien tai theo dung code.
 | Ingredient inventory con bao nhieu? | `inventory_items.current_qty` | Order commit, inventory adjust, cancel restock |
 | Consumption ledger la gi? | `inventory_consumptions` | Order commit, cancel restock marker update |
 | Sellable/menu stock hien tai la gi? | `menu_item_stock.quantity` + projection refresh | Hold, checkout commit, cancel restock, inventory adjust |
-| Public menu dang hien "con lai" bao nhieu? | Menu API + projection/refetch | Polling, session-scoped realtime invalidation, admin/customer updates |
+| Public menu dang hien "con lai" bao nhieu? | Menu API + projection/refetch | Public-safe branch realtime, session-scoped realtime invalidation, polling fallback |
 
 ---
 
@@ -71,7 +71,7 @@ Tai lieu nay chot lai source of truth hien tai theo dung code.
 ### Customer menu
 - phan "Con lai" = sellable / public ordering availability
 - khong phai raw ingredient qty
-- co the tre mot nhip polling neu update xuat phat tu actor khac va khong qua session room
+- uu tien public-safe branch realtime cho inventory/menu; van co polling fallback de tranh drift khi gap replay gap hay reconnect edge case
 
 ### Customer cart
 - phan so luong trong cart = hold da dat cho session/cart do
@@ -111,8 +111,8 @@ Muc tieu:
 
 ## 6) Known limits tied to this model
 
-- Public branch-wide realtime stock van chua full-spec; customer menu van co polling fallback.
-- Branch `999` trong smoke/negative dang duoc dung nhu branch isolation fixture hon la branch van hanh day du.
+- Public branch realtime da dong theo model public-safe cho inventory/menu, nhung van chua full-spec enterprise; customer menu van co polling fallback.
+- Branch `999` trong smoke/negative da duoc chot la branch isolation fixture, khong phai branch van hanh day du.
 - Neu business doi commit point thanh `payment success` thay vi `order created`, can doi lai transaction boundary va compensation rule.
 
 ---

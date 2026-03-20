@@ -193,8 +193,8 @@ export async function joinRoom(room: string) {
   if (existing) return existing;
 
   const run = (async () => {
-    if (ctx!.kind === "customer" && ctx!.userKey) {
-      const skRoom = `sessionKey:${ctx!.userKey}`;
+    if (ctx!.kind === "customer" && ctx!.sessionKey) {
+      const skRoom = `sessionKey:${ctx!.sessionKey}`;
       if (room !== skRoom) {
         await joinRoom(skRoom);
       }
@@ -212,7 +212,7 @@ export async function joinRoom(room: string) {
       status = "ERROR";
 
       if (msg === "FORBIDDEN_JOIN") {
-        await stopRealtime();
+        joinedRooms.delete(room);
       }
     } finally {
       joining.delete(room);

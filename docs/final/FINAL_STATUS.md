@@ -80,9 +80,9 @@ Tai thoi diem cap nhat tai lieu nay, da verify pass:
 
 Nhung diem duoi day la that, khong phai "loi noi khiem ton":
 
-- Public/customer stock visibility van dua mot phan vao polling fallback; chua phai public branch-wide realtime full-spec.
-- Branch 999 chu yeu dang la branch demo/phuc vu branch-isolation test; negative smoke phai seed fixture order rieng thay vi checkout cross-branch that.
-- Public reservation FE flow van chua phai ban polished closeout.
+- Public/customer stock visibility da co branch room public-safe cho inventory/menu, nhung van giu polling fallback de an toan drift.
+- Branch 999 da duoc co dinh lai lam isolation fixture branch; negative smoke van seed fixture order rieng thay vi checkout cross-branch that.
+- Public reservation FE flow da dong vong hon o create/detail/cancel/check-in window visibility, nhung van chua phai UX closeout cap enterprise.
 - Repo van la local-demo / handover-safe deliverable; chua phai deployment package day du.
 
 ---

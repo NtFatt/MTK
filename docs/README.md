@@ -7,6 +7,7 @@
 - [final/PROJECT_SNAPSHOT_SPEC.md](./final/PROJECT_SNAPSHOT_SPEC.md) — snapshot spec tong hop cua toan bo du an hien tai.
 - [final/SOURCE_OF_TRUTH.md](./final/SOURCE_OF_TRUTH.md) — điểm commit thật của hold / order / inventory / sellable stock.
 - [final/FINAL_HANDOVER.md](./final/FINAL_HANDOVER.md) — handover trung thực sau đợt hardening.
+- [../apps/api/docs/RUNBOOK.md](../apps/api/docs/RUNBOOK.md) — local bootstrap, reset, release-check, smoke discipline.
 
 ## Context Injection (code-level)
 

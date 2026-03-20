@@ -75,8 +75,8 @@ function buildJoinPayload(room: string, lastSeq: number, ctx: RealtimeContext): 
     replayLimit: 200,
   };
 
-  if (ctx.kind === "customer") {
-    payload.sessionKey = ctx.userKey;
+  if (ctx.kind === "customer" && ctx.sessionKey) {
+    payload.sessionKey = ctx.sessionKey;
   } else if (ctx.token) {
     payload.internalToken = ctx.token;
   }

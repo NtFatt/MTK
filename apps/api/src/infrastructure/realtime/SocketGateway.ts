@@ -55,10 +55,13 @@ function isRoomAllowed(roomRaw: string): boolean {
   if (!room) return false;
   if (room.length > ROOM_MAX_LEN) return false;
   if (room === "admin" || room === "global") return true;
+  if (room.startsWith("reservation:")) return true;
   if (room.startsWith("sessionKey:")) return true;
   if (room.startsWith("session:")) return true;
   if (room.startsWith("order:")) return true;
   if (room.startsWith("branch:")) return true;
+  if (room.startsWith("ops:")) return true;
+  if (room.startsWith("inventory:")) return true;
   if (room.startsWith("kitchen:")) return true;
   if (room.startsWith("cashier:")) return true;
   return false;
@@ -95,6 +98,34 @@ async function getSessionBranchId(sessionId: string): Promise<string | null> {
   return r?.branch_id ? String(r.branch_id) : null;
 }
 
+async function getBranchIdBySessionKey(
+  deps: SocketGatewayDeps,
+  sessionKey: string,
+): Promise<string | null> {
+  const session = await deps.sessionRepo.findBySessionKey(sessionKey);
+  if (!session || session.status !== "OPEN") return null;
+  return getSessionBranchId(String(session.id));
+}
+
+async function getReservationScope(
+  reservationRef: string,
+): Promise<{ reservationId: string; branchId: string | null } | null> {
+  const [rows]: any = await pool.query(
+    `SELECT r.reservation_id, rt.branch_id
+     FROM table_reservations r
+     JOIN restaurant_tables rt ON rt.table_id = r.table_id
+     WHERE r.reservation_code = ? OR r.reservation_id = ?
+     LIMIT 1`,
+    [reservationRef, reservationRef],
+  );
+  const row = rows?.[0];
+  if (!row?.reservation_id) return null;
+  return {
+    reservationId: String(row.reservation_id),
+    branchId: row.branch_id != null ? String(row.branch_id) : null,
+  };
+}
+
 function getJoinedSessionKey(socket: Socket): string | null {
   for (const r of socket.rooms) {
     if (typeof r === "string" && r.startsWith("sessionKey:")) return r.slice("sessionKey:".length);
@@ -127,7 +158,65 @@ async function authorizeJoinRoom(input: {
     if (!branchId) return { ok: false, code: "ROOM_INVALID" };
     if (isAdmin) return { ok: true };
     if (isStaff && internal?.branchId && String(internal.branchId) === String(branchId)) return { ok: true };
+
+    const sessionKey = getJoinedSessionKey(input.socket);
+    if (!sessionKey) return { ok: false, code: "SESSION_REQUIRED" };
+    if (!verifyClientSessionKey(sessionKey)) return { ok: false, code: "SESSION_INVALID" };
+    const sessionBranchId = await getBranchIdBySessionKey(input.deps, sessionKey);
+    if (!sessionBranchId) return { ok: false, code: "SESSION_NOT_FOUND" };
+    if (String(sessionBranchId) === String(branchId)) return { ok: true };
     return { ok: false, code: "BRANCH_FORBIDDEN" };
+  }
+
+  // reservation: public by reservation code, branch-scoped for internal staff
+  if (room.startsWith("reservation:")) {
+    const reservationRef = room.slice("reservation:".length);
+    if (!reservationRef) return { ok: false, code: "ROOM_INVALID" };
+    const scope = await getReservationScope(reservationRef);
+    if (!scope) return { ok: false, code: "RESERVATION_NOT_FOUND" };
+    if (isAdmin) return { ok: true };
+
+    if (isStaff) {
+      if (!internal?.branchId || !scope.branchId) return { ok: false, code: "BRANCH_FORBIDDEN" };
+      if (String(scope.branchId) === String(internal.branchId)) return { ok: true };
+      return { ok: false, code: "BRANCH_FORBIDDEN" };
+    }
+
+    return { ok: true };
+  }
+
+  // ops: internal-only (STAFF / BRANCH_MANAGER) scoped by branch
+  if (room.startsWith("ops:")) {
+    const branchId = room.slice("ops:".length);
+    if (!branchId) return { ok: false, code: "ROOM_INVALID" };
+    if (!internal) return { ok: false, code: "INTERNAL_REQUIRED" };
+    if (isAdmin) return { ok: true };
+
+    if (isStaff) {
+      if (!internal.branchId || String(internal.branchId) !== String(branchId)) return { ok: false, code: "BRANCH_FORBIDDEN" };
+      const role = String(internal.role ?? "").toUpperCase();
+      if (role === "STAFF" || role === "BRANCH_MANAGER") return { ok: true };
+      return { ok: false, code: "ROLE_FORBIDDEN" };
+    }
+
+    return { ok: false, code: "FORBIDDEN" };
+  }
+
+  // inventory: internal-only (STAFF / BRANCH_MANAGER) scoped by branch
+  if (room.startsWith("inventory:")) {
+    const branchId = room.slice("inventory:".length);
+    if (!branchId) return { ok: false, code: "ROOM_INVALID" };
+    if (!internal) return { ok: false, code: "INTERNAL_REQUIRED" };
+    if (isAdmin) return { ok: true };
+
+    if (isStaff) {
+      if (!internal.branchId || String(internal.branchId) !== String(branchId)) return { ok: false, code: "BRANCH_FORBIDDEN" };
+      const role = String(internal.role ?? "").toUpperCase();
+      if (role === "STAFF" || role === "BRANCH_MANAGER") return { ok: true };
+      return { ok: false, code: "ROLE_FORBIDDEN" };
+    }
+
+    return { ok: false, code: "FORBIDDEN" };
   }
 
   // kitchen: internal-only (KITCHEN or BRANCH_MANAGER) scoped by branch
@@ -261,6 +350,16 @@ function gapPayload(room: string, lastSeq: number, window: ReplayWindow) {
     };
   }
 
+  if (room.startsWith("ops:") || room.startsWith("inventory:") || room.startsWith("reservation:")) {
+    return {
+      ...base,
+      resync: {
+        supported: false,
+        note: "No dedicated snapshot endpoint yet. Fallback: refetch room-specific views via REST endpoints.",
+      },
+    };
+  }
+
   return {
     ...base,
     resync: {
@@ -310,6 +409,7 @@ function roomsForEvent(evt: DomainEvent): string[] {
   const out: string[] = [];
   const scope: any = evt?.scope ?? {};
   const payload: any = (evt as any)?.payload ?? {};
+  const eventType = String(evt?.type ?? "");
 
   if (scope?.sessionKey) out.push(`sessionKey:${String(scope.sessionKey)}`);
   if (scope?.sessionId) out.push(`session:${String(scope.sessionId)}`);
@@ -318,14 +418,35 @@ function roomsForEvent(evt: DomainEvent): string[] {
   if (payload?.orderCode) out.push(`order:${String(payload.orderCode)}`);
   if (scope?.orderId) out.push(`order:${String(scope.orderId)}`);
 
+  if (payload?.reservationCode) out.push(`reservation:${String(payload.reservationCode)}`);
+  if (!payload?.reservationCode && scope?.reservationId) out.push(`reservation:${String(scope.reservationId)}`);
+
   if (scope?.branchId) {
     const branchId = String(scope.branchId);
-    out.push(`branch:${branchId}`);
 
-    // Ops rooms by role
-    const t = String(evt?.type ?? "");
-    if (t.startsWith("order.")) out.push(`kitchen:${branchId}`);
-    if (t.startsWith("payment.")) out.push(`cashier:${branchId}`);
+    if (eventType.startsWith("inventory.")) {
+      out.push(`branch:${branchId}`);
+      out.push(`inventory:${branchId}`);
+    }
+
+    if (
+      eventType.startsWith("cart.") ||
+      eventType.startsWith("table.session.") ||
+      eventType.startsWith("reservation.") ||
+      eventType.startsWith("order.") ||
+      eventType.startsWith("payment.")
+    ) {
+      out.push(`ops:${branchId}`);
+    }
+
+    if (eventType.startsWith("order.")) {
+      out.push(`kitchen:${branchId}`);
+      out.push(`cashier:${branchId}`);
+    }
+
+    if (eventType.startsWith("payment.")) {
+      out.push(`cashier:${branchId}`);
+    }
   }
 
   // Always feed admin room for operational dashboards (audit + monitoring).
@@ -420,7 +541,19 @@ export function attachSocketGateway(io: Server, eventBus: IEventBus, deps: Socke
         ttlSeconds: env.REALTIME_REPLAY_TTL_SECONDS,
       },
       rooms: {
-        allowed: ["admin", "branch:<branchId>", "order:<orderCode>", "order:<orderId>", "session:<sessionId>", "sessionKey:<sessionKey>", "kitchen:<branchId>", "cashier:<branchId>"],
+        allowed: [
+          "admin",
+          "branch:<branchId>",
+          "ops:<branchId>",
+          "inventory:<branchId>",
+          "kitchen:<branchId>",
+          "cashier:<branchId>",
+          "reservation:<reservationCode>",
+          "order:<orderCode>",
+          "order:<orderId>",
+          "session:<sessionId>",
+          "sessionKey:<sessionKey>",
+        ],
         aliases: ["sessionId:<sessionId> -> session:<sessionId>"],
       },
       events: {
@@ -446,7 +579,9 @@ export function attachSocketGateway(io: Server, eventBus: IEventBus, deps: Socke
 
         // Backward-compat shortcut
         const sessionKey = typeof payload?.sessionKey === "string" ? payload.sessionKey.trim() : "";
-        if (sessionKey) rooms.push({ room: `sessionKey:${sessionKey}`, lastSeq: 0 });
+        if (sessionKey && !rooms.some((entry) => normalizeRoom(String(entry?.room ?? "")) === `sessionKey:${sessionKey}`)) {
+          rooms.unshift({ room: `sessionKey:${sessionKey}`, lastSeq: 0 });
+        }
 
         const replayLimit = clampReplayLimit(payload?.replayLimit);
 
@@ -539,6 +674,20 @@ export function attachSocketGateway(io: Server, eventBus: IEventBus, deps: Socke
     socket.on("realtime:join.v1", handleJoinV1);
 
     socket.on("realtime:replay.request.v1", handleReplayRequestV1);
+
+    socket.on("leave.v1", async (payload: { room?: string } | null, ack?: Function) => {
+      try {
+        const room = normalizeRoom(String(payload?.room ?? "").trim());
+        if (!room || !isRoomAllowed(room)) {
+          if (ack) ack({ ok: false, error: "ROOM_INVALID" });
+          return;
+        }
+        await socket.leave(room);
+        if (ack) ack({ ok: true, room });
+      } catch (e: any) {
+        if (ack) ack({ ok: false, error: String(e?.message ?? "LEAVE_FAILED") });
+      }
+    });
 
     // ===== Legacy compatibility =====
     socket.on("join", async (payload: any, ack?: Function) => {

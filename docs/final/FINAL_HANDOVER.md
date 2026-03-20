@@ -130,8 +130,8 @@ Smoke packs khong chi kiem happy path ma con kiem:
 Nhung diem sau van phai noi that:
 
 - Public customer stock updates chua phai public branch-wide realtime full-spec; van co polling fallback.
-- Branch 999 la branch demo/phuc vu branch isolation test; negative pack seed fixture order rieng thay vi checkout cross-branch that.
-- Public reservation FE chua phai luong polished closeout.
+- Branch 999 da duoc chot lai la isolation fixture branch; negative pack seed fixture order rieng thay vi checkout cross-branch that.
+- Public reservation FE da co detail/create/cancel closeout ro hon va reservation realtime room, nhung van chua nen overclaim la enterprise polish.
 - Repo van phu thuoc MySQL + Redis local de co trai nghiem day du.
 
 ---

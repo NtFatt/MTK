@@ -577,9 +577,9 @@ This repo still has explicit limits that should be spoken about honestly.
 
 Current non-closed or intentionally constrained areas include:
 
-- customer/public stock is not yet a fully branch-wide realtime public channel model
-- public reservation FE is not yet a polished closeout path
-- branch `999` is used as a demo/isolation fixture branch in testing strategy
+- customer/public stock now has a public-safe branch realtime room for inventory/menu updates, but still keeps polling fallback and should not be overclaimed as full-spec enterprise realtime
+- public reservation FE now supports create/detail/cancel with clearer hold/check-in window visibility, but still has remaining UX polish headroom
+- branch `999` is intentionally used as an isolation fixture branch in testing strategy, not as a main business demo branch
 - local environment discipline still matters for deterministic demo quality
 
 Reference:

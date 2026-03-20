@@ -13,8 +13,8 @@ Nguyen tac:
 
 | ID | Issue | Impact | Workaround |
 |---|---|---|---|
-| K-01 | Public stock visibility chua phai branch-wide realtime full-spec | Admin inventory adjust co the mat mot nhip polling moi phan anh sang customer menu | Giữ customer menu mo tren focus/refetch; polling hien tai da duoc rut ngan |
-| K-02 | Public reservation FE chua phai luong polished closeout | Khong nen demo reservation customer flow chi bang FE | Dung public reservation API + internal reservations page |
+| K-01 | Public stock visibility chua phai branch-wide realtime full-spec enterprise | Van co fallback polling neu customer bo lo su kien hoac gap replay gap | Giữ customer menu mo tren focus/refetch; branch room hien tai da giam do tre dang ke |
+| K-02 | Public reservation FE da closeout hon nhung van chua phai luxury UX | Demo reservation customer duoc, nhung wording/polish edge case van co the tiep tuc siet them | Dung customer detail page + internal reservations page cho demo song song |
 | K-03 | Mot so copy/error text van uu tien correctness hon wording | UX o edge case chua that "mượt" | Chap nhan o muc local-demo, uu tien dung state va contract |
 
 ---
@@ -23,8 +23,8 @@ Nguyen tac:
 
 | ID | Issue | Impact | Workaround |
 |---|---|---|---|
-| T-01 | Branch `999` hien chu yeu la branch demo/phuc vu branch-isolation test | Negative pack khong tao `orderOther` bang checkout cross-branch that | `smoke:negative` seed fixture order rieng truoc khi chay |
-| T-02 | Public customer socket chua co room cong khai an toan cho inventory/menu branch-wide | Khong nen claim public realtime stock full-spec | Dung invalidate + polling fallback nhu hien tai |
+| T-01 | Branch `999` duoc co dinh la isolation fixture branch, khong phai branch business hoan chinh | Negative pack khong tao `orderOther` bang checkout cross-branch that | `smoke:negative` seed fixture order rieng truoc khi chay |
+| T-02 | Public customer socket moi dong branch inventory/menu public-safe, chua phai mot live projection enterprise day du | Khong nen claim public realtime stock full-spec | Dung branch room + invalidate + polling fallback nhu hien tai |
 
 ---
 

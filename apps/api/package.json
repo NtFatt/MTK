@@ -20,6 +20,7 @@
     "admin:create": "node scripts/admin-create.js",
     "staff:create": "node scripts/staff-create.js",
     "seed:internal": "node scripts/dev-seed-internal.js",
+    "seed:negative-fixture": "node scripts/smoke/seed-negative-fixtures.mjs postman/Hadilao_Smoke_Local.postman_environment.json",
 
     "route:map": "tsx scripts/route-map.ts",
 

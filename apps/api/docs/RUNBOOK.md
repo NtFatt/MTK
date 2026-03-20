@@ -46,7 +46,10 @@ Tạo file env từ mẫu:
 
 ```powershell
 Copy-Item apps/api/.env.example apps/api/.env
+Copy-Item apps/fe/.env.example apps/fe/.env
 ```
+
+`apps/fe/.env` la optional. De trong theo `.env.example` la du cho local proxy mac dinh.
 
 Các nhóm biến quan trọng trong `apps/api/.env`:
 
@@ -202,6 +205,21 @@ Chạy khi API đang bật:
 pnpm verify:smokes
 ```
 
+### 8.3 One-command release check
+```powershell
+pnpm release:check
+```
+
+Command nay se:
+
+- copy `apps/api/.env` tu example neu chua co
+- `db:reset --yes`
+- `seed:internal`
+- chay `verify:static`
+- boot API local tu ban build moi
+- doi health xanh
+- chay `verify:smokes`
+
 Kỳ vọng:
 
 - `smoke:full` pass
@@ -218,11 +236,7 @@ Kỳ vọng:
 Dùng khi cần dry-run đầy đủ trước khi demo/chốt PR:
 
 ```powershell
-pnpm -C apps/api db:reset --yes
-pnpm -C apps/api seed:internal
-pnpm -C apps/api dev
-pnpm -C apps/fe dev
-pnpm verify:all
+pnpm release:check
 ```
 
 ### Chế độ presentation
@@ -295,7 +309,7 @@ Kiểm tra:
 Sau `db:reset --yes`, baseline local quan trọng:
 
 - branch demo chính: `branch_id=1`
-- branch phụ cho negative/branch isolation: `branch_id=999`
+- branch isolation fixture: `branch_id=999` (khong dung cho main demo)
 - table demo an toàn: `A01`, `A02`, `B01`
 - table cross-branch test: `Z01`, `Z02`
 

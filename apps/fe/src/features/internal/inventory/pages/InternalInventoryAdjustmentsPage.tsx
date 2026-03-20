@@ -16,6 +16,7 @@ import { useInventoryAdjustmentsQuery } from "../hooks/useInventoryAdjustmentsQu
 import type { InventoryAdjustmentRow } from "../services/inventoryApi";
 
 import { useRealtimeRoom } from "../../../../shared/realtime/useRealtimeRoom";
+import { realtimeConfig } from "../../../../shared/realtime/config";
 type ModeFilter = "" | "RESTOCK" | "DEDUCT" | "SET";
 
 function isAdminRole(role: unknown): boolean {
@@ -67,7 +68,10 @@ function AdjustmentsInner({ bid, enabled }: InnerProps) {
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [archivedPages, setArchivedPages] = useState<InventoryAdjustmentRow[][]>([]);
 
-  useRealtimeRoom(bid ? `branch:${bid}` : null, enabled);
+  useRealtimeRoom(
+    bid ? `${realtimeConfig.internalInventoryRoomPrefix}:${bid}` : null,
+    enabled,
+  );
   const resetPaging = useCallback(() => {
     setCursor(undefined);
     setArchivedPages([]);

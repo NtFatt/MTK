@@ -17,6 +17,7 @@ import { Badge } from "../../../../shared/ui/badge";
 import { useInventoryStockQuery } from "../hooks/useInventoryStockQuery";
 import { adjustInventoryStock } from "../services/inventoryApi";
 import { useRealtimeRoom } from "../../../../shared/realtime/useRealtimeRoom";
+import { realtimeConfig } from "../../../../shared/realtime/config";
 
 type AdjustMode = "RESTOCK" | "DEDUCT" | "SET";
 type StockFilter = "all" | "available" | "empty" | "hold";
@@ -82,7 +83,10 @@ export function InternalInventoryStockPage() {
   const enabled =
     !!session && !!bid && canRead && !shouldRedirectBranch && !shouldRedirectMissingBranch;
 
-  useRealtimeRoom(bid ? `branch:${bid}` : null, enabled);
+  useRealtimeRoom(
+    bid ? `${realtimeConfig.internalInventoryRoomPrefix}:${bid}` : null,
+    enabled,
+  );
   const { data, isLoading, error, refetch, isFetching } = useInventoryStockQuery(bid, enabled);
 
   useEffect(() => {

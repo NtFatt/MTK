@@ -88,17 +88,25 @@ export function CustomerMenuPage() {
 
   const branchId = useCustomerSessionStore(selectBranchId);
   const sessionKey = useCustomerSessionStore(selectSessionKey);
+  const customerRealtimeCtx = sessionKey
+    ? {
+        kind: "customer" as const,
+        userKey: sessionKey,
+        sessionKey,
+        branchId: branchId ?? undefined,
+      }
+    : undefined;
 
   useRealtimeRoom(
     sessionKey ? `sessionKey:${sessionKey}` : null,
     !!sessionKey,
-    sessionKey
-      ? {
-          kind: "customer",
-          userKey: sessionKey,
-          branchId: branchId ?? undefined,
-        }
-      : undefined,
+    customerRealtimeCtx,
+  );
+
+  useRealtimeRoom(
+    branchId && sessionKey ? `branch:${branchId}` : null,
+    !!branchId && !!sessionKey,
+    customerRealtimeCtx,
   );
 
   const menuQuery = useMenuQuery(branchId ? { branchId } : {});

@@ -8,6 +8,8 @@
     "build": "pnpm -r run --if-present build",
     "typecheck": "pnpm -r run --if-present typecheck",
     "lint": "pnpm -r run --if-present lint",
+    "local:reset": "pnpm -C apps/api db:reset --yes && pnpm -C apps/api seed:internal",
+    "release:check": "node scripts/local-release-check.mjs",
     "verify:static": "pnpm -C packages/contracts build && pnpm -C apps/fe lint && pnpm -C apps/fe typecheck && pnpm -C apps/fe build && pnpm -C apps/api typecheck && pnpm -C apps/api build",
     "verify:smokes": "pnpm -C apps/api verify:smokes",
     "verify:all": "pnpm verify:static && pnpm verify:smokes",

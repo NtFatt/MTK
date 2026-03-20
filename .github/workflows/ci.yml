@@ -1,0 +1,78 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: "123456"
+          MYSQL_DATABASE: hadilao_online
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -p123456"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=20
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.4.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare env
+        run: cp apps/api/.env.example apps/api/.env
+
+      - name: Reset DB baseline
+        run: pnpm local:reset
+
+      - name: Static gates
+        run: pnpm verify:static
+
+      - name: Start API
+        run: pnpm -C apps/api start > api.log 2>&1 &
+
+      - name: Wait for health
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://localhost:3001/api/v1/health > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "API did not become healthy in time"
+          cat api.log || true
+          exit 1
+
+      - name: Smoke packs
+        run: pnpm verify:smokes
+
+      - name: API log on failure
+        if: failure()
+        run: cat api.log || true

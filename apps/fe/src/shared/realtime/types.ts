@@ -37,6 +37,7 @@ export type RealtimeContext = {
   userKey: string; // internal userId hoặc customer sessionKey
   branchId?: string | number;
   token?: string; // internal accessToken nếu BE yêu cầu
+  sessionKey?: string; // customer-only auth room for session/order/branch
 };
 
 export type CursorValue = {

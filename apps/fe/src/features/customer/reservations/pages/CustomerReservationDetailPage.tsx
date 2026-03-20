@@ -22,6 +22,92 @@ type FlashState =
   | { kind: "error"; message: string }
   | null;
 
+const CHECKIN_EARLY_MINUTES = 30;
+const CHECKIN_LATE_MINUTES = 15;
+
+function parseMs(value?: string | null): number | null {
+  if (!value) return null;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function formatRelativeMinutes(targetMs: number, nowMs = Date.now()) {
+  const deltaMinutes = Math.round((targetMs - nowMs) / 60000);
+  if (Math.abs(deltaMinutes) < 1) return "vừa xong";
+  if (deltaMinutes > 0) return `còn ${deltaMinutes} phút`;
+  return `trễ ${Math.abs(deltaMinutes)} phút`;
+}
+
+function describeCheckinWindow(row: PublicReservationRow, nowMs = Date.now()) {
+  const fromMs = parseMs(row.reservedFrom);
+  const toMs = parseMs(row.reservedTo);
+  if (fromMs == null || toMs == null) return null;
+
+  const opensAtMs = fromMs - CHECKIN_EARLY_MINUTES * 60_000;
+  const closesAtMs = toMs + CHECKIN_LATE_MINUTES * 60_000;
+
+  let tone: "default" | "positive" | "warn" | "danger" = "default";
+  let label = "Chưa đến cửa sổ check-in";
+  let detail = `Có thể check-in từ ${formatDateTime(new Date(opensAtMs).toISOString())}.`;
+
+  if (row.status === "CHECKED_IN" || row.status === "COMPLETED") {
+    tone = "positive";
+    label = "Đã check-in";
+    detail = row.checkedInAt
+      ? `Khách đã check-in lúc ${formatDateTime(row.checkedInAt)}.`
+      : "Nhân viên đã mở phiên phục vụ cho reservation này.";
+  } else if (row.status === "CANCELED" || row.status === "EXPIRED" || row.status === "NO_SHOW") {
+    tone = "danger";
+    label = "Reservation không còn hiệu lực";
+    detail = "Reservation này không còn nằm trong cửa sổ check-in hợp lệ.";
+  } else if (nowMs < opensAtMs) {
+    tone = "warn";
+    detail = `Quầy sẽ cho check-in từ ${formatDateTime(new Date(opensAtMs).toISOString())} (${formatRelativeMinutes(opensAtMs, nowMs)}).`;
+  } else if (nowMs <= closesAtMs) {
+    tone = "positive";
+    label = "Đang trong cửa sổ check-in";
+    detail = `Có thể check-in đến ${formatDateTime(new Date(closesAtMs).toISOString())} (${formatRelativeMinutes(closesAtMs, nowMs)}).`;
+  } else {
+    tone = "danger";
+    label = "Đã quá cửa sổ check-in";
+    detail = "Nếu nhân viên chưa check-in kịp, reservation có thể sớm chuyển sang no-show.";
+  }
+
+  return {
+    opensAtLabel: formatDateTime(new Date(opensAtMs).toISOString()),
+    closesAtLabel: formatDateTime(new Date(closesAtMs).toISOString()),
+    tone,
+    label,
+    detail,
+  };
+}
+
+function describeHoldWindow(row: PublicReservationRow, nowMs = Date.now()) {
+  const expiresAtMs = parseMs(row.expiresAt);
+  if (expiresAtMs == null) return null;
+
+  if (row.status === "PENDING") {
+    const active = nowMs <= expiresAtMs;
+    return {
+      tone: active ? ("warn" as const) : ("danger" as const),
+      label: active ? "Đang giữ bàn chờ xác nhận" : "Hết thời gian giữ bàn",
+      detail: active
+        ? `Bàn sẽ được giữ đến ${formatDateTime(row.expiresAt)} (${formatRelativeMinutes(expiresAtMs, nowMs)}).`
+        : `Reservation đã vượt quá thời điểm giữ bàn ${formatDateTime(row.expiresAt)}.`,
+    };
+  }
+
+  if (row.status === "CONFIRMED") {
+    return {
+      tone: "positive" as const,
+      label: "Đã xác nhận giữ bàn",
+      detail: "Bàn đã được quán xác nhận. Hãy đến trong cửa sổ check-in để nhân viên mở phiên phục vụ.",
+    };
+  }
+
+  return null;
+}
+
 function statusTone(status: PublicReservationStatus): "default" | "positive" | "warn" | "danger" {
   switch (status) {
     case "CONFIRMED":
@@ -172,6 +258,9 @@ export function CustomerReservationDetailPage() {
     );
   }
 
+  const checkinWindow = describeCheckinWindow(row);
+  const holdWindow = describeHoldWindow(row);
+
   return (
     <CustomerHotpotShell contentClassName="max-w-5xl">
       <div className="space-y-6">
@@ -271,6 +360,50 @@ export function CustomerReservationDetailPage() {
         <div className="customer-hotpot-stat rounded-[24px] px-5 py-4 text-sm text-[#7a5a43]">
           {getReservationStatusHint(row)}
         </div>
+
+        {(holdWindow || checkinWindow) ? (
+          <section className="grid gap-4 lg:grid-cols-2">
+            {holdWindow ? (
+              <div className="customer-hotpot-stat rounded-[24px] px-5 py-4">
+                <div className="customer-hotpot-kicker">Trạng thái giữ bàn</div>
+                <div className="mt-2">
+                  <span
+                    className="customer-hotpot-status-pill px-4 py-2 text-sm font-semibold"
+                    data-tone={holdWindow.tone}
+                  >
+                    {holdWindow.label}
+                  </span>
+                </div>
+                <p className="mt-3 text-sm text-[#7a5a43]">{holdWindow.detail}</p>
+              </div>
+            ) : null}
+
+            {checkinWindow ? (
+              <div className="customer-hotpot-stat rounded-[24px] px-5 py-4">
+                <div className="customer-hotpot-kicker">Cửa sổ check-in</div>
+                <div className="mt-2">
+                  <span
+                    className="customer-hotpot-status-pill px-4 py-2 text-sm font-semibold"
+                    data-tone={checkinWindow.tone}
+                  >
+                    {checkinWindow.label}
+                  </span>
+                </div>
+                <div className="mt-3 grid gap-2 text-sm text-[#7a5a43]">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Mở từ</span>
+                    <span className="font-medium text-[#5a301a]">{checkinWindow.opensAtLabel}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Đóng lúc</span>
+                    <span className="font-medium text-[#5a301a]">{checkinWindow.closesAtLabel}</span>
+                  </div>
+                </div>
+                <p className="mt-3 text-sm text-[#7a5a43]">{checkinWindow.detail}</p>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
 
         <div className="flex flex-wrap gap-3">
           {canCancelReservation(row) ? (

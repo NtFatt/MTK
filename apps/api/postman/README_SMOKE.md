@@ -24,6 +24,7 @@ pnpm -C apps/api verify:smokes
 ## Deterministic behavior
 - Moi smoke run co `reset-dev-state` truoc khi chay de don session/table/reservation cu.
 - `smoke:negative` tu seed mot `orderOther` fixture vao env tam truoc khi chay, de branch-mismatch test khong phu thuoc vao checkout cross-branch.
+- branch `999` duoc coi la **negative isolation fixture branch**, khong phai branch demo van hanh chinh.
 - `smoke:oversell` ep stock = 1 roi dua 2 cart song song; ky vong dung la 1 success + 1 `409 OUT_OF_STOCK`.
 
 ## Postman environment
@@ -38,8 +39,10 @@ Keys quan trong:
 - `smokeRestock=true`
 - `smokeRestockQty=100`
 - `branchOtherId=999`
+- `negativeFixtureBranchId=999` (mirror clarity key, khong bat buoc cho collection cu)
 
 ## Notes
 - `reset-dev-state` va `dev/set-stock` la dev-only, khong phai production contract.
 - Legacy `/api/*` duoc kiem nhu negative case; khi `LEGACY_API_ENABLED=false` thi `/api/*` phai tra `404`.
 - Neu Redis tat, mot so buoc realtime se skip/fallback, nhung bo verify day du nen chay voi Redis bat.
+- Co the seed fixture thu cong bang `pnpm -C apps/api seed:negative-fixture` neu muon reproduce rieng branch isolation pack.

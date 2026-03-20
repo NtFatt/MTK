@@ -9,6 +9,7 @@ import { useInventoryAlertsQuery } from "../hooks/useInventoryAlertsQuery";
 import { useStore } from "zustand";
 import { authStore } from "../../../../shared/auth/authStore";
 import { useRealtimeRoom } from "../../../../shared/realtime";
+import { realtimeConfig } from "../../../../shared/realtime/config";
 function toneClass(level: "WARNING" | "CRITICAL") {
   if (level === "CRITICAL") {
     return "border-destructive/40 bg-destructive/10 text-destructive";
@@ -31,7 +32,7 @@ export function InternalInventoryAlertsPage() {
   const branchParam = String(branchId ?? "").trim();
 
   useRealtimeRoom(
-    branchParam ? `branch:${branchParam}` : null,
+    branchParam ? `${realtimeConfig.internalInventoryRoomPrefix}:${branchParam}` : null,
     !!session && !!branchParam,
     session
       ? {

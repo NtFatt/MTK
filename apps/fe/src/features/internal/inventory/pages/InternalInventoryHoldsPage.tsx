@@ -15,6 +15,7 @@ import { Label } from "../../../../shared/ui/label";
 import { useInventoryHoldsQuery } from "../hooks/useInventoryHoldsQuery";
 
 import { useRealtimeRoom } from "../../../../shared/realtime/useRealtimeRoom";
+import { realtimeConfig } from "../../../../shared/realtime/config";
 type ExpireFilter = "ALL" | "EXPIRING_SOON" | "ACTIVE" | "EXPIRED";
 type SortKey = "EXPIRE_ASC" | "EXPIRE_DESC" | "QTY_DESC" | "QTY_ASC";
 
@@ -49,7 +50,10 @@ export function InternalInventoryHoldsPage() {
 
   const enabled = !!session && !!bid && !isBranchMismatch && canRead;
 
-useRealtimeRoom(bid ? `branch:${bid}` : null, enabled);
+  useRealtimeRoom(
+    bid ? `${realtimeConfig.internalInventoryRoomPrefix}:${bid}` : null,
+    enabled,
+  );
 
   const [q, setQ] = useState("");
   const [cartKeyFilter, setCartKeyFilter] = useState("");

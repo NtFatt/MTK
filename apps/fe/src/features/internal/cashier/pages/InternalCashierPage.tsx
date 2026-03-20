@@ -115,12 +115,6 @@ export function InternalCashierPage() {
     rtCtx
   );
 
-  useRealtimeRoom(
-    bid ? `branch:${bid}` : null,
-    enabled && !!bid,
-    rtCtx
-  );
-
   const [q, setQ] = useState("");
   const [paying, setPaying] = useState<OrderRow | null>(null);
   const [payMethod, setPayMethod] = useState<"CASH" | "SHOPEEPAY" | "VISA" | "MASTER" | "JCB" | "ATM" | "OTHER">(

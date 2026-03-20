@@ -20,7 +20,7 @@ Tài liệu này gom toàn bộ account/demo assumptions cần để:
 | STAFF | `staff01` | `123456` | Branch `1` | `/i/1/tables`, `/i/1/reservations` | `pnpm -C apps/api staff:create staff01 123456 STAFF 1 "Staff 01"` hoặc `seed:internal` | Dùng cho tables/session/cart/order ops |
 | KITCHEN | `kitchen01` | `123456` | Branch `1` | `/i/1/kitchen` | `pnpm -C apps/api staff:create kitchen01 123456 KITCHEN 1 "Kitchen 01"` hoặc `seed:internal` | Chỉ nên dùng để demo queue + status change hợp lệ |
 | CASHIER | `cashier01` | `123456` | Branch `1` | `/i/1/cashier` | `pnpm -C apps/api staff:create cashier01 123456 CASHIER 1 "Cashier 01"` hoặc `seed:internal` | Demo unpaid list + settle cash |
-| Cross-branch negative test | custom | custom | Branch `999` | API negative / branch mismatch only | `pnpm -C apps/api staff:create demo999 123456 STAFF 999 "Demo 999"` | Không dùng cho main demo; chỉ dùng nếu muốn chứng minh branch isolation |
+| Cross-branch negative test | custom | custom | Branch `999` fixture | API negative / branch mismatch only | `pnpm -C apps/api staff:create demo999 123456 STAFF 999 "Demo 999"` | Không dùng cho main demo; chỉ dùng để chứng minh branch isolation |
 
 ---
 
@@ -68,7 +68,7 @@ Nhưng cần ghi rõ: **main FE customer demo hiện không bắt buộc đi qua
 | Domain | Baseline |
 |---|---|
 | Main branch | `branch_id=1`, code `HCM1` |
-| Secondary branch | `branch_id=999`, code `HCM999` |
+| Isolation fixture branch | `branch_id=999`, code `NEG999` |
 | Main demo tables | `A01`, `A02`, `B01` |
 | Cross-branch tables | `Z01`, `Z02` |
 | Demo client phone in seed | `0900000000` |

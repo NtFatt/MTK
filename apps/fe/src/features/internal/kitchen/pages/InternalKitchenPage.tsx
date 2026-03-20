@@ -102,12 +102,6 @@ export function InternalKitchenPage() {
     realtimeAuth
   );
 
-  useRealtimeRoom(
-    branchParam ? `branch:${branchParam}` : null,
-    enabled && !!branchParam,
-    realtimeAuth
-  );
-
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<"ALL" | "NEW" | "RECEIVED" | "PREPARING" | "READY">("ALL");
   const [actionError, setActionError] = useState<string | null>(null);

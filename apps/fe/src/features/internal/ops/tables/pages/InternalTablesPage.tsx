@@ -71,7 +71,7 @@ const enabled = !!session && !!effectiveBranchId && !isBranchMismatch && canRead
   const setPosSession = useStore(posStore, (s) => s.setSession);
 
 const room = effectiveBranchId
-  ? `${realtimeConfig.internalBranchRoomPrefix}:${effectiveBranchId}`
+  ? `${realtimeConfig.internalOpsRoomPrefix}:${effectiveBranchId}`
   : null;
   useRealtimeRoom(
     room,

@@ -11,6 +11,7 @@ import {
   resolveInternalBranch,
 } from "../../../../shared/auth/permissions";
 import { useRealtimeRoom } from "../../../../shared/realtime/useRealtimeRoom";
+import { realtimeConfig } from "../../../../shared/realtime/config";
 
 import { Alert, AlertDescription } from "../../../../shared/ui/alert";
 import { Badge } from "../../../../shared/ui/badge";
@@ -130,7 +131,8 @@ export function InternalReservationsPage() {
 
   const enabled = !!session && !!bid && !branchMismatch && canSeePage;
 
-  useRealtimeRoom(bid ? `branch:${bid}` : null, enabled);
+  const room = bid ? `${realtimeConfig.internalOpsRoomPrefix}:${bid}` : null;
+  useRealtimeRoom(room, enabled);
 
   const { data, isLoading, isFetching, error, refetch } = useReservationsQuery(
     {

@@ -208,6 +208,11 @@ export function routeRealtimeEvent(env: EventEnvelope) {
     const orderCode = tryExtractOrderCode(env);
     if (orderCode) enqueueInvalidate(qk.orders.byCode(orderCode), true);
 
+    const reservationCode = tryExtractReservationCode(env);
+    if (reservationCode) {
+      enqueueInvalidate(["public", "reservations", "detail", reservationCode], true);
+    }
+
     const sk = tryExtractSessionKey(env);
     if (sk) {
       enqueueInvalidate(qk.cart.bySessionKey(sk), true);
@@ -327,8 +332,9 @@ export function routeRealtimeEvent(env: EventEnvelope) {
       enqueueInvalidate(["inventory-ingredient-alerts", b], false);
     }
 
+    enqueueMenuRefresh();
+
     if (tryExtractSessionKey(env)) {
-      enqueueMenuRefresh();
       enqueueVoucherRefresh();
     }
     return;

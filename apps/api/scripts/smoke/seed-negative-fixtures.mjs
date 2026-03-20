@@ -67,6 +67,10 @@ async function main() {
   const branchOtherId = String(getEnvValue(envJson, "branchOtherId") || "999").trim() || "999";
   const outputPath = outputEnvPath || sourceEnvPath;
 
+  if (branchOtherId === "1") {
+    die("branchOtherId must stay isolated from the main demo branch. Use a dedicated fixture branch such as 999.");
+  }
+
   const conn = await mysql.createConnection({
     host: envPick(["MYSQL_HOST", "DB_HOST"], "127.0.0.1"),
     port: Number(envPick(["MYSQL_PORT", "DB_PORT"], "3306")),
@@ -89,7 +93,7 @@ async function main() {
         is_active = VALUES(is_active),
         open_time = VALUES(open_time),
         close_time = VALUES(close_time)`,
-      [branchOtherId, `SMK${branchOtherId}`, `Smoke Branch ${branchOtherId}`],
+      [branchOtherId, `NEG${branchOtherId}`, `Negative Fixture Branch ${branchOtherId}`],
     );
 
     const [itemRows] = await conn.query(
@@ -143,12 +147,15 @@ async function main() {
     await conn.commit();
 
     setEnvValue(envJson, "orderOther", orderCode);
+    setEnvValue(envJson, "negativeFixtureBranchId", branchOtherId);
+    setEnvValue(envJson, "negativeFixtureOrderCode", orderCode);
     writeJson(outputPath, envJson);
 
     console.log("✅ Seeded negative smoke fixture:", {
       branchOtherId,
       orderCode,
       itemId,
+      purpose: "branch-isolation fixture only",
       outputEnvPath: outputPath,
     });
   } catch (e) {

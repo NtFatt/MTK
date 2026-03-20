@@ -1,6 +1,6 @@
 # Hadilao API Route Map
 
-Generated at: 2026-03-20T14:54:27.427Z
+Generated at: 2026-03-20T16:21:27.684Z
 
 ## Canonical routes (LEGACY_API_ENABLED=false)
 

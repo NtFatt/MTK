@@ -174,7 +174,7 @@ export function InternalRealtimeAdminPage() {
   const [auditSearch, setAuditSearch] = useState("");
   const [replaySearch, setReplaySearch] = useState("");
 
-  const [replayRoom, setReplayRoom] = useState("branch:1");
+  const [replayRoom, setReplayRoom] = useState("ops:1");
   const [replayFromSeq, setReplayFromSeq] = useState("1");
   const [replayLimit, setReplayLimit] = useState("50");
   const [submittedReplay, setSubmittedReplay] = useState<RealtimeReplayInput | null>(null);
@@ -259,7 +259,7 @@ export function InternalRealtimeAdminPage() {
                     <Input
                       value={replayRoom}
                       onChange={(e) => setReplayRoom(e.target.value)}
-                      placeholder="branch:1 hoặc order:HDL-1001"
+                      placeholder="ops:1, inventory:1, reservation:RSV..., order:HDL-1001"
                     />
                   </div>
 

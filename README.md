@@ -17,6 +17,7 @@ Yeu cau:
 ```powershell
 pnpm install
 Copy-Item apps/api/.env.example apps/api/.env
+Copy-Item apps/fe/.env.example apps/fe/.env
 pnpm -C apps/api db:reset --yes
 pnpm -C apps/api seed:internal
 pnpm -C apps/api dev
@@ -28,9 +29,11 @@ FE mac dinh: `http://localhost:5173`
 
 ## Verification
 ```powershell
+pnpm local:reset
 pnpm verify:static
 pnpm verify:smokes
 pnpm verify:all
+pnpm release:check
 ```
 
 Smoke packs chinh:
@@ -57,4 +60,5 @@ Smoke packs chinh:
 ## Notes
 - Khong commit `.env`, secret that, hoac `node_modules`.
 - `db:reset` local se restock demo stock de smoke deterministic hon.
+- `release:check` la command chuan de reset -> seed -> static gates -> boot API -> smoke packs trong mot luong local duy nhat.
 - Contract chuan la `/api/v1/*`; legacy `/api/*` chi ton tai khi bat co migration tuong ung.

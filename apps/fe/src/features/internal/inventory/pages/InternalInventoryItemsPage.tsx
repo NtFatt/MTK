@@ -4,6 +4,7 @@ import { useStore } from "zustand";
 
 import { authStore } from "../../../../shared/auth/authStore";
 import { useRealtimeRoom } from "../../../../shared/realtime";
+import { realtimeConfig } from "../../../../shared/realtime/config";
 import { Alert, AlertDescription } from "../../../../shared/ui/alert";
 import { Badge } from "../../../../shared/ui/badge";
 import { Button } from "../../../../shared/ui/button";
@@ -200,7 +201,7 @@ export function InternalInventoryItemsPage() {
   const branchParam = String(branchId ?? "").trim();
 
   useRealtimeRoom(
-    branchParam ? `branch:${branchParam}` : null,
+    branchParam ? `${realtimeConfig.internalInventoryRoomPrefix}:${branchParam}` : null,
     !!session && !!branchParam,
     session
       ? {

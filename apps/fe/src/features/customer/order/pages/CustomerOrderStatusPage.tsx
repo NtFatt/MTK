@@ -101,6 +101,7 @@ export function CustomerOrderStatusPage() {
       ? {
           kind: "customer",
           userKey: sessionKey,
+          sessionKey,
           branchId: branchId ?? undefined,
         }
       : undefined,
