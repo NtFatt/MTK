@@ -12,6 +12,7 @@ export class MySQLCartRepository implements ICartRepository {
       r.branch_id ? String(r.branch_id) : null,
       r.session_id ? String(r.session_id) : null,
       r.client_id ? String(r.client_id) : null,
+      r.applied_voucher_id ? String(r.applied_voucher_id) : null,
     );
   }
 

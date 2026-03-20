@@ -1,19 +1,19 @@
 import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
+import { useStore } from "zustand";
 
+import { authStore } from "../../../../shared/auth/authStore";
+import { useRealtimeRoom } from "../../../../shared/realtime";
+import { Alert, AlertDescription } from "../../../../shared/ui/alert";
 import { Badge } from "../../../../shared/ui/badge";
 import { Button } from "../../../../shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../../shared/ui/card";
 import { Input } from "../../../../shared/ui/input";
-import { Alert, AlertDescription } from "../../../../shared/ui/alert";
-import { useInventoryItemsQuery } from "../hooks/useInventoryItemsQuery";
-import { useCreateInventoryItemMutation } from "../hooks/useCreateInventoryItemMutation";
-import { useUpdateInventoryItemMutation } from "../hooks/useUpdateInventoryItemMutation";
+import { Label } from "../../../../shared/ui/label";
 import { useAdjustInventoryItemMutation } from "../hooks/useAdjustInventoryItemMutation";
-
-import { useStore } from "zustand";
-import { authStore } from "../../../../shared/auth/authStore";
-import { useRealtimeRoom } from "../../../../shared/realtime";
+import { useCreateInventoryItemMutation } from "../hooks/useCreateInventoryItemMutation";
+import { useInventoryItemsQuery } from "../hooks/useInventoryItemsQuery";
+import { useUpdateInventoryItemMutation } from "../hooks/useUpdateInventoryItemMutation";
 
 type CreateIngredientForm = {
   ingredientCode: string;
@@ -41,6 +41,11 @@ type AdjustIngredientForm = {
   quantity: string;
   reason: string;
 };
+
+type FlashState =
+  | { kind: "success"; message: string }
+  | { kind: "error"; message: string }
+  | null;
 
 const EMPTY_FORM: CreateIngredientForm = {
   ingredientCode: "",
@@ -92,15 +97,71 @@ function stockTone(row: {
   };
 }
 
+function extractErrorMessage(error: unknown) {
+  if (typeof error === "object" && error && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) {
+      return message;
+    }
+  }
+  return "Thao tác nguyên liệu thất bại.";
+}
+
+function parseNonNegativeNumber(value: string, fieldLabel: string): number {
+  const n = Number(value.trim() || "0");
+  if (!Number.isFinite(n) || n < 0) {
+    throw new Error(`${fieldLabel} phải là số lớn hơn hoặc bằng 0.`);
+  }
+  return n;
+}
+
+function validateCreateForm(form: CreateIngredientForm): string | null {
+  if (!form.ingredientCode.trim()) return "Vui lòng nhập mã nguyên liệu.";
+  if (!form.ingredientName.trim()) return "Vui lòng nhập tên nguyên liệu.";
+  if (!form.unit.trim()) return "Vui lòng nhập đơn vị.";
+
+  try {
+    parseNonNegativeNumber(form.currentQty, "Số lượng ban đầu");
+    parseNonNegativeNumber(form.warningThreshold, "Ngưỡng cảnh báo");
+    parseNonNegativeNumber(form.criticalThreshold, "Ngưỡng nguy cấp");
+  } catch (error) {
+    return extractErrorMessage(error);
+  }
+
+  return null;
+}
+
+function validateEditForm(form: EditIngredientForm): string | null {
+  if (!form.ingredientName.trim()) return "Vui lòng nhập tên nguyên liệu.";
+  if (!form.unit.trim()) return "Vui lòng nhập đơn vị.";
+
+  try {
+    parseNonNegativeNumber(form.warningThreshold, "Ngưỡng cảnh báo");
+    parseNonNegativeNumber(form.criticalThreshold, "Ngưỡng nguy cấp");
+  } catch (error) {
+    return extractErrorMessage(error);
+  }
+
+  return null;
+}
+
+function validateAdjustForm(form: AdjustIngredientForm): string | null {
+  const quantity = Number(form.quantity.trim());
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    return "Số lượng điều chỉnh phải lớn hơn 0.";
+  }
+
+  return null;
+}
+
 export function InternalInventoryItemsPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const [q, setQ] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [flash, setFlash] = useState<FlashState>(null);
   const [form, setForm] = useState<CreateIngredientForm>(EMPTY_FORM);
-
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditIngredientForm>(EMPTY_EDIT_FORM);
-
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
   const [adjustForm, setAdjustForm] = useState<AdjustIngredientForm>(EMPTY_ADJUST_FORM);
 
@@ -143,11 +204,11 @@ export function InternalInventoryItemsPage() {
     !!session && !!branchParam,
     session
       ? {
-        kind: "internal",
-        userKey: session.user?.id ? String(session.user.id) : "internal",
-        branchId: branchParam || (session.branchId != null ? String(session.branchId) : undefined),
-        token: session.accessToken,
-      }
+          kind: "internal",
+          userKey: session.user?.id ? String(session.user.id) : "internal",
+          branchId: branchParam || (session.branchId != null ? String(session.branchId) : undefined),
+          token: session.accessToken,
+        }
       : undefined,
   );
 
@@ -166,7 +227,7 @@ export function InternalInventoryItemsPage() {
     setAdjustForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  function resetForm() {
+  function resetCreateForm() {
     setForm(EMPTY_FORM);
     setShowCreate(false);
   }
@@ -180,6 +241,9 @@ export function InternalInventoryItemsPage() {
     criticalThreshold: number;
     isActive: boolean;
   }) {
+    setFlash(null);
+    setAdjustingId(null);
+    setAdjustForm(EMPTY_ADJUST_FORM);
     setEditingId(String(row.id));
     setEditForm({
       id: String(row.id),
@@ -190,6 +254,7 @@ export function InternalInventoryItemsPage() {
       criticalThreshold: String(row.criticalThreshold),
       isActive: row.isActive,
     });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function cancelEdit() {
@@ -201,6 +266,9 @@ export function InternalInventoryItemsPage() {
     id: string | number;
     ingredientName: string;
   }) {
+    setFlash(null);
+    setEditingId(null);
+    setEditForm(EMPTY_EDIT_FORM);
     setAdjustingId(String(row.id));
     setAdjustForm({
       id: String(row.id),
@@ -209,6 +277,7 @@ export function InternalInventoryItemsPage() {
       quantity: "",
       reason: "",
     });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function cancelAdjust() {
@@ -219,39 +288,68 @@ export function InternalInventoryItemsPage() {
   async function onCreateIngredient() {
     if (!branchId) return;
 
-    await createMutation.mutateAsync({
-      branchId,
-      ingredientCode: form.ingredientCode.trim(),
-      ingredientName: form.ingredientName.trim(),
-      unit: form.unit.trim(),
-      currentQty: Number(form.currentQty || "0"),
-      warningThreshold: Number(form.warningThreshold || "0"),
-      criticalThreshold: Number(form.criticalThreshold || "0"),
-      isActive: true,
-    });
+    setFlash(null);
+    const validationError = validateCreateForm(form);
+    if (validationError) {
+      setFlash({ kind: "error", message: validationError });
+      return;
+    }
 
-    resetForm();
+    try {
+      await createMutation.mutateAsync({
+        branchId,
+        ingredientCode: form.ingredientCode.trim(),
+        ingredientName: form.ingredientName.trim(),
+        unit: form.unit.trim(),
+        currentQty: parseNonNegativeNumber(form.currentQty, "Số lượng ban đầu"),
+        warningThreshold: parseNonNegativeNumber(form.warningThreshold, "Ngưỡng cảnh báo"),
+        criticalThreshold: parseNonNegativeNumber(form.criticalThreshold, "Ngưỡng nguy cấp"),
+        isActive: true,
+      });
+
+      setFlash({
+        kind: "success",
+        message: `Đã tạo nguyên liệu ${form.ingredientName.trim()}.`,
+      });
+      resetCreateForm();
+    } catch (error) {
+      setFlash({ kind: "error", message: extractErrorMessage(error) });
+    }
   }
 
   async function onSaveEdit() {
     if (!branchId || !editingId) return;
 
-    await updateMutation.mutateAsync({
-      branchId,
-      ingredientId: editingId,
-      ingredientName: editForm.ingredientName.trim(),
-      unit: editForm.unit.trim(),
-      warningThreshold: Number(editForm.warningThreshold || "0"),
-      criticalThreshold: Number(editForm.criticalThreshold || "0"),
-      isActive: editForm.isActive,
-    });
+    setFlash(null);
+    const validationError = validateEditForm(editForm);
+    if (validationError) {
+      setFlash({ kind: "error", message: validationError });
+      return;
+    }
 
-    cancelEdit();
+    try {
+      await updateMutation.mutateAsync({
+        branchId,
+        ingredientId: editingId,
+        ingredientName: editForm.ingredientName.trim(),
+        unit: editForm.unit.trim(),
+        warningThreshold: parseNonNegativeNumber(editForm.warningThreshold, "Ngưỡng cảnh báo"),
+        criticalThreshold: parseNonNegativeNumber(editForm.criticalThreshold, "Ngưỡng nguy cấp"),
+        isActive: editForm.isActive,
+      });
+
+      setFlash({
+        kind: "success",
+        message: `Đã cập nhật metadata cho ${editForm.ingredientName.trim()}.`,
+      });
+      cancelEdit();
+    } catch (error) {
+      setFlash({ kind: "error", message: extractErrorMessage(error) });
+    }
   }
 
   async function onToggleActive(row: {
     id: string | number;
-    ingredientCode: string;
     ingredientName: string;
     unit: string;
     warningThreshold: number;
@@ -260,29 +358,57 @@ export function InternalInventoryItemsPage() {
   }) {
     if (!branchId) return;
 
-    await updateMutation.mutateAsync({
-      branchId,
-      ingredientId: String(row.id),
-      ingredientName: row.ingredientName,
-      unit: row.unit,
-      warningThreshold: row.warningThreshold,
-      criticalThreshold: row.criticalThreshold,
-      isActive: !row.isActive,
-    });
+    setFlash(null);
+
+    try {
+      await updateMutation.mutateAsync({
+        branchId,
+        ingredientId: String(row.id),
+        ingredientName: row.ingredientName,
+        unit: row.unit,
+        warningThreshold: row.warningThreshold,
+        criticalThreshold: row.criticalThreshold,
+        isActive: !row.isActive,
+      });
+
+      setFlash({
+        kind: "success",
+        message: !row.isActive
+          ? `Đã kích hoạt nguyên liệu ${row.ingredientName}.`
+          : `Đã ngừng nguyên liệu ${row.ingredientName}.`,
+      });
+    } catch (error) {
+      setFlash({ kind: "error", message: extractErrorMessage(error) });
+    }
   }
 
   async function onSubmitAdjust() {
     if (!branchId || !adjustingId) return;
 
-    await adjustMutation.mutateAsync({
-      branchId,
-      ingredientId: adjustingId,
-      adjustmentType: adjustForm.adjustmentType,
-      quantity: Number(adjustForm.quantity || "0"),
-      reason: adjustForm.reason.trim() || undefined,
-    });
+    setFlash(null);
+    const validationError = validateAdjustForm(adjustForm);
+    if (validationError) {
+      setFlash({ kind: "error", message: validationError });
+      return;
+    }
 
-    cancelAdjust();
+    try {
+      await adjustMutation.mutateAsync({
+        branchId,
+        ingredientId: adjustingId,
+        adjustmentType: adjustForm.adjustmentType,
+        quantity: Number(adjustForm.quantity.trim()),
+        reason: adjustForm.reason.trim() || undefined,
+      });
+
+      setFlash({
+        kind: "success",
+        message: `Đã điều chỉnh tồn cho ${adjustForm.ingredientName}.`,
+      });
+      cancelAdjust();
+    } catch (error) {
+      setFlash({ kind: "error", message: extractErrorMessage(error) });
+    }
   }
 
   return (
@@ -291,27 +417,28 @@ export function InternalInventoryItemsPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Nguyên liệu</h1>
           <p className="text-sm text-muted-foreground">
-            Quản lý tồn kho nguyên liệu theo chi nhánh, ngưỡng cảnh báo và trạng thái hoạt động.
+            PR25 tách rõ hai việc: sửa metadata nguyên liệu và điều chỉnh tồn kho. Không gộp hai luồng này nữa.
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <Button type="button" onClick={() => setShowCreate((prev) => !prev)}>
-            {showCreate ? "Đóng form" : "Thêm nguyên liệu"}
+            {showCreate ? "Đóng form tạo" : "Thêm nguyên liệu"}
           </Button>
         </div>
       </div>
 
-      {(itemsQuery.isError ||
-        createMutation.isError ||
-        updateMutation.isError ||
-        adjustMutation.isError) && (
-          <Alert>
-            <AlertDescription>
-              Không thao tác được với dữ liệu nguyên liệu. Kiểm tra lại API hoặc quyền truy cập.
-            </AlertDescription>
-          </Alert>
-        )}
+      {flash && (
+        <Alert variant={flash.kind === "error" ? "destructive" : "default"}>
+          <AlertDescription>{flash.message}</AlertDescription>
+        </Alert>
+      )}
+
+      {itemsQuery.isError && (
+        <Alert variant="destructive">
+          <AlertDescription>Không tải được dữ liệu nguyên liệu.</AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
@@ -348,19 +475,75 @@ export function InternalInventoryItemsPage() {
           <CardHeader>
             <CardTitle>Tạo nguyên liệu mới</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <Input value={form.ingredientCode} onChange={(e) => updateForm("ingredientCode", e.target.value)} placeholder="Mã nguyên liệu" />
-            <Input value={form.ingredientName} onChange={(e) => updateForm("ingredientName", e.target.value)} placeholder="Tên nguyên liệu" />
-            <Input value={form.unit} onChange={(e) => updateForm("unit", e.target.value)} placeholder="Đơn vị" />
-            <Input value={form.currentQty} onChange={(e) => updateForm("currentQty", e.target.value)} placeholder="Số lượng ban đầu" inputMode="decimal" />
-            <Input value={form.warningThreshold} onChange={(e) => updateForm("warningThreshold", e.target.value)} placeholder="Ngưỡng cảnh báo" inputMode="decimal" />
-            <Input value={form.criticalThreshold} onChange={(e) => updateForm("criticalThreshold", e.target.value)} placeholder="Ngưỡng nguy cấp" inputMode="decimal" />
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="space-y-2">
+                <Label>Mã nguyên liệu</Label>
+                <Input
+                  value={form.ingredientCode}
+                  onChange={(e) => updateForm("ingredientCode", e.target.value)}
+                  placeholder="Ví dụ: VN_BEEF"
+                />
+              </div>
 
-            <div className="md:col-span-2 xl:col-span-3 flex flex-wrap gap-2">
-              <Button type="button" onClick={onCreateIngredient} disabled={createMutation.isPending}>
+              <div className="space-y-2">
+                <Label>Tên nguyên liệu</Label>
+                <Input
+                  value={form.ingredientName}
+                  onChange={(e) => updateForm("ingredientName", e.target.value)}
+                  placeholder="Ví dụ: Bò Việt"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Đơn vị</Label>
+                <Input
+                  value={form.unit}
+                  onChange={(e) => updateForm("unit", e.target.value)}
+                  placeholder="Ví dụ: gram"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Số lượng ban đầu</Label>
+                <Input
+                  value={form.currentQty}
+                  onChange={(e) => updateForm("currentQty", e.target.value)}
+                  placeholder="0"
+                  inputMode="decimal"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Ngưỡng cảnh báo</Label>
+                <Input
+                  value={form.warningThreshold}
+                  onChange={(e) => updateForm("warningThreshold", e.target.value)}
+                  placeholder="0"
+                  inputMode="decimal"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Ngưỡng nguy cấp</Label>
+                <Input
+                  value={form.criticalThreshold}
+                  onChange={(e) => updateForm("criticalThreshold", e.target.value)}
+                  placeholder="0"
+                  inputMode="decimal"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                onClick={() => void onCreateIngredient()}
+                disabled={createMutation.isPending}
+              >
                 {createMutation.isPending ? "Đang lưu..." : "Lưu nguyên liệu"}
               </Button>
-              <Button type="button" variant="secondary" onClick={resetForm}>
+              <Button type="button" variant="secondary" onClick={resetCreateForm}>
                 Hủy
               </Button>
             </div>
@@ -368,89 +551,167 @@ export function InternalInventoryItemsPage() {
         </Card>
       )}
 
-      {editingId && (
+      <div className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Sửa nguyên liệu</CardTitle>
+            <CardTitle>Sửa metadata nguyên liệu</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <Input
-              value={editForm.ingredientCode}
-              readOnly
-              placeholder="Mã nguyên liệu"
-            />            <Input value={editForm.ingredientName} onChange={(e) => updateEditForm("ingredientName", e.target.value)} placeholder="Tên nguyên liệu" />
-            <Input value={editForm.unit} onChange={(e) => updateEditForm("unit", e.target.value)} placeholder="Đơn vị" />
-            <Input value={editForm.warningThreshold} onChange={(e) => updateEditForm("warningThreshold", e.target.value)} placeholder="Ngưỡng cảnh báo" inputMode="decimal" />
-            <Input value={editForm.criticalThreshold} onChange={(e) => updateEditForm("criticalThreshold", e.target.value)} placeholder="Ngưỡng nguy cấp" inputMode="decimal" />
-
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={editForm.isActive}
-                onChange={(e) => updateEditForm("isActive", e.target.checked)}
-              />
-              Đang hoạt động
-            </label>
-
-            <div className="md:col-span-2 xl:col-span-3 flex flex-wrap gap-2">
-              <Button type="button" onClick={onSaveEdit} disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
-              </Button>
-              <Button type="button" variant="secondary" onClick={cancelEdit}>
-                Hủy
-              </Button>
+          <CardContent className="space-y-4">
+            <div className="text-sm text-muted-foreground">
+              Chỉ sửa tên, đơn vị, ngưỡng cảnh báo và trạng thái hoạt động. Không đổi tồn kho ở đây.
             </div>
+
+            {!editingId ? (
+              <div className="rounded-lg border border-dashed px-4 py-8 text-sm text-muted-foreground">
+                Chọn “Sửa metadata” ở bảng bên dưới để chỉnh thông tin nguyên liệu.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Mã nguyên liệu</Label>
+                    <Input value={editForm.ingredientCode} readOnly />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Tên nguyên liệu</Label>
+                    <Input
+                      value={editForm.ingredientName}
+                      onChange={(e) => updateEditForm("ingredientName", e.target.value)}
+                      placeholder="Tên nguyên liệu"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Đơn vị</Label>
+                    <Input
+                      value={editForm.unit}
+                      onChange={(e) => updateEditForm("unit", e.target.value)}
+                      placeholder="Đơn vị"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Ngưỡng cảnh báo</Label>
+                    <Input
+                      value={editForm.warningThreshold}
+                      onChange={(e) => updateEditForm("warningThreshold", e.target.value)}
+                      inputMode="decimal"
+                    />
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Ngưỡng nguy cấp</Label>
+                    <Input
+                      value={editForm.criticalThreshold}
+                      onChange={(e) => updateEditForm("criticalThreshold", e.target.value)}
+                      inputMode="decimal"
+                    />
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={editForm.isActive}
+                    onChange={(e) => updateEditForm("isActive", e.target.checked)}
+                  />
+                  Đang hoạt động
+                </label>
+
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => void onSaveEdit()}
+                    disabled={updateMutation.isPending}
+                  >
+                    {updateMutation.isPending ? "Đang lưu..." : "Lưu metadata"}
+                  </Button>
+                  <Button type="button" variant="secondary" onClick={cancelEdit}>
+                    Hủy
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
-      )}
 
-      {adjustingId && (
         <Card>
           <CardHeader>
-            <CardTitle>Điều chỉnh tồn — {adjustForm.ingredientName}</CardTitle>
+            <CardTitle>Điều chỉnh tồn kho</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <select
-              value={adjustForm.adjustmentType}
-              onChange={(e) =>
-                updateAdjustForm(
-                  "adjustmentType",
-                  e.target.value as AdjustIngredientForm["adjustmentType"],
-                )
-              }
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-            >
-              <option value="IN">IN</option>
-              <option value="OUT">OUT</option>
-              <option value="SET">SET</option>
-              <option value="CORRECTION">CORRECTION</option>
-            </select>
-
-            <Input
-              value={adjustForm.quantity}
-              onChange={(e) => updateAdjustForm("quantity", e.target.value)}
-              placeholder="Số lượng"
-              inputMode="decimal"
-            />
-
-            <Input
-              value={adjustForm.reason}
-              onChange={(e) => updateAdjustForm("reason", e.target.value)}
-              placeholder="Lý do điều chỉnh"
-              className="xl:col-span-2"
-            />
-
-            <div className="md:col-span-2 xl:col-span-4 flex flex-wrap gap-2">
-              <Button type="button" onClick={onSubmitAdjust} disabled={adjustMutation.isPending}>
-                {adjustMutation.isPending ? "Đang cập nhật..." : "Xác nhận điều chỉnh"}
-              </Button>
-              <Button type="button" variant="secondary" onClick={cancelAdjust}>
-                Hủy
-              </Button>
+          <CardContent className="space-y-4">
+            <div className="text-sm text-muted-foreground">
+              Chỉ dùng để tăng / giảm / set tồn. Không sửa tên, đơn vị hay ngưỡng ở đây.
             </div>
+
+            {!adjustingId ? (
+              <div className="rounded-lg border border-dashed px-4 py-8 text-sm text-muted-foreground">
+                Chọn “Điều chỉnh tồn” ở bảng bên dưới để mở đúng nguyên liệu cần thao tác.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="rounded-lg border p-3 text-sm">
+                  Đang điều chỉnh: <span className="font-medium">{adjustForm.ingredientName}</span>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Kiểu điều chỉnh</Label>
+                    <select
+                      value={adjustForm.adjustmentType}
+                      onChange={(e) =>
+                        updateAdjustForm(
+                          "adjustmentType",
+                          e.target.value as AdjustIngredientForm["adjustmentType"],
+                        )
+                      }
+                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    >
+                      <option value="IN">IN</option>
+                      <option value="OUT">OUT</option>
+                      <option value="SET">SET</option>
+                      <option value="CORRECTION">CORRECTION</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Số lượng</Label>
+                    <Input
+                      value={adjustForm.quantity}
+                      onChange={(e) => updateAdjustForm("quantity", e.target.value)}
+                      placeholder="Số lượng"
+                      inputMode="decimal"
+                    />
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Lý do điều chỉnh</Label>
+                    <Input
+                      value={adjustForm.reason}
+                      onChange={(e) => updateAdjustForm("reason", e.target.value)}
+                      placeholder="Ví dụ: nhập kho, hao hụt, kiểm kê"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => void onSubmitAdjust()}
+                    disabled={adjustMutation.isPending}
+                  >
+                    {adjustMutation.isPending ? "Đang cập nhật..." : "Xác nhận điều chỉnh"}
+                  </Button>
+                  <Button type="button" variant="secondary" onClick={cancelAdjust}>
+                    Hủy
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
-      )}
+      </div>
 
       <Card>
         <CardHeader>
@@ -474,6 +735,10 @@ export function InternalInventoryItemsPage() {
             <div className="rounded-lg border border-dashed px-4 py-10 text-sm text-muted-foreground">
               Đang tải dữ liệu nguyên liệu...
             </div>
+          ) : filteredRows.length === 0 ? (
+            <div className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
+              Không có nguyên liệu phù hợp bộ lọc.
+            </div>
           ) : (
             <div className="overflow-x-auto rounded-lg border">
               <table className="min-w-full text-sm">
@@ -494,7 +759,7 @@ export function InternalInventoryItemsPage() {
                     const tone = stockTone(row);
 
                     return (
-                      <tr key={row.id} className="border-t">
+                      <tr key={row.id} className="border-t align-top">
                         <td className="px-4 py-3 font-mono text-xs">{row.id}</td>
                         <td className="px-4 py-3 font-mono text-xs">{row.ingredientCode}</td>
                         <td className="px-4 py-3 font-medium">{row.ingredientName}</td>
@@ -515,11 +780,21 @@ export function InternalInventoryItemsPage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap gap-2">
-                            <Button type="button" size="sm" variant="secondary" onClick={() => startEdit(row)}>
-                              Sửa
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => startEdit(row)}
+                            >
+                              Sửa metadata
                             </Button>
 
-                            <Button type="button" size="sm" variant="outline" onClick={() => startAdjust(row)}>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => startAdjust(row)}
+                            >
                               Điều chỉnh tồn
                             </Button>
 
@@ -537,14 +812,6 @@ export function InternalInventoryItemsPage() {
                       </tr>
                     );
                   })}
-
-                  {filteredRows.length === 0 && (
-                    <tr>
-                      <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
-                        Không có nguyên liệu phù hợp bộ lọc.
-                      </td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
             </div>

@@ -11,19 +11,21 @@ type CheckoutNoteProps = {
 export function CheckoutNote({
   value,
   onChange,
-  placeholder = "Ghi chú cho đơn hàng (tùy chọn)",
+  placeholder = "Ví dụ: ít cay, cho lên món rau sau, có trẻ nhỏ...",
   className,
 }: CheckoutNoteProps) {
   return (
     <div className={cn("space-y-2", className)}>
-      <Label htmlFor="checkout-note">Ghi chú</Label>
+      <Label htmlFor="checkout-note" className="text-[#6a4226]">
+        Ghi chú cho bếp
+      </Label>
       <textarea
         id="checkout-note"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={3}
-        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        className="customer-hotpot-textarea px-4 py-3 text-sm placeholder:text-[#a68569]"
       />
     </div>
   );

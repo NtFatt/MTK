@@ -14,7 +14,9 @@ export function useSaveMenuRecipeMutation(branchId: string | null, menuItemId: s
     mutationFn: (input) => saveMenuRecipe(input),
     invalidateKeys: [
       ["menu-recipe", branchId, menuItemId],
+      ["menu-recipe-presence"],
       ["admin", "menu", "items"],
+      ["menu", "view"],
     ],
   });
 }

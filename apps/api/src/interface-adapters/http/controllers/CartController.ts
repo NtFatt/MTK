@@ -3,6 +3,8 @@ import type { GetOrCreateCartForSession } from "../../../application/use-cases/c
 import type { GetCartDetail } from "../../../application/use-cases/cart/GetCartDetail.js";
 import type { UpsertCartItem } from "../../../application/use-cases/cart/UpsertCartItem.js";
 import type { RemoveCartItem } from "../../../application/use-cases/cart/RemoveCartItem.js";
+import type { ApplyCartVoucher } from "../../../application/use-cases/cart/ApplyCartVoucher.js";
+import type { RemoveCartVoucher } from "../../../application/use-cases/cart/RemoveCartVoucher.js";
 
 function mustString(v: unknown, field: string): string {
   if (typeof v !== "string" || v.trim().length === 0) throw new Error(`INVALID_${field}`);
@@ -26,6 +28,8 @@ export class CartController {
     private getDetail: GetCartDetail,
     private upsertItem: UpsertCartItem,
     private removeItem: RemoveCartItem,
+    private applyVoucherUc: ApplyCartVoucher | null = null,
+    private removeVoucherUc: RemoveCartVoucher | null = null,
   ) {}
 
   openForSession = async (req: Request, res: Response) => {
@@ -59,5 +63,23 @@ export class CartController {
 
     await this.removeItem.execute(cartKey, itemId, optionsHash);
     return res.status(204).send();
+  };
+
+  applyVoucher = async (req: Request, res: Response) => {
+    if (!this.applyVoucherUc) throw new Error("FEATURE_DISABLED");
+
+    const cartKey = mustString(req.params.cartKey as unknown, "CART_KEY");
+    const code = mustString(req.body?.code, "VOUCHER_CODE");
+
+    const out = await this.applyVoucherUc.execute(cartKey, code);
+    return res.json(out);
+  };
+
+  removeVoucher = async (req: Request, res: Response) => {
+    if (!this.removeVoucherUc) throw new Error("FEATURE_DISABLED");
+
+    const cartKey = mustString(req.params.cartKey as unknown, "CART_KEY");
+    const out = await this.removeVoucherUc.execute(cartKey);
+    return res.json(out);
   };
 }

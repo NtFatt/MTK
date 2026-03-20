@@ -4,6 +4,8 @@ import { customerSessionStore } from "../../../../shared/customer/session/sessio
 import { Alert, AlertDescription } from "../../../../shared/ui/alert";
 import { buttonVariants } from "../../../../shared/ui/button";
 import { applyPendingAction } from "../../../../shared/customer/session/pendingActions";
+import { CustomerHotpotShell } from "../../shared/components/CustomerHotpotShell";
+import { cn } from "../../../../shared/utils/cn";
 
 export function CustomerSessionBootstrapPage() {
   const { sessionKey } = useParams<{ sessionKey: string }>();
@@ -15,14 +17,13 @@ export function CustomerSessionBootstrapPage() {
 
   useEffect(() => {
     if (!sessionKey) return;
-    // In current BE, GET /sessions/:sessionKey may not exist. Bootstrap relies on the session already in store
-    // (set by /sessions/open response). If user deep-links without opening, we show an actionable error.
     if (!session || session.sessionKey !== sessionKey) return;
 
     void (async () => {
       let target = next ? String(next) : "/c/menu";
       try {
-        const res = await applyPendingAction(sessionKey, session.branchId); if (res.returnTo) target = res.returnTo;
+        const res = await applyPendingAction(sessionKey, session.branchId);
+        if (res.returnTo) target = res.returnTo;
       } finally {
         navigate(target, { replace: true });
       }
@@ -31,36 +32,55 @@ export function CustomerSessionBootstrapPage() {
 
   if (!sessionKey) {
     return (
-      <div className="flex min-h-[200px] flex-col items-center justify-center gap-4 p-6">
-        <Alert variant="destructive">
-          <AlertDescription>Thiếu session. Quay lại trang mở bàn.</AlertDescription>
-        </Alert>
-        <Link to="/c/qr" className={buttonVariants({ variant: "outline" })}>
-          Quay lại /c/qr
-        </Link>
-      </div>
+      <CustomerHotpotShell contentClassName="max-w-3xl">
+        <div className="customer-hotpot-receipt rounded-[30px] px-6 py-10 text-center">
+          <Alert variant="destructive" className="rounded-[20px] border-[#e4bfb4] bg-[#fff4ef] text-left">
+            <AlertDescription>Thiếu session. Quay lại trang mở bàn.</AlertDescription>
+          </Alert>
+          <Link
+            to="/c/qr"
+            className={cn(
+              buttonVariants({ variant: "outline" }),
+              "mt-5 inline-flex rounded-full border-[#d9bd95]/80 bg-[#fff8ec] text-[#6a3b20] hover:bg-[#fff2df]",
+            )}
+          >
+            Quay lại /c/qr
+          </Link>
+        </div>
+      </CustomerHotpotShell>
     );
   }
 
   if (!session || session.sessionKey !== sessionKey) {
     const back = next ? `/c/qr?next=${encodeURIComponent(String(next))}` : "/c/qr";
     return (
-      <div className="flex min-h-[200px] flex-col items-center justify-center gap-4 p-6">
-        <Alert variant="destructive">
-          <AlertDescription>
-            Không tìm thấy phiên bàn trên thiết bị này. Vui lòng mở bàn lại (hoặc quét QR).
-          </AlertDescription>
-        </Alert>
-        <Link to={back} className={buttonVariants({ variant: "outline" })}>
-          Mở bàn
-        </Link>
-      </div>
+      <CustomerHotpotShell contentClassName="max-w-3xl">
+        <div className="customer-hotpot-receipt rounded-[30px] px-6 py-10 text-center">
+          <Alert variant="destructive" className="rounded-[20px] border-[#e4bfb4] bg-[#fff4ef] text-left">
+            <AlertDescription>
+              Không tìm thấy phiên bàn trên thiết bị này. Vui lòng mở bàn lại hoặc quét QR.
+            </AlertDescription>
+          </Alert>
+          <Link
+            to={back}
+            className={cn(
+              buttonVariants({ variant: "outline" }),
+              "mt-5 inline-flex rounded-full border-[#d9bd95]/80 bg-[#fff8ec] text-[#6a3b20] hover:bg-[#fff2df]",
+            )}
+          >
+            Mở bàn
+          </Link>
+        </div>
+      </CustomerHotpotShell>
     );
   }
 
   return (
-    <div className="flex min-h-[200px] items-center justify-center p-6" aria-busy="true">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-    </div>
+    <CustomerHotpotShell contentClassName="max-w-3xl">
+      <div className="customer-hotpot-receipt rounded-[30px] px-6 py-10 text-center" aria-busy="true">
+        <div className="customer-mythmaker-script text-[2rem] text-[#bd5132]">Đang dọn bàn cho bạn</div>
+        <div className="mx-auto mt-5 h-9 w-9 animate-spin rounded-full border-2 border-[#c43c2d] border-t-transparent" />
+      </div>
+    </CustomerHotpotShell>
   );
 }

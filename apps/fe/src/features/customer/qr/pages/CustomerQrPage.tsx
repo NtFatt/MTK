@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Card, CardContent, CardHeader } from "../../../../shared/ui/card";
+import { Alert, AlertDescription } from "../../../../shared/ui/alert";
 import { Button } from "../../../../shared/ui/button";
 import { Input } from "../../../../shared/ui/input";
 import { Label } from "../../../../shared/ui/label";
-import { Alert, AlertDescription } from "../../../../shared/ui/alert";
 import { useOpenSessionMutation } from "../../../../shared/customer/session/useOpenSessionMutation";
+import {
+  formatCustomerSessionRecoveryMessage,
+  getCustomerSessionRecoveryReason,
+} from "../../../../shared/customer/session/sessionRecovery";
 import { resolveTableIdByCode } from "../../../../shared/customer/tables/tableLookup";
+import { CustomerHotpotShell } from "../../shared/components/CustomerHotpotShell";
 
-// --- Minimal BarcodeDetector typing (avoid TS errors) ---
 type DetectedBarcode = { rawValue: string };
 type BarcodeDetectorLike = {
   detect: (source: ImageBitmapSource) => Promise<DetectedBarcode[]>;
@@ -19,23 +22,25 @@ function hasBarcodeDetector(): boolean {
   return typeof window !== "undefined" && typeof (window as any).BarcodeDetector === "function";
 }
 
-function parseScannedValue(raw: string): { url?: string; directionId?: string; tableId?: string; error?: string } {
+function parseScannedValue(raw: string): {
+  url?: string;
+  directionId?: string;
+  tableId?: string;
+  error?: string;
+} {
   const v = raw.trim();
   if (!v) return { error: "QR rỗng." };
 
-  // If it's a URL (most common in real restaurants)
   try {
     const u = new URL(v, window.location.origin);
-    // Only allow same-origin navigation for safety
     if (u.origin !== window.location.origin) {
       return { error: "QR không thuộc hệ thống này. Hãy quét QR đúng của quán." };
     }
     return { url: u.toString() };
   } catch {
-    // Not a URL; maybe a plain token like directionId=xxx or tableId=yyy
+    // ignore
   }
 
-  // Try key=value
   const m1 = v.match(/directionId\s*=\s*([A-Za-z0-9._-]+)/i);
   if (m1?.[1]) return { directionId: m1[1] };
 
@@ -57,10 +62,13 @@ export function CustomerQrPage() {
 
   const openSessionMutation = useOpenSessionMutation({ next });
   const [localError, setLocalError] = useState<string | null>(null);
+  const [sessionRecoveryMessage] = useState<string | null>(() => {
+    const reason = getCustomerSessionRecoveryReason();
+    return reason ? formatCustomerSessionRecoveryMessage(reason) : null;
+  });
 
   const offline = typeof navigator !== "undefined" && !navigator.onLine;
 
-  // --- QR scan UI state ---
   const [scanOpen, setScanOpen] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -69,7 +77,6 @@ export function CustomerQrPage() {
 
   const isQrParamMode = Boolean(qpTableId || qpDirectionId);
 
-  // Auto-open when arriving from QR params
   const autoOpenedRef = useRef(false);
   useEffect(() => {
     if (!isQrParamMode) return;
@@ -85,9 +92,7 @@ export function CustomerQrPage() {
   const canSubmit = useMemo(() => {
     if (offline) return false;
     if (openSessionMutation.isPending) return false;
-    // QR params -> allow (auto open already happens, but keep safe)
     if (qpTableId || qpDirectionId) return true;
-    // Manual mode: require table code
     return tableCode.trim() !== "";
   }, [offline, openSessionMutation.isPending, qpTableId, qpDirectionId, tableCode]);
 
@@ -114,7 +119,9 @@ export function CustomerQrPage() {
       return;
     }
     if (!hasBarcodeDetector()) {
-      setScanError("Thiết bị/trình duyệt không hỗ trợ quét QR trong app. Hãy dùng camera điện thoại để quét QR trên bàn.");
+      setScanError(
+        "Thiết bị/trình duyệt không hỗ trợ quét QR trong app. Hãy dùng camera điện thoại để quét QR trên bàn.",
+      );
       return;
     }
 
@@ -142,7 +149,6 @@ export function CustomerQrPage() {
 
       const tick = async () => {
         try {
-          // detect QR
           const codes = await detector.detect(video);
           if (codes?.length) {
             const raw = codes[0]?.rawValue ?? "";
@@ -165,7 +171,6 @@ export function CustomerQrPage() {
             }
           }
         } catch (e: any) {
-          // ignore transient errors, but show if persistent
           setScanError(String(e?.message ?? "Không thể quét QR."));
         }
         rafRef.current = requestAnimationFrame(tick);
@@ -188,7 +193,6 @@ export function CustomerQrPage() {
     e.preventDefault();
     setLocalError(null);
 
-    // If we already have QR params, just let auto-open handle it
     if (qpTableId) {
       openSessionMutation.mutate({ tableId: qpTableId });
       return;
@@ -219,61 +223,103 @@ export function CustomerQrPage() {
   };
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-8">
-      <Card>
+    <CustomerHotpotShell contentClassName="max-w-5xl">
+      <div className="grid gap-6 lg:grid-cols-[1.02fr_0.98fr] lg:items-start">
+        <section className="space-y-4">
+          <div className="space-y-2">
+            <div className="customer-hotpot-kicker">Mở bàn tại quán</div>
+            <h1 className="customer-mythmaker-title customer-hotpot-page-title">Bắt đầu gọi món</h1>
+            <p className="customer-hotpot-page-subtitle">
+              Quét QR trên bàn hoặc nhập mã bàn để vào đúng phiên gọi món. Sau khi mở bàn, bạn sẽ
+              đi thẳng vào thực đơn của quán.
+            </p>
+          </div>
 
+          <div className="customer-mythmaker-panel-strong relative overflow-hidden rounded-[32px] px-6 py-6 text-[#fff2da] shadow-[0_30px_80px_-40px_rgba(56,29,10,0.86)]">
+            <span className="customer-hotpot-steam absolute left-8 top-6 scale-75" />
+            <span className="customer-hotpot-steam customer-hotpot-steam-delay-2 absolute left-16 top-2 scale-[0.65]" />
+            <div className="pointer-events-none absolute inset-0 opacity-15 [background:repeating-linear-gradient(90deg,rgba(255,255,255,0.08)_0,rgba(255,255,255,0.08)_2px,transparent_2px,transparent_22px)]" />
 
-        <CardContent>
-          <div className="space-y-4">
-            {offline && (
-              <Alert variant="destructive">
-                <AlertDescription>Bạn đang offline. Kiểm tra mạng và thử lại.</AlertDescription>
-              </Alert>
-            )}
+            <div className="relative z-10">
+              <div className="customer-mythmaker-script text-[2rem] text-[#ffd07a]">Mời vào quán</div>
+              <div className="customer-mythmaker-title mt-2 text-4xl text-[#fff4df]">Đèn đã lên, bếp đã nóng</div>
+              <p className="mt-4 text-sm leading-6 text-[#f4e5ca]/84">
+                Nếu bạn đang ngồi tại bàn, cách nhanh nhất là quét QR trên bàn. Nếu không, nhập mã
+                bàn thủ công để tiếp tục.
+              </p>
 
-            {scanError && (
-              <Alert variant="destructive">
-                <AlertDescription>{scanError}</AlertDescription>
-              </Alert>
-            )}
+              <div className="mt-5 flex flex-wrap gap-2">
+                {["Quét QR", "Nhập mã bàn", "Gọi món tại bàn"].map((label) => (
+                  <span key={label} className="customer-hotpot-chip px-3 py-1 text-xs font-medium uppercase tracking-[0.18em]">
+                    {label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
 
-            {localError && (
-              <Alert variant="destructive">
-                <AlertDescription>{localError}</AlertDescription>
-              </Alert>
-            )}
+        <section className="customer-hotpot-receipt rounded-[32px] p-5 sm:p-6">
+          <div className="space-y-5">
+            {(offline || scanError || localError || sessionRecoveryMessage || openSessionMutation.error) ? (
+              <div className="space-y-3">
+                {offline ? (
+                  <Alert variant="destructive" className="rounded-[20px] border-[#e4bfb4] bg-[#fff4ef]">
+                    <AlertDescription>Bạn đang offline. Kiểm tra mạng và thử lại.</AlertDescription>
+                  </Alert>
+                ) : null}
 
-            {openSessionMutation.error && (
-              <Alert variant="destructive">
-                <AlertDescription>
-                  {openSessionMutation.error.code === "NO_TABLE_AVAILABLE" ||
-                    openSessionMutation.error.code === "TABLE_RESERVED_SOON"
-                    ? "Không thể mở bàn lúc này (bàn không khả dụng / sắp có đặt trước)."
-                    : openSessionMutation.error.code === "TABLE_OUT_OF_SERVICE"
-                      ? "Bàn đang tạm ngưng phục vụ."
-                      : openSessionMutation.error.code === "TABLE_NOT_FOUND"
-                        ? "Không tìm thấy bàn. Hãy kiểm tra lại mã bàn."
-                        : openSessionMutation.error.code === "INVALID_DIRECTION_ID"
-                          ? "Thiếu thông tin bàn/zone. Hãy nhập mã bàn hoặc quét QR."
-                          : openSessionMutation.error.message}
-                  {openSessionMutation.error.correlationId && (
-                    <span className="mt-1 block text-xs">Mã: {openSessionMutation.error.correlationId}</span>
-                  )}
-                </AlertDescription>
-              </Alert>
-            )}
+                {scanError ? (
+                  <Alert variant="destructive" className="rounded-[20px] border-[#e4bfb4] bg-[#fff4ef]">
+                    <AlertDescription>{scanError}</AlertDescription>
+                  </Alert>
+                ) : null}
 
-            {/* ✅ QR scan frame */}
+                {localError ? (
+                  <Alert variant="destructive" className="rounded-[20px] border-[#e4bfb4] bg-[#fff4ef]">
+                    <AlertDescription>{localError}</AlertDescription>
+                  </Alert>
+                ) : null}
+
+                {sessionRecoveryMessage ? (
+                  <Alert className="rounded-[20px] border-[#e0c49d]/80 bg-[#fff8ec]">
+                    <AlertDescription>{sessionRecoveryMessage}</AlertDescription>
+                  </Alert>
+                ) : null}
+
+                {openSessionMutation.error ? (
+                  <Alert variant="destructive" className="rounded-[20px] border-[#e4bfb4] bg-[#fff4ef]">
+                    <AlertDescription>
+                      {openSessionMutation.error.code === "NO_TABLE_AVAILABLE" ||
+                      openSessionMutation.error.code === "TABLE_RESERVED_SOON"
+                        ? "Không thể mở bàn lúc này (bàn không khả dụng hoặc sắp có đặt trước)."
+                        : openSessionMutation.error.code === "TABLE_OUT_OF_SERVICE"
+                          ? "Bàn đang tạm ngưng phục vụ."
+                          : openSessionMutation.error.code === "TABLE_NOT_FOUND"
+                            ? "Không tìm thấy bàn. Hãy kiểm tra lại mã bàn."
+                            : openSessionMutation.error.code === "INVALID_DIRECTION_ID"
+                              ? "Thiếu thông tin bàn. Hãy nhập mã bàn hoặc quét QR."
+                              : openSessionMutation.error.message}
+                      {openSessionMutation.error.correlationId ? (
+                        <span className="mt-1 block text-xs">Mã: {openSessionMutation.error.correlationId}</span>
+                      ) : null}
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
+              </div>
+            ) : null}
+
             <div className="space-y-2">
-              <Label>Quét QR trên bàn</Label>
+              <div className="customer-hotpot-kicker">Quét mã QR</div>
+              <Label className="text-[#6a4226]">Đưa QR vào khung này</Label>
 
-              <div className="relative aspect-square w-full overflow-hidden rounded-lg border border-dashed bg-muted/30">
+              <div className="relative aspect-square w-full overflow-hidden rounded-[26px] border border-dashed border-[#d8bc93] bg-[linear-gradient(180deg,#f7ecda_0%,#efe1c6_100%)]">
                 {!scanOpen ? (
                   <div className="flex h-full flex-col items-center justify-center p-6 text-center">
-                    <div className="mb-3 text-3xl">▣</div>
-                    <div className="text-sm font-medium">Đưa QR vào khung này</div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      Bấm “Bật camera” để quét trong app (nếu thiết bị hỗ trợ).
+                    <div className="customer-mythmaker-title text-5xl text-[#8a5c34]">▣</div>
+                    <div className="mt-3 text-sm font-medium text-[#5f3a22]">Đưa QR vào khung này</div>
+                    <div className="mt-1 text-xs text-[#8a694f]">
+                      Bấm “Bật camera” để quét trực tiếp trong app nếu thiết bị hỗ trợ.
                     </div>
                   </div>
                 ) : (
@@ -283,42 +329,55 @@ export function CustomerQrPage() {
 
               <div className="flex gap-2">
                 {!scanOpen ? (
-                  <Button type="button" className="w-full" onClick={startScan} disabled={offline || openSessionMutation.isPending}>
+                  <Button
+                    type="button"
+                    className="w-full rounded-full border border-[#b83022] bg-[linear-gradient(180deg,#d34a34_0%,#a82e22_100%)] text-[#fff7f0] shadow-[0_18px_40px_-24px_rgba(94,26,16,0.9)] hover:brightness-110"
+                    onClick={startScan}
+                    disabled={offline || openSessionMutation.isPending}
+                  >
                     Bật camera
                   </Button>
                 ) : (
-                  <Button type="button" variant="outline" className="w-full" onClick={stopScan}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full rounded-full border-[#d9bd95]/80 bg-[#fff8ec] text-[#6a3b20] hover:bg-[#fff2df]"
+                    onClick={stopScan}
+                  >
                     Tắt camera
                   </Button>
                 )}
               </div>
 
-              {isQrParamMode && (
-                <Alert>
+              {isQrParamMode ? (
+                <Alert className="rounded-[20px] border-[#e0c49d]/80 bg-[#fff8ec]">
                   <AlertDescription>
-                    Đã nhận thông tin bàn từ QR. {openSessionMutation.isPending ? "Đang xác nhận…" : "Nếu chưa tự chuyển trang, bấm nút dưới để thử lại."}
+                    Đã nhận thông tin bàn từ QR.{" "}
+                    {openSessionMutation.isPending ? "Đang xác nhận..." : "Nếu chưa tự chuyển trang, bấm nút dưới để thử lại."}
                   </AlertDescription>
                 </Alert>
-              )}
+              ) : null}
             </div>
 
-            {/* ✅ Manual fallback */}
-            <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+            <form onSubmit={handleSubmit} className="space-y-4 border-t border-[#e0c49d]/70 pt-4">
               <div className="flex items-center justify-between">
-                <Label className="text-sm">Nhập thủ công</Label>
+                <div>
+                  <div className="customer-hotpot-kicker">Nhập thủ công</div>
+                  <Label className="text-[#6a4226]">Điền mã bàn nếu không quét QR</Label>
+                </div>
                 <Button
                   type="button"
                   variant="ghost"
-                  className="h-8 px-2 text-xs"
+                  className="rounded-full px-3 text-xs text-[#7b5a42] hover:bg-[#fff0db]"
                   onClick={() => setShowAdvanced((v) => !v)}
                 >
                   {showAdvanced ? "Ẩn nâng cao" : "Nâng cao"}
                 </Button>
               </div>
 
-              {showAdvanced && (
+              {showAdvanced ? (
                 <div className="space-y-2">
-                  <Label htmlFor="branchId">Mã chi nhánh (nâng cao)</Label>
+                  <Label htmlFor="branchId" className="text-[#6a4226]">Mã chi nhánh</Label>
                   <Input
                     id="branchId"
                     type="text"
@@ -326,12 +385,13 @@ export function CustomerQrPage() {
                     value={branchId}
                     onChange={(e) => setBranchId(e.target.value)}
                     disabled={offline}
+                    className="customer-hotpot-input"
                   />
                 </div>
-              )}
+              ) : null}
 
               <div className="space-y-2">
-                <Label htmlFor="tableCode">Mã bàn</Label>
+                <Label htmlFor="tableCode" className="text-[#6a4226]">Mã bàn</Label>
                 <Input
                   id="tableCode"
                   type="text"
@@ -339,23 +399,34 @@ export function CustomerQrPage() {
                   value={tableCode}
                   onChange={(e) => setTableCode(e.target.value)}
                   disabled={offline}
+                  className="customer-hotpot-input"
                 />
-                <div className="flex gap-2 pt-1">
+                <div className="flex flex-wrap gap-2 pt-1">
                   {["A01", "A02", "A03"].map((c) => (
-                    <Button key={c} type="button" variant="outline" className="h-8 px-3 text-xs" onClick={() => setTableCode(c)}>
+                    <Button
+                      key={c}
+                      type="button"
+                      variant="outline"
+                      className="rounded-full border-[#d9bd95]/80 bg-[#fff8ec] px-3 text-xs text-[#6a3b20] hover:bg-[#fff2df]"
+                      onClick={() => setTableCode(c)}
+                    >
                       {c}
                     </Button>
                   ))}
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={!canSubmit}>
-                {openSessionMutation.isPending ? "Đang xác nhận…" : "Xác nhận bàn"}
+              <Button
+                type="submit"
+                className="w-full rounded-full border border-[#b83022] bg-[linear-gradient(180deg,#d34a34_0%,#a82e22_100%)] text-[#fff7f0] shadow-[0_18px_40px_-24px_rgba(94,26,16,0.9)] hover:brightness-110"
+                disabled={!canSubmit}
+              >
+                {openSessionMutation.isPending ? "Đang xác nhận..." : "Xác nhận bàn"}
               </Button>
             </form>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </section>
+      </div>
+    </CustomerHotpotShell>
   );
 }

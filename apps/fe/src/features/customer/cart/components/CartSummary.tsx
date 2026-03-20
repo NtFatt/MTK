@@ -9,24 +9,42 @@ function formatVnd(price: number): string {
 
 type CartSummaryProps = {
   subtotal: number;
+  discount?: number;
   total?: number;
+  voucherCode?: string | null;
 };
 
-export function CartSummary({ subtotal, total }: CartSummaryProps) {
+export function CartSummary({ subtotal, discount = 0, total, voucherCode }: CartSummaryProps) {
   return (
-    <div className="space-y-3">
-      <Separator />
-      <div className="flex justify-between text-sm">
-        <span className="text-muted-foreground">Tạm tính</span>
-        <span>{formatVnd(subtotal)}</span>
+    <div className="space-y-4">
+      <Separator className="bg-[#e0c49d]/70" />
+
+      <div className="flex justify-between text-sm text-[#7a5b44]">
+        <span>Tạm tính</span>
+        <span className="font-medium text-[#5d341b]">{formatVnd(subtotal)}</span>
       </div>
-      {total != null && total !== subtotal && (
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Tổng cộng</span>
-          <span className="font-medium">{formatVnd(total)}</span>
+
+      {discount > 0 ? (
+        <div className="flex justify-between text-sm text-[#7a5b44]">
+          <span>{voucherCode ? `Voucher ${voucherCode}` : "Giảm giá"}</span>
+          <span className="font-semibold text-[#c43c2d]">-{formatVnd(discount)}</span>
         </div>
-      )}
-      <Link to="/c/checkout" className={cn(buttonVariants({ size: "lg" }), "w-full inline-block text-center")}>
+      ) : null}
+
+      {total != null && total !== subtotal ? (
+        <div className="flex justify-between text-sm text-[#7a5b44]">
+          <span>Tổng cộng</span>
+          <span className="font-semibold text-[#5d341b]">{formatVnd(total)}</span>
+        </div>
+      ) : null}
+
+      <Link
+        to="/c/checkout"
+        className={cn(
+          buttonVariants({ size: "lg" }),
+          "inline-flex w-full rounded-full border border-[#b83022] bg-[linear-gradient(180deg,#d34a34_0%,#a82e22_100%)] text-center text-[#fff7f0] shadow-[0_18px_40px_-24px_rgba(94,26,16,0.9)] hover:brightness-110",
+        )}
+      >
         Tiếp tục thanh toán
       </Link>
     </div>

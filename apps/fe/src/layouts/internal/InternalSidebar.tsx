@@ -59,8 +59,10 @@ export function InternalSidebar() {
 
   const canReadInventory = hasPermission(session, "inventory.read");
   const canManageMenu = hasPermission(session, "menu.manage");
+  const canManagePromotions = hasPermission(session, "promotions.manage");
 
   const menuManagementRoute = `${adminBase}/menu`;
+  const voucherManagementRoute = `${adminBase}/vouchers`;
 
   const realtimeRoute = `${adminBase}/realtime`;
   const showRealtime = hasPermission(session, "realtime.admin");
@@ -81,6 +83,10 @@ export function InternalSidebar() {
 
           {canManageMenu && (
             <NavItem to={menuManagementRoute} label="Quản lý món" />
+          )}
+
+          {canManagePromotions && (
+            <NavItem to={voucherManagementRoute} label="Voucher" />
           )}
 
           <button

@@ -4,8 +4,11 @@ export type InventoryStockRow = {
   itemId?: string | number;
   itemName?: string;
   branchId?: string | number;
+  dbQty?: number;
   available?: number;
   onHold?: number;
+  stockSource?: string;
+  lastRestockAt?: string | null;
   updatedAt?: string;
 };
 
@@ -22,15 +25,23 @@ function normalizeStockRow(x: any): InventoryStockRow | null {
   const itemId = x.itemId ?? x.item_id ?? x.id ?? x.menuItemId ?? x.menu_item_id;
   if (itemId == null) return null;
 
-  const available = Number(x.quantity ?? x.available ?? x.qty ?? x.stock ?? 0);
-  const onHold = Number(x.onHold ?? x.on_hold ?? x.hold ?? 0);
+  const dbQty = Number(x.dbQty ?? x.db_qty ?? x.quantity ?? x.qty ?? x.stock ?? 0);
+  const available = Number(
+    x.available ?? x.availableQty ?? x.available_qty ?? x.quantity ?? x.qty ?? x.stock ?? 0,
+  );
+  const onHold = Number(
+    x.onHold ?? x.on_hold ?? x.hold ?? x.reservedQty ?? x.reserved_qty ?? x.reserved ?? 0,
+  );
 
   return {
     itemId,
     itemName: x.itemName ?? x.item_name ?? x.name ?? undefined,
     branchId: x.branchId ?? x.branch_id ?? undefined,
+    dbQty: Number.isFinite(dbQty) ? Math.trunc(dbQty) : 0,
     available: Number.isFinite(available) ? Math.trunc(available) : 0,
     onHold: Number.isFinite(onHold) ? Math.trunc(onHold) : 0,
+    stockSource: x.stockSource ?? x.stock_source ?? undefined,
+    lastRestockAt: x.lastRestockAt ?? x.last_restock_at ?? null,
     updatedAt: x.updatedAt ?? x.updated_at ?? undefined,
   };
 }

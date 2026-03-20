@@ -129,6 +129,11 @@ const InternalMenuManagementPage = lazy(async () => ({
     .InternalMenuManagementPage,
 }));
 
+const InternalVoucherManagementPage = lazy(async () => ({
+  default: (await import("../features/internal/vouchers/pages/InternalVoucherManagementPage"))
+    .InternalVoucherManagementPage,
+}));
+
 const InternalReservationsPage = lazy(async () => ({
   default: (await import("../features/internal/reservations/pages/InternalReservationsPage"))
     .InternalReservationsPage,
@@ -254,6 +259,7 @@ export const router = createBrowserRouter([
       { path: "cashier", element: withSuspense(<InternalCashierPage />) },
       { path: "staff", element: withSuspense(<InternalAdminPage />) },
       { path: "menu", element: withSuspense(<InternalMenuManagementPage />) },
+      { path: "vouchers", element: withSuspense(<InternalVoucherManagementPage />) },
       { path: "reservations", element: withSuspense(<InternalReservationsPage />) },
       { path: "maintenance", element: withSuspense(<InternalMaintenancePage />) },
       { path: "observability", element: withSuspense(<InternalObservabilityPage />) },

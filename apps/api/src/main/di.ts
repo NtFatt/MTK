@@ -8,6 +8,7 @@ import { MySQLOrderCheckoutService } from "../infrastructure/db/mysql/services/M
 import { MySQLMenuItemStockRepository } from "../infrastructure/db/mysql/repositories/MySQLMenuItemStockRepository.js";
 import { NoopStockHoldService } from "../application/ports/services/NoopStockHoldService.js";
 import { RedisStockHoldService } from "../infrastructure/redis/stock/RedisStockHoldService.js";
+import { RedisMenuStockProjectionSync } from "../infrastructure/redis/stock/RedisMenuStockProjectionSync.js";
 
 // ===== Event bus (optional) =====
 import type { IEventBus } from "../application/ports/events/IEventBus.js";
@@ -35,6 +36,7 @@ import { MySQLInventoryRepository } from "../infrastructure/db/mysql/repositorie
 import { MySQLOrderQueryRepository } from "../infrastructure/db/mysql/repositories/MySQLOrderQueryRepository.js";
 import { MySQLInventoryIngredientRepository } from "../infrastructure/db/mysql/repositories/MySQLInventoryIngredientRepository.js";
 import { MySQLMenuRecipeRepository } from "../infrastructure/db/mysql/repositories/MySQLMenuRecipeRepository.js";
+import { MySQLVoucherRepository } from "../infrastructure/db/mysql/repositories/MySQLVoucherRepository.js";
 // ===== Client auth repositories =====
 import { MySQLClientRepository } from "../infrastructure/db/mysql/repositories/MySQLClientRepository.js";
 import { MySQLOtpRepository } from "../infrastructure/db/mysql/repositories/MySQLOtpRepository.js";
@@ -42,6 +44,7 @@ import { MySQLClientRefreshTokenRepository } from "../infrastructure/db/mysql/re
 
 // ===== Redis repositories =====
 import { CachedMenuCatalogRepository } from "../infrastructure/redis/repositories/CachedMenuCatalogRepository.js";
+import { RedisAvailableMenuCatalogRepository } from "../infrastructure/redis/repositories/RedisAvailableMenuCatalogRepository.js";
 import { RedisTableSessionRepository } from "../infrastructure/redis/repositories/RedisTableSessionRepository.js";
 
 // ===== Use-cases =====
@@ -54,8 +57,11 @@ import { GetOrCreateCartForSession } from "../application/use-cases/cart/GetOrCr
 import { GetCartDetail } from "../application/use-cases/cart/GetCartDetail.js";
 import { UpsertCartItem } from "../application/use-cases/cart/UpsertCartItem.js";
 import { RemoveCartItem } from "../application/use-cases/cart/RemoveCartItem.js";
+import { ApplyCartVoucher } from "../application/use-cases/cart/ApplyCartVoucher.js";
+import { RemoveCartVoucher } from "../application/use-cases/cart/RemoveCartVoucher.js";
 
 import { CreateOrderFromCart } from "../application/use-cases/order/CreateOrderFromCart.js";
+import { ListPublicVouchers } from "../application/use-cases/voucher/ListPublicVouchers.js";
 
 import { ChangeOrderStatus } from "../application/use-cases/admin/ChangeOrderStatus.js";
 
@@ -113,6 +119,10 @@ import { AdjustInventoryItem } from "../application/use-cases/admin/inventory/Ad
 import { ListInventoryAlerts } from "../application/use-cases/admin/inventory/ListInventoryAlerts.js";
 import { GetMenuItemRecipe } from "../application/use-cases/admin/menu/GetMenuItemRecipe.js";
 import { SaveMenuItemRecipe } from "../application/use-cases/admin/menu/SaveMenuItemRecipe.js";
+import { ListBranchVouchers } from "../application/use-cases/admin/voucher/ListBranchVouchers.js";
+import { CreateVoucher } from "../application/use-cases/admin/voucher/CreateVoucher.js";
+import { UpdateVoucher } from "../application/use-cases/admin/voucher/UpdateVoucher.js";
+import { SetVoucherActive } from "../application/use-cases/admin/voucher/SetVoucherActive.js";
 // ===== 7 roles: ops/kitchen/cashier list endpoints (branch-scoped) =====
 import { ListBranchTables } from "../application/use-cases/admin/ops/ListBranchTables.js";
 import { ListKitchenQueue } from "../application/use-cases/admin/kitchen/ListKitchenQueue.js";
@@ -147,6 +157,8 @@ import { AdminObservabilityController } from "../interface-adapters/http/control
 import { RealtimeSnapshotController } from "../interface-adapters/http/controllers/RealtimeSnapshotController.js";
 import { MenuController } from "../interface-adapters/http/controllers/MenuController.js";
 import { ClientAuthController } from "../interface-adapters/http/controllers/ClientAuthController.js";
+import { VoucherController } from "../interface-adapters/http/controllers/VoucherController.js";
+import { AdminVoucherController } from "../interface-adapters/http/controllers/AdminVoucherController.js";
 
 // Realtime replay store (HTTP snapshot/resync uses Redis-backed store for consistency with sockets)
 import { RedisRoomEventStore } from "../infrastructure/realtime/RoomEventStore.js";
@@ -182,17 +194,28 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
   const stockHold = redis && env.REDIS_STOCK_HOLDS_ENABLED
     ? new RedisStockHoldService(redis, stockRepo, { holdTtlSeconds: env.REDIS_STOCK_HOLD_TTL_SECONDS })
     : new NoopStockHoldService();
+  const menuProjectionSync = redis
+    ? new RedisMenuStockProjectionSync(redis, {
+        stockHoldsEnabled: Boolean(env.REDIS_STOCK_HOLDS_ENABLED),
+        menuCacheEnabled: Boolean(env.MENU_CACHE_ENABLED),
+        menuVersionKey: "menu:ver",
+      })
+    : null;
 
   // ===== Menu catalog (cached optional) =====
   const menuCatalogBase = new MySQLMenuCatalogRepository();
-  const menuCatalogRepo = redis && env.MENU_CACHE_ENABLED
+  const menuCatalogCachedRepo = redis && env.MENU_CACHE_ENABLED
     ? new CachedMenuCatalogRepository(menuCatalogBase, redis, { ttlSeconds: env.MENU_CACHE_TTL_SECONDS })
     : menuCatalogBase;
+  const menuCatalogRepo = redis && env.REDIS_STOCK_HOLDS_ENABLED
+    ? new RedisAvailableMenuCatalogRepository(menuCatalogCachedRepo, redis)
+    : menuCatalogCachedRepo;
 
   // ===== Cart =====
   const cartRepo = new MySQLCartRepository();
   const cartItemRepo = new MySQLCartItemRepository();
   const menuItemRepo = new MySQLMenuItemRepository();
+  const voucherRepo = new MySQLVoucherRepository();
 
   // CloseTableSession cần cartRepo/stockHold => khởi tạo ở đây (CHỈ 1 LẦN)
   const closeTableSession = new CloseTableSession(
@@ -208,7 +231,7 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
   const tableSessionController = new TableSessionController(openTableSession, closeTableSession);
 
   const getOrCreateCart = new GetOrCreateCartForSession(sessionRepo, cartRepo);
-  const getCartDetail = new GetCartDetail(cartRepo, cartItemRepo);
+  const getCartDetail = new GetCartDetail(cartRepo, cartItemRepo, voucherRepo);
 
   const upsertCartItem = new UpsertCartItem(
     cartRepo,
@@ -227,13 +250,36 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
     eventBus,
   );
 
-  const cartController = new CartController(getOrCreateCart, getCartDetail, upsertCartItem, removeCartItem);
+  const applyCartVoucher = new ApplyCartVoucher(
+    cartRepo,
+    cartItemRepo,
+    voucherRepo,
+    sessionRepo,
+    eventBus,
+  );
+  const removeCartVoucher = new RemoveCartVoucher(
+    cartRepo,
+    voucherRepo,
+    sessionRepo,
+    eventBus,
+  );
+
+  const cartController = new CartController(
+    getOrCreateCart,
+    getCartDetail,
+    upsertCartItem,
+    removeCartItem,
+    applyCartVoucher,
+    removeCartVoucher,
+  );
+  const listPublicVouchers = new ListPublicVouchers(cartRepo, cartItemRepo, voucherRepo);
+  const voucherController = new VoucherController(listPublicVouchers);
 
   // ===== Orders =====
   const orderRepo = new MySQLOrderRepository();
   const orderSnapshotRepo = new MySQLOrderSnapshotRepository();
   const orderCodeGen = new OrderCodeGenerator();
-  const checkoutSvc = new MySQLOrderCheckoutService(stockRepo);
+  const checkoutSvc = new MySQLOrderCheckoutService(stockRepo, voucherRepo);
 
   const createOrderFromCart = new CreateOrderFromCart(
     cartRepo,
@@ -244,6 +290,13 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
     sessionRepo,
     stockHold,
     eventBus,
+    {
+      syncMenuProjection: menuProjectionSync
+        ? async ({ branchId, itemIds }) => {
+            await menuProjectionSync.syncItems({ branchId, itemIds });
+          }
+        : null,
+    },
   );
 
   const orderController = new OrderController(createOrderFromCart, orderRepo);
@@ -268,7 +321,17 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
 
   // ===== Admin orders =====
   const adminOrderRepo = new MySQLAdminOrderRepository();
-  const changeOrderStatus = new ChangeOrderStatus(adminOrderRepo, eventBus);
+  const changeOrderStatus = new ChangeOrderStatus(
+    adminOrderRepo,
+    eventBus,
+    {
+      syncMenuProjection: menuProjectionSync
+        ? async ({ branchId, itemIds }) => {
+            await menuProjectionSync.syncItems({ branchId, itemIds });
+          }
+        : null,
+    },
+  );
   const adminOrderController = new AdminOrderController(changeOrderStatus);
 
   // ===== Payments =====
@@ -414,7 +477,10 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
 
   // ===== Inventory operations (M2) =====
   const inventoryRepo = new MySQLInventoryRepository();
-  const listBranchStock = new ListBranchStock(inventoryRepo);
+  const listBranchStock = new ListBranchStock(inventoryRepo, {
+    redis: redis ?? null,
+    stockHoldsEnabled: Boolean(redis && env.REDIS_STOCK_HOLDS_ENABLED),
+  });
 
   const adjustBranchStock = new AdjustBranchStock(
     inventoryRepo,
@@ -490,6 +556,18 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
     getMenuItemRecipe,
     saveMenuItemRecipe,
 
+    auditRepo,
+  );
+
+  const listBranchVouchers = new ListBranchVouchers(voucherRepo);
+  const createVoucher = new CreateVoucher(voucherRepo);
+  const updateVoucher = new UpdateVoucher(voucherRepo);
+  const setVoucherActive = new SetVoucherActive(voucherRepo);
+  const adminVoucherController = new AdminVoucherController(
+    listBranchVouchers,
+    createVoucher,
+    updateVoucher,
+    setVoucherActive,
     auditRepo,
   );
 
@@ -595,5 +673,7 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
     menuController,
     clientAuthController,
     adminMenuController,
+    voucherController,
+    adminVoucherController,
   };
 }

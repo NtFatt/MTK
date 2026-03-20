@@ -1,28 +1,27 @@
-# FINAL_HANDOVER.md — Hadilao Online PR21
+# FINAL_HANDOVER.md -- Hadilao Online After PR25 Rescue
 
 ## 1) Executive summary
 
-Hadilao Online là monorepo full-stack cho hệ thống vận hành nhà hàng/lẩu theo mô hình nhiều vai trò và nhiều luồng thao tác đồng thời. Hệ thống hiện không còn ở trạng thái “chỉ chạy được” mà đã có:
+Hadilao Online hien la monorepo full-stack cho customer ordering + internal restaurant operations voi:
 
-- customer ordering flow,
-- internal operational flow,
-- role-based authorization,
-- branch isolation,
-- realtime foundation,
-- smoke verification tương đối mạnh.
+- customer session/menu/cart/checkout/order/payment flow
+- internal ops tables/session/order flow
+- kitchen queue + cashier flow
+- inventory / hold / sellable stock flow
+- reservations
+- branch isolation + RBAC
+- realtime foundation + replay/audit support
 
-Trạng thái sau PR20 và được đóng gói ở PR21 là: **feature scope chính đã gần hoàn tất; phần còn lại là release-readiness, handover-readiness, demo-safety, và repo discipline**.
+Dieu quan trong nhat cua dot hardening nay:
 
-Mục tiêu của PR21 không phải làm thêm module lớn. Mục tiêu là biến repo này thành một deliverable có thể:
-
-- clone về chạy được,
-- demo được theo script,
-- đọc tài liệu là hiểu kiến trúc,
-- đánh giá được phần nào done, phần nào deferred.
+- ingredient inventory commit point da duoc dua ve checkout/order creation
+- `PREPARING` khong con la diem tru kho nghiep vu chinh
+- visibility giua customer/internal da bot "moi noi mot so"
+- smoke/negative verification da duoc siet lai
 
 ---
 
-## 2) Architecture overview
+## 2) Architecture summary
 
 ### Frontend
 - React
@@ -39,170 +38,125 @@ Mục tiêu của PR21 không phải làm thêm module lớn. Mục tiêu là bi
 - MySQL 8
 - Redis
 - Socket.IO
-- layered / clean-architecture style separation giữa application, domain, infrastructure, interface adapters
+- layered / clean-architecture style separation
 
 ### Shared contract
 - `packages/contracts`
-- shared typing / query keys / contract discipline giữa FE và BE
-
-### Runtime characteristics
-- API contract locked ở `/api/v1/*`
-- realtime path mặc định `/socket.io`
-- branch-scoped internal flows
-- Redis-backed features cho session store / stock holds / replay / rate limit tùy env
+- shared query keys / contract helpers / error handling conventions
 
 ---
 
-## 3) Role coverage
+## 3) Current business source of truth
 
-Hệ thống đang bao phủ các persona chính:
+Tom tat:
 
-- PUBLIC
-- CLIENT
-- ADMIN
-- BRANCH_MANAGER
-- STAFF
-- KITCHEN
-- CASHIER
+1. Cart `+ / -`
+   - tao/release hold tam thoi trong Redis
+   - chua phai ingredient consumption that
 
-Các role này không chỉ là label trong UI. Chúng gắn với permission sets và route/action guards tương ứng ở FE và BE.
+2. Create order from cart
+   - tao order + order items
+   - tru menu sellable stock
+   - consume hold
+   - tru ingredient inventory ngay
+   - ghi `inventory_consumptions`
+   - recompute/sync sellable stock
+
+3. `PREPARING`
+   - chi con la state nghiep vu
+   - co legacy-safe guard de tranh double deduction
+
+4. Cancel o `NEW/RECEIVED`
+   - restock ingredient inventory
+   - update projection/sellable stock
+
+5. Payment/cashier
+   - settle cash / mock success duoc harden de duplicate request khong tao effect lap
+
+Doc chi tiet o:
+- [SOURCE_OF_TRUTH.md](./SOURCE_OF_TRUTH.md)
 
 ---
 
-## 4) Implemented modules
+## 4) What is implemented and usable
 
-### 4.1 Customer / public
-- customer QR / session bootstrap
-- menu browsing
+### Customer/public
+- QR/session bootstrap
+- menu
 - cart
 - checkout
+- payment page / return page
 - order status
-- payment page / payment return page
-- public reservation API / availability API
 
-### 4.2 Internal operations
-- tables page
-- internal POS / order-from-cart related flow
-- session open/close related ops
-- branch-scoped navigation
-
-### 4.3 Kitchen
+### Internal
+- admin auth
+- tables / ops session flow
 - kitchen queue
-- status progression cho bếp trong phạm vi hợp lệ
+- cashier unpaid / settle cash
+- inventory stock / holds / adjustments
+- menu management / recipes
+- reservations
+- observability / realtime admin
 
-### 4.4 Cashier
-- unpaid orders list
-- settle cash flow
-- idempotency-sensitive payment action
-
-### 4.5 Inventory
-- stock read
-- holds read
-- adjustments history / adjustment related flow
-- drift / rehydrate related backend foundations
-
-### 4.6 Reservations
-- public reservation create / availability
-- internal reservation listing
-- confirm
-- check-in
-
-### 4.7 Maintenance
-- maintenance run
-- sync table status
-- reset dev state
-- dev stock tools
-
-### 4.8 Observability
-- metrics endpoint
-- local observability docs/assets
-- FE admin observability surface
-
-### 4.9 Realtime admin
-- realtime audit / replay related backend support
-- FE realtime admin surface
-- replay / sequence recovery foundations
+### Runtime guarantees with real value
+- branch isolation duoc kiem o backend, khong chi hide UI
+- duplicate settle/payment retry co idempotency cover
+- oversell co deterministic smoke
+- negative pack cover 401/403/404/409/429 + duplicate cases
 
 ---
 
-## 5) Technical guarantees that matter
+## 5) Verification discipline
 
-### 5.1 Contract lock
-FE phải gọi đúng `/api/v1/*`. Legacy `/api/*` không phải đường dựa vào để “chạy tạm”.
+Repo hien co the duoc verify theo 2 tang:
 
-### 5.2 Branch isolation
-Internal operations phải đi theo branch scope. Negative case kiểu branch mismatch là một phần chất lượng bắt buộc, không phải phụ kiện.
+### Static / compile
+- `pnpm verify:static`
 
-### 5.3 Idempotency on critical flows
-Các operation như cashier settle cash / payment retry không được xử lý kiểu “bấm nhiều lần thì tạo nhiều effect”.
+### Runtime
+- `pnpm verify:smokes`
 
-### 5.4 Smoke verification
-Repo có smoke packs để không chỉ kiểm happy path mà còn kiểm một phần negative path, realtime sanity, oversell protection.
-
-### 5.5 Deterministic oversell prevention
-Có dedicated smoke cho oversell. Đây là một proof point kỹ thuật quan trọng vì nó đụng tới stock hold / concurrency behavior.
-
-### 5.6 Realtime foundation
-Realtime không chỉ là “có socket”. Repo có foundation cho room, replay, seq recovery, invalidation wiring.
+Smoke packs khong chi kiem happy path ma con kiem:
+- branch mismatch
+- forbidden actions
+- duplicate settle / duplicate payment success
+- oversell
+- realtime replay/join sanity
 
 ---
 
-## 6) What is intentionally deferred
+## 6) Honest limitations
 
-Các điểm sau phải được nói thật, không tô vẽ:
+Nhung diem sau van phai noi that:
 
-- public/customer reservation UI chưa phải luồng FE polished hoàn chỉnh
-- một số error copy / UX copy vẫn còn mang tính kỹ thuật
-- repo này ở mức local-demo / handover-ready, chưa phải production deployment package
-- chưa có CI/CD production-grade multi-environment pipeline đầy đủ
-- chưa nên claim “enterprise production system” chỉ vì đã có nhiều role và nhiều module
-
----
-
-## 7) Risks still remaining
-
-### 7.1 Local environment dependency
-Repo vẫn phụ thuộc vào việc người chạy có MySQL / Redis local đúng cấu hình.
-
-### 7.2 Demo data drift
-Nếu không reset trước demo, state cũ có thể làm reservation/session/table status bị bẩn.
-
-### 7.3 Env-gated behavior
-Metrics, OTP dev mode, realtime adapter, maintenance jobs, OTEL... đều phụ thuộc env. Không thể giả định mọi màn đều bật trong mọi local machine.
-
-### 7.4 Realtime visibility
-Nếu event stream trong local quá “yên”, realtime admin page vẫn có thể đúng về wiring nhưng kém ấn tượng về mặt trình diễn.
+- Public customer stock updates chua phai public branch-wide realtime full-spec; van co polling fallback.
+- Branch 999 la branch demo/phuc vu branch isolation test; negative pack seed fixture order rieng thay vi checkout cross-branch that.
+- Public reservation FE chua phai luong polished closeout.
+- Repo van phu thuoc MySQL + Redis local de co trai nghiem day du.
 
 ---
 
-## 8) Suggested next improvements (optional, not PR21 requirement)
+## 7) Suggested next work
 
-Nếu còn muốn đi tiếp sau khi đóng PR21, hướng hợp lý là:
+Neu muon di tiep theo roadmap con lai, thu tu hop ly nhat la:
 
-1. public reservation FE polished flow  
-2. UX/error copy polishing  
-3. CI verification pipeline cho root / apps/api / apps/fe  
-4. packaging docs/screenshots tốt hơn cho handover  
-5. stronger seed / demo-data script cho nhiều scenario hơn  
-
-Những việc này là **scope expansion** hoặc **polish**, không còn là phần tối thiểu để gọi dự án đã hoàn thành đúng chuẩn capstone.
+1. public/internal realtime closure that su
+2. reservation/table lifecycle edge-case hardening
+3. payment/kitchen/order terminal-state hardening sau commit
+4. final docs + cleanup + route map / runbook discipline tiep tuc
 
 ---
 
-## 9) Final judgment
+## 8) Final judgment
 
-Hadilao Online hiện đã đủ mạnh để được đánh giá là một đồ án có cấu trúc, có kỷ luật contract, có role separation, có verification, và có phạm vi hệ thống thật.
+Repo hien tai khong con o trang thai "demo roi phat".  
+No da co:
 
-Điểm chưa đủ trước PR21 không phải là thiếu module lớn, mà là thiếu lớp đóng gói cuối:
+- business commit point dung hon
+- verification manh hon
+- route/action guard chat hon
+- handover trung thuc hon
 
-- docs,
-- runbook,
-- demo pack,
-- final status,
-- known-issues discipline.
+Nhung phai giu mot ket luan ky luat:
 
-Sau khi các file PR21 này được đưa vào repo và gate chính pass, repo có thể được xem là:
-
-- **professionally complete at capstone level**
-- **handover-safe**
-- **demo-safe nếu giữ reset discipline**
+> Day la mot local-demo / handover-safe deliverable da duoc harden rat nhieu sau PR25, nhung van khong nen overclaim thanh production-ready closeout toan phan.

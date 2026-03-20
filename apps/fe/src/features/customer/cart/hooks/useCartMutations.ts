@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAppMutation } from "../../../../shared/http/useAppMutation";
 import { qk } from "@hadilao/contracts";
 import { useCustomerSessionStore, selectBranchId } from "../../../../shared/customer/session/sessionStore";
+import { recoverInvalidCustomerSession } from "../../../../shared/customer/session/sessionRecovery";
 
 import {
   getOrCreateCart,
@@ -14,9 +15,10 @@ function cartQueryKey(sessionKey: string) {
   return qk.cart.bySessionKey(sessionKey);
 }
 
-export function useAddCartItem(sessionKey: string | null) {
+const MENU_VIEW_QUERY_PREFIX = ["menu", "view"] as const;
 
-const branchId = useCustomerSessionStore(selectBranchId);
+export function useAddCartItem(sessionKey: string | null) {
+  const branchId = useCustomerSessionStore(selectBranchId);
   return useAppMutation({
     mutationFn: async (payload: AddItemPayload) => {
       if (!sessionKey) throw new Error("No session");
@@ -38,13 +40,13 @@ const branchId = useCustomerSessionStore(selectBranchId);
 
       return true;
     },
-    invalidateKeys: sessionKey ? [[...cartQueryKey(sessionKey)]] : [],
+    invalidateKeys: sessionKey ? [[...cartQueryKey(sessionKey)], [...MENU_VIEW_QUERY_PREFIX]] : [],
   });
 }
 
 export function useUpdateCartItem(sessionKey: string | null) {
   const queryClient = useQueryClient();
-const branchId = useCustomerSessionStore(selectBranchId);
+  const branchId = useCustomerSessionStore(selectBranchId);
   return useAppMutation({
     mutationFn: async ({ itemId, qty }: { itemId: string | number; qty: number }) => {
       if (!sessionKey) throw new Error("No session");
@@ -60,7 +62,10 @@ const branchId = useCustomerSessionStore(selectBranchId);
       await upsertCartItem(cart.cartKey, { itemId, quantity: qty });
       return true;
     },
-    invalidateKeys: sessionKey ? [[...cartQueryKey(sessionKey)]] : [],
+    onError: (error) => {
+      recoverInvalidCustomerSession(error);
+    },
+    invalidateKeys: sessionKey ? [[...cartQueryKey(sessionKey)], [...MENU_VIEW_QUERY_PREFIX]] : [],
   });
 }
 
@@ -68,6 +73,9 @@ export function useRemoveCartItem(sessionKey: string | null) {
   return useAppMutation({
     mutationFn: async ({ cartKey, itemId }: { cartKey: string; itemId: string | number }) =>
       deleteCartItem(cartKey, itemId),
-    invalidateKeys: sessionKey ? [[...cartQueryKey(sessionKey)]] : [],
+    onError: (error) => {
+      recoverInvalidCustomerSession(error);
+    },
+    invalidateKeys: sessionKey ? [[...cartQueryKey(sessionKey)], [...MENU_VIEW_QUERY_PREFIX]] : [],
   });
 }

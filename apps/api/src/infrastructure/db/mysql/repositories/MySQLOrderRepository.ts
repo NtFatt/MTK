@@ -78,10 +78,17 @@ export class MySQLOrderRepository implements IOrderRepository {
   async findStatusByOrderCode(orderCode: string): Promise<{
     orderCode: string;
     orderStatus: OrderStatus;
+    subtotalAmount: number;
+    discountAmount: number;
+    totalAmount: number;
+    voucherCode: string | null;
+    voucherName: string | null;
+    voucherDiscountAmount: number;
     updatedAt: string;
   } | null> {
     const [rows]: any = await pool.query(
-      `SELECT order_code, order_status, updated_at
+      `SELECT order_code, order_status, subtotal_amount, discount_amount, total_amount,
+              voucher_code_snapshot, voucher_name_snapshot, voucher_discount_amount, updated_at
        FROM orders WHERE order_code = ? LIMIT 1`,
       [orderCode],
     );
@@ -91,6 +98,12 @@ export class MySQLOrderRepository implements IOrderRepository {
     return {
       orderCode: r.order_code,
       orderStatus: r.order_status as OrderStatus,
+      subtotalAmount: Number(r.subtotal_amount ?? 0),
+      discountAmount: Number(r.discount_amount ?? 0),
+      totalAmount: Number(r.total_amount ?? 0),
+      voucherCode: r.voucher_code_snapshot ? String(r.voucher_code_snapshot) : null,
+      voucherName: r.voucher_name_snapshot ? String(r.voucher_name_snapshot) : null,
+      voucherDiscountAmount: Number(r.voucher_discount_amount ?? 0),
       updatedAt: new Date(r.updated_at).toISOString(),
     };
   }
@@ -100,10 +113,17 @@ export class MySQLOrderRepository implements IOrderRepository {
   async findStatusByOrderCodeForBranch(orderCode: string, branchId: string): Promise<{
     orderCode: string;
     orderStatus: OrderStatus;
+    subtotalAmount: number;
+    discountAmount: number;
+    totalAmount: number;
+    voucherCode: string | null;
+    voucherName: string | null;
+    voucherDiscountAmount: number;
     updatedAt: string;
   } | null> {
     const [rows]: any = await pool.query(
-      `SELECT order_code, order_status, updated_at
+      `SELECT order_code, order_status, subtotal_amount, discount_amount, total_amount,
+              voucher_code_snapshot, voucher_name_snapshot, voucher_discount_amount, updated_at
        FROM orders
        WHERE order_code = ? AND branch_id = ?
        LIMIT 1`,
@@ -115,6 +135,12 @@ export class MySQLOrderRepository implements IOrderRepository {
     return {
       orderCode: r.order_code,
       orderStatus: r.order_status as OrderStatus,
+      subtotalAmount: Number(r.subtotal_amount ?? 0),
+      discountAmount: Number(r.discount_amount ?? 0),
+      totalAmount: Number(r.total_amount ?? 0),
+      voucherCode: r.voucher_code_snapshot ? String(r.voucher_code_snapshot) : null,
+      voucherName: r.voucher_name_snapshot ? String(r.voucher_name_snapshot) : null,
+      voucherDiscountAmount: Number(r.voucher_discount_amount ?? 0),
       updatedAt: new Date(r.updated_at).toISOString(),
     };
   }

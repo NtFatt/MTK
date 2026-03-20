@@ -23,7 +23,9 @@ import { createAdminOpsRouter } from "./admin-ops.route.js";
 import { createAdminKitchenRouter } from "./admin-kitchen.route.js";
 import { createAdminCashierRouter } from "./admin-cashier.route.js";
 import { createAdminMenuRouter } from "./admin-menu.route.js";
+import { createAdminVoucherRouter } from "./admin-voucher.route.js";
 import { createMenuRouter } from "./menu.route.js";
+import { createVoucherRouter } from "./voucher.route.js";
 import { createClientAuthRouter } from "./client-auth.route.js";
 import { createRealtimeRouter } from "./realtime.route.js";
 
@@ -63,6 +65,8 @@ export function registerRoutes(
     realtimeSnapshotController,
     menuController,
     clientAuthController,
+    voucherController,
+    adminVoucherController,
   } = buildControllers(diDeps);
 
   const v1 = "/api/v1";
@@ -74,17 +78,19 @@ export function registerRoutes(
   app.use(`${v1}/tables`, createTableRouter(tableController));
   app.use(`${v1}/sessions`, createTableSessionRouter(tableSessionController));
   app.use(`${v1}/carts`, createCartRouter(cartController));
-  app.use(`${v1}/orders`, createOrderRouter(orderController));
+  app.use(`${v1}/orders`, createOrderRouter(orderController, routerDeps));
   app.use(`${v1}/payments`, createPaymentRouter(paymentController));
   app.use(`${v1}/reservations`, createReservationRouter(reservationController));
   app.use(`${v1}/menu`, createMenuRouter(menuController));
+  app.use(`${v1}/vouchers`, createVoucherRouter(voucherController));
   app.use(`${v1}/realtime`, createRealtimeRouter(realtimeSnapshotController));
 
   app.use(`${v1}/admin`, createAdminAuthRouter(adminAuthController, routerDeps));
   app.use(`${v1}/admin`, createAdminMenuRouter(adminMenuController));
+  app.use(`${v1}/admin`, createAdminVoucherRouter(adminVoucherController));
   app.use(`${v1}/admin`, createAdminStaffRouter(adminStaffController));
   app.use(`${v1}/admin`, createAdminInventoryRouter(adminInventoryController));
-  app.use(`${v1}/admin`, createAdminOpsRouter(adminOpsController));
+  app.use(`${v1}/admin`, createAdminOpsRouter(adminOpsController, routerDeps));
   app.use(`${v1}/admin`, createAdminKitchenRouter(adminKitchenController));
   app.use(`${v1}/admin`, createAdminCashierRouter(adminCashierController, routerDeps));
   app.use(`${v1}/admin`, createAdminOrderRouter(adminOrderController, { legacyEnabled: env.LEGACY_API_ENABLED }));
@@ -109,17 +115,19 @@ export function registerRoutes(
     app.use("/api/tables", legacyDeprecated, createTableRouter(tableController));
     app.use("/api/sessions", legacyDeprecated, createTableSessionRouter(tableSessionController));
     app.use("/api/carts", legacyDeprecated, createCartRouter(cartController));
-    app.use("/api/orders", legacyDeprecated, createOrderRouter(orderController));
+    app.use("/api/orders", legacyDeprecated, createOrderRouter(orderController, routerDeps));
     app.use("/api/payments", legacyDeprecated, createPaymentRouter(paymentController));
     app.use("/api/reservations", legacyDeprecated, createReservationRouter(reservationController));
     app.use("/api/menu", legacyDeprecated, createMenuRouter(menuController));
+    app.use("/api/vouchers", legacyDeprecated, createVoucherRouter(voucherController));
     app.use("/api/realtime", legacyDeprecated, createRealtimeRouter(realtimeSnapshotController));
 
     app.use("/api/admin", legacyDeprecated, createAdminAuthRouter(adminAuthController, routerDeps));
     app.use("/api/admin", legacyDeprecated, createAdminMenuRouter(adminMenuController));
+    app.use("/api/admin", legacyDeprecated, createAdminVoucherRouter(adminVoucherController));
     app.use("/api/admin", legacyDeprecated, createAdminStaffRouter(adminStaffController));
     app.use("/api/admin", legacyDeprecated, createAdminInventoryRouter(adminInventoryController));
-    app.use("/api/admin", legacyDeprecated, createAdminOpsRouter(adminOpsController));
+    app.use("/api/admin", legacyDeprecated, createAdminOpsRouter(adminOpsController, routerDeps));
     app.use("/api/admin", legacyDeprecated, createAdminKitchenRouter(adminKitchenController));
     app.use("/api/admin", legacyDeprecated, createAdminCashierRouter(adminCashierController, routerDeps));
     app.use("/api/admin", legacyDeprecated, createAdminOrderRouter(adminOrderController, { legacyEnabled: true }));

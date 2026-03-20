@@ -17,6 +17,12 @@ type OrderDto = {
   orderCode: string;
   status?: string;
   orderStatus?: string;
+  subtotalAmount?: number;
+  discountAmount?: number;
+  totalAmount?: number;
+  voucherCode?: string | null;
+  voucherName?: string | null;
+  voucherDiscountAmount?: number;
   updatedAt?: string;
 };
 
@@ -24,6 +30,12 @@ function toOrder(dto: OrderDto): Order {
   return {
     orderCode: dto.orderCode,
     status: dto.status ?? dto.orderStatus ?? "UNKNOWN",
+    subtotal: dto.subtotalAmount,
+    discount: dto.discountAmount,
+    total: dto.totalAmount,
+    voucherCode: dto.voucherCode ?? null,
+    voucherName: dto.voucherName ?? null,
+    voucherDiscountAmount: dto.voucherDiscountAmount ?? 0,
     updatedAt: dto.updatedAt,
   };
 }

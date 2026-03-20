@@ -10,5 +10,6 @@ export class Cart {
     public readonly branchId?: string | null,
     public readonly sessionId?: string | null,
     public readonly clientId?: string | null,
+    public readonly appliedVoucherId?: string | null,
   ) {}
 }

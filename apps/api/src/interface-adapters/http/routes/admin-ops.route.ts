@@ -1,12 +1,25 @@
 import { Router } from "express";
 import type { AdminOpsController } from "../controllers/AdminOpsController.js";
+import { withIdempotency } from "../middlewares/idempotency.js";
 import { requireInternal } from "../middlewares/requireInternal.js";
 import { requirePermission } from "../middlewares/requirePermission.js";
 import { asyncHandler } from "./asyncHandler.js";
+import type { RedisClient } from "../../../infrastructure/redis/redisClient.js";
 
-export function createAdminOpsRouter(ctrl: AdminOpsController) {
+export function createAdminOpsRouter(
+  ctrl: AdminOpsController,
+  deps?: { redis?: RedisClient },
+) {
   const r = Router();
   r.use(requireInternal);
+
+  const createOrderFromCartHandler = deps?.redis
+    ? withIdempotency({
+        endpoint: "admin-ops-orders-from-cart",
+        redis: deps.redis,
+        paramName: "cartKey",
+      })(ctrl.createOrderFromCart)
+    : ctrl.createOrderFromCart;
 
   // STAFF/BRANCH_MANAGER/ADMIN - branch-scoped by token for STAFF actors.
   r.get("/ops/tables", requirePermission("ops.tables.read"), asyncHandler(ctrl.listTables));
@@ -41,7 +54,7 @@ export function createAdminOpsRouter(ctrl: AdminOpsController) {
   r.post(
     "/ops/orders/from-cart/:cartKey",
     requirePermission("ops.orders.create"),
-    asyncHandler(ctrl.createOrderFromCart),
+    asyncHandler(createOrderFromCartHandler),
   );
   r.get(
     "/ops/orders/:orderCode/status",

@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import type { Express } from "express";
@@ -22,7 +22,13 @@ function uniqSorted(endpoints: Endpoint[]): Endpoint[] {
 function normalizePath(p: string): string {
   if (!p) return "/";
   // Avoid double slashes except protocol (not applicable here)
-  return p.replace(/\/+/g, "/").replace(/\/$/, "") || "/";
+  return (
+    p
+      .replace(/\/\?\//g, "/")
+      .replace(/\/\?(?=\/|$)/g, "")
+      .replace(/\/+/g, "/")
+      .replace(/\/$/, "") || "/"
+  );
 }
 
 function regexpToPath(regexp: any): string {
@@ -106,10 +112,19 @@ function main() {
 
   const md = `# Hadilao API Route Map\n\nGenerated at: ${now}\n\n## Canonical routes (LEGACY_API_ENABLED=false)\n\n${toMarkdownTable(canonOff)}\n\n## Canonical additions when LEGACY_API_ENABLED=true\n\n> These routes are registered under **/api/v1/** only when the legacy flag is enabled (migration-only).\n\n${toMarkdownTable(addedWhenLegacyOn)}\n\n## Legacy mirror (/api/*) when LEGACY_API_ENABLED=true\n\n> When **LEGACY_API_ENABLED=false**, all **/api/** routes must return **404** (contract lock).\n\n${toMarkdownTable(legacyOn)}\n`;
 
-  const outPath = path.resolve(process.cwd(), "ROUTE_MAP.md");
-  writeFileSync(outPath, md, { encoding: "utf-8" });
+  const outPaths = [
+    path.resolve(process.cwd(), "ROUTE_MAP.md"),
+    path.resolve(process.cwd(), "..", "..", "docs", "API_ROUTE_MAP.generated.md"),
+  ];
+
+  for (const outPath of outPaths) {
+    mkdirSync(path.dirname(outPath), { recursive: true });
+    writeFileSync(outPath, md, { encoding: "utf-8" });
+  }
   // eslint-disable-next-line no-console
-  console.log(`✅ Wrote ${outPath} (canonical=${canonOff.length}, legacyOn=${legacyOn.length})`);
+  console.log(
+    `✅ Wrote ${outPaths.join(", ")} (canonical=${canonOff.length}, legacyOn=${legacyOn.length})`,
+  );
 }
 
 main();

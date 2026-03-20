@@ -19,6 +19,7 @@ import { adjustInventoryStock } from "../services/inventoryApi";
 import { useRealtimeRoom } from "../../../../shared/realtime/useRealtimeRoom";
 
 type AdjustMode = "RESTOCK" | "DEDUCT" | "SET";
+type StockFilter = "all" | "available" | "empty" | "hold";
 
 type AdjustSuccessState = {
   itemId: string;
@@ -42,6 +43,16 @@ function isAdminRole(role: unknown): boolean {
   return String(role ?? "").toUpperCase() === "ADMIN";
 }
 
+function normalizeText(value: unknown): string {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function formatStockSourceLabel(source: unknown): string {
+  return String(source ?? "").toLowerCase() === "redis"
+    ? "Redis hold + MySQL"
+    : "MySQL only";
+}
+
 export function InternalInventoryStockPage() {
   const session = useStore(authStore, (s) => s.session);
   const { branchId } = useParams<{ branchId: string }>();
@@ -60,12 +71,12 @@ export function InternalInventoryStockPage() {
 
   const canRead = useMemo(
     () => (session?.permissions ?? []).includes("inventory.read"),
-    [session?.permissions]
+    [session?.permissions],
   );
 
   const canAdjust = useMemo(
     () => (session?.permissions ?? []).includes("inventory.adjust"),
-    [session?.permissions]
+    [session?.permissions],
   );
 
   const enabled =
@@ -86,36 +97,99 @@ export function InternalInventoryStockPage() {
   }, [enabled, refetch]);
 
   const [q, setQ] = useState("");
+  const [stockFilter, setStockFilter] = useState<StockFilter>("all");
+  const [adjustSearch, setAdjustSearch] = useState("");
   const [itemId, setItemId] = useState("");
   const [mode, setMode] = useState<AdjustMode>("RESTOCK");
   const [quantity, setQuantity] = useState<number>(1);
   const [success, setSuccess] = useState<AdjustSuccessState | null>(null);
   const [lastAdjustedItemId, setLastAdjustedItemId] = useState<string | null>(null);
+  const rawList = useMemo(() => data ?? [], [data]);
 
   const list = useMemo(() => {
-    const raw = data ?? [];
-    const qq = q.trim().toLowerCase();
+    const qq = normalizeText(q);
 
-    if (!qq) return raw;
+    return rawList.filter((r) => {
+      const avail = Number(r.available ?? 0);
+      const hold = Number(r.onHold ?? 0);
 
-    return raw.filter((r) => {
-      return (
-        String(r.itemId ?? "").toLowerCase().includes(qq) ||
-        String(r.itemName ?? "").toLowerCase().includes(qq)
-      );
+      const matchKeyword =
+        !qq ||
+        normalizeText(r.itemId).includes(qq) ||
+        normalizeText(r.itemName).includes(qq);
+
+      if (!matchKeyword) return false;
+
+      switch (stockFilter) {
+        case "available":
+          return avail > 0;
+        case "empty":
+          return avail <= 0;
+        case "hold":
+          return hold > 0;
+        case "all":
+        default:
+          return true;
+      }
     });
-  }, [data, q]);
+  }, [rawList, q, stockFilter]);
+  const stockSummary = useMemo(() => {
+    let available = 0;
+    let empty = 0;
+    let hold = 0;
 
-  const selectedItemName = useMemo(() => {
-    const found = (data ?? []).find((r) => String(r.itemId ?? "") === itemId);
-    return found?.itemName ?? undefined;
-  }, [data, itemId]);
+    for (const r of rawList) {
+      const avail = Number(r.available ?? 0);
+      const onHold = Number(r.onHold ?? 0);
+
+      if (avail > 0) {
+        available += 1;
+      } else {
+        empty += 1;
+      }
+
+      if (onHold > 0) {
+        hold += 1;
+      }
+    }
+
+    return {
+      total: rawList.length,
+      available,
+      empty,
+      hold,
+    };
+  }, [rawList]);
+
+  const adjustCandidates = useMemo(() => {
+    const qq = normalizeText(adjustSearch);
+    if (!qq) return rawList.slice(0, 200);
+
+    return rawList
+      .filter((r) => {
+        return (
+          normalizeText(r.itemId).includes(qq) ||
+          normalizeText(r.itemName).includes(qq)
+        );
+      })
+      .slice(0, 200);
+  }, [rawList, adjustSearch]);
+
+  const selectedStockItem = useMemo(() => {
+    return rawList.find((r) => String(r.itemId ?? "") === itemId) ?? null;
+  }, [rawList, itemId]);
+
+  const selectedItemName = selectedStockItem?.itemName ?? undefined;
+  const selectedItemDbQty = Number(selectedStockItem?.dbQty ?? selectedStockItem?.available ?? 0);
+  const selectedItemAvailable = Number(selectedStockItem?.available ?? 0);
+  const selectedItemOnHold = Number(selectedStockItem?.onHold ?? 0);
 
   const adjustMut = useAppMutation<AdjustMutationResult, any, void>({
     invalidateKeys: [
       qk.inventory.stock({ branchId: bid }) as unknown as unknown[],
       qk.inventory.adjustments({ branchId: bid }) as unknown as unknown[],
-    ], mutationFn: async () => {
+    ],
+    mutationFn: async () => {
       const iid = itemId.trim();
       const qty = Number(quantity);
 
@@ -154,6 +228,17 @@ export function InternalInventoryStockPage() {
       void refetch();
     },
   });
+
+  function handlePickItem(nextItemId: string) {
+    const nextId = String(nextItemId ?? "").trim();
+    const picked = rawList.find((r) => String(r.itemId ?? "") === nextId) ?? null;
+
+    setItemId(nextId);
+    setAdjustSearch(
+      picked ? `${picked.itemId} — ${picked.itemName ?? ""}`.trim() : nextId,
+    );
+    setSuccess(null);
+  }
 
   if (shouldRedirectBranch) {
     return <Navigate to={`/i/${sessionBid}/inventory/stock`} replace />;
@@ -198,11 +283,7 @@ export function InternalInventoryStockPage() {
                       {new Date(success.atMs).toLocaleTimeString("vi-VN")}.
                     </span>
 
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => setSuccess(null)}
-                    >
+                    <Button type="button" variant="secondary" onClick={() => setSuccess(null)}>
                       Ẩn
                     </Button>
                   </AlertDescription>
@@ -218,23 +299,41 @@ export function InternalInventoryStockPage() {
                 }}
               >
                 <div className="space-y-2 md:col-span-2">
+                  <Label>Tìm item để adjust</Label>
+                  <Input
+                    value={adjustSearch}
+                    onChange={(e) => {
+                      setAdjustSearch(e.target.value);
+                      setSuccess(null);
+                    }}
+                    placeholder="Tìm theo itemId / tên nguyên liệu..."
+                    disabled={!enabled || !canAdjust}
+                  />
+                  <div className="text-xs text-muted-foreground">
+                    Gõ để lọc item. Bạn cũng có thể bấm trực tiếp vào card ở phần Stock bên dưới để chọn nhanh.
+                  </div>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
                   <Label>Item</Label>
                   <select
                     className="h-10 w-full rounded-md border bg-background px-3 text-sm"
                     value={itemId}
                     onChange={(e) => {
-                      setItemId(e.target.value);
-                      setSuccess(null);
+                      handlePickItem(e.target.value);
                     }}
                     disabled={!enabled || !canAdjust}
                   >
                     <option value="">— chọn item —</option>
-                    {(data ?? []).slice(0, 500).map((r) => (
+                    {adjustCandidates.map((r) => (
                       <option key={String(r.itemId)} value={String(r.itemId ?? "")}>
                         {String(r.itemId)} — {r.itemName ?? "?"}
                       </option>
                     ))}
                   </select>
+                  <div className="text-xs text-muted-foreground">
+                    Hiển thị tối đa {adjustCandidates.length} item phù hợp trong dropdown.
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -259,14 +358,41 @@ export function InternalInventoryStockPage() {
                   <Input
                     type="number"
                     min={1}
-                    value={quantity}
+                    value={Number.isFinite(quantity) ? quantity : 1}
                     onChange={(e) => {
-                      setQuantity(Number(e.target.value));
+                      const next = Number(e.target.value);
+                      setQuantity(Number.isFinite(next) ? next : 0);
                       setSuccess(null);
                     }}
                     disabled={!enabled || !canAdjust}
                   />
                 </div>
+
+                {selectedStockItem && (
+                  <div className="md:col-span-4 grid gap-3 md:grid-cols-4">
+                    <div className="rounded-lg border p-3 text-sm">
+                      <div className="text-xs uppercase text-muted-foreground">Item đang chọn</div>
+                      <div className="mt-1 font-medium">
+                        {selectedStockItem.itemId} — {selectedStockItem.itemName ?? "—"}
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border p-3 text-sm">
+                      <div className="text-xs uppercase text-muted-foreground">DB qty</div>
+                      <div className="mt-1 font-medium">{selectedItemDbQty}</div>
+                    </div>
+
+                    <div className="rounded-lg border p-3 text-sm">
+                      <div className="text-xs uppercase text-muted-foreground">Reserved</div>
+                      <div className="mt-1 font-medium">{selectedItemOnHold}</div>
+                    </div>
+
+                    <div className="rounded-lg border p-3 text-sm">
+                      <div className="text-xs uppercase text-muted-foreground">Available</div>
+                      <div className="mt-1 font-medium">{selectedItemAvailable}</div>
+                    </div>
+                  </div>
+                )}
 
                 {itemId && (
                   <div className="md:col-span-4 text-sm text-muted-foreground">
@@ -292,13 +418,28 @@ export function InternalInventoryStockPage() {
                   </div>
                 )}
 
-                <div className="md:col-span-4">
+                <div className="md:col-span-4 flex flex-wrap gap-2">
                   <Button
                     type="submit"
                     disabled={!enabled || !canAdjust || adjustMut.isPending || !itemId.trim()}
                   >
                     {adjustMut.isPending ? "Đang cập nhật..." : "Apply"}
                   </Button>
+
+                  {itemId && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => {
+                        setItemId("");
+                        setAdjustSearch("");
+                        setSuccess(null);
+                      }}
+                      disabled={adjustMut.isPending}
+                    >
+                      Bỏ chọn item
+                    </Button>
+                  )}
                 </div>
               </form>
             </CardContent>
@@ -306,14 +447,43 @@ export function InternalInventoryStockPage() {
         </section>
 
         <section className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold">Stock</h2>
-            <Input
-              className="max-w-sm"
-              placeholder="Search itemId / name..."
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Stock</h2>
+              <div className="text-sm text-muted-foreground">
+                {list.length} / {stockSummary.total} item
+              </div>
+              <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                <span>Tồn &gt; 0: {stockSummary.available}</span>
+                <span>Hết hàng: {stockSummary.empty}</span>
+                <span>Có reserve: {stockSummary.hold}</span>
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                <span className="font-mono">DB qty</span> là số trong MySQL,{" "}
+                <span className="font-mono">Reserved</span> là hold ở Redis,{" "}
+                <span className="font-mono">Available</span> là phần còn có thể bán.
+              </div>
+            </div>
+
+            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+              <select
+                className="h-10 w-full rounded-md border bg-background px-3 text-sm md:w-[220px]"
+                value={stockFilter}
+                onChange={(e) => setStockFilter(e.target.value as StockFilter)}
+              >
+                <option value="all">Tất cả</option>
+                <option value="available">Còn hàng</option>
+                <option value="empty">Hết hàng</option>
+                <option value="hold">Có reserve</option>
+              </select>
+
+              <Input
+                className="w-full md:w-[320px]"
+                placeholder="Search itemId / name..."
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+            </div>
           </div>
 
           {isLoading && (
@@ -337,37 +507,90 @@ export function InternalInventoryStockPage() {
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {list.map((r) => {
                 const rid = String(r.itemId);
+                const dbQty = Number(r.dbQty ?? r.available ?? 0);
                 const avail = r.available ?? 0;
                 const hold = r.onHold ?? 0;
                 const isRecentlyAdjusted = lastAdjustedItemId != null && lastAdjustedItemId === rid;
+                const isSelected = itemId === rid;
 
                 return (
                   <Card
                     key={rid}
-                    className={isRecentlyAdjusted ? "border-primary ring-1 ring-primary/30" : undefined}
+                    className={[
+                      isSelected ? "border-primary ring-1 ring-primary/40" : "",
+                      isRecentlyAdjusted ? "border-primary ring-1 ring-primary/30" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
                   >
-                    <CardHeader className="flex flex-row items-center justify-between">
+                    <CardHeader className="flex flex-row items-center justify-between gap-3">
                       <CardTitle className="text-base">{r.itemName ?? "—"}</CardTitle>
-                      <Badge variant={avail > 0 ? "secondary" : "default"}>
-                        ID: {rid}
-                      </Badge>
+                      <div className="flex gap-2">
+                        <Badge variant={avail > 0 ? "secondary" : "default"}>ID: {rid}</Badge>
+                        {isSelected && <Badge variant="outline">ĐANG CHỌN</Badge>}
+                      </div>
                     </CardHeader>
 
-                    <CardContent className="text-sm text-muted-foreground">
-                      <div>
-                        Available: <span className="font-mono text-foreground">{avail}</span>
+                    <CardContent className="space-y-3 text-sm text-muted-foreground">
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        <div className="rounded-md border bg-muted/20 px-3 py-2">
+                          <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                            DB qty
+                          </div>
+                          <div className="mt-1 font-mono text-base text-foreground">{dbQty}</div>
+                        </div>
+
+                        <div className="rounded-md border bg-muted/20 px-3 py-2">
+                          <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                            Reserved
+                          </div>
+                          <div className="mt-1 font-mono text-base text-foreground">{hold}</div>
+                        </div>
+
+                        <div className="rounded-md border bg-muted/20 px-3 py-2">
+                          <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                            Available
+                          </div>
+                          <div className="mt-1 font-mono text-base text-foreground">{avail}</div>
+                        </div>
                       </div>
-                      <div>
-                        OnHold: <span className="font-mono text-foreground">{hold}</span>
+
+                      <div className="text-xs">
+                        Source: <span className="font-medium text-foreground">{formatStockSourceLabel(r.stockSource)}</span>
                       </div>
+
                       {r.updatedAt && (
                         <div className="text-xs opacity-70">Updated: {r.updatedAt}</div>
                       )}
+
                       {isRecentlyAdjusted && (
-                        <div className="mt-2 text-xs font-medium text-foreground">
+                        <div className="text-xs font-medium text-foreground">
                           Vừa được điều chỉnh.
                         </div>
                       )}
+
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={isSelected ? "secondary" : "default"}
+                          onClick={() => handlePickItem(rid)}
+                          disabled={!canAdjust}
+                        >
+                          {isSelected ? "Đã chọn" : "Chọn để adjust"}
+                        </Button>
+
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setQ(rid);
+                          }}
+                        >
+                          Lọc theo item này
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 );
@@ -376,7 +599,7 @@ export function InternalInventoryStockPage() {
               {list.length === 0 && (
                 <Card className="md:col-span-2">
                   <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                    Không có dữ liệu stock.
+                    Không có dữ liệu stock phù hợp với search/filter hiện tại.
                   </CardContent>
                 </Card>
               )}

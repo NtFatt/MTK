@@ -14,7 +14,7 @@ const MAP: Record<string, ErrorMapping> = {
   INSUFFICIENT_INGREDIENT: {
     status: 409,
     code: "INSUFFICIENT_INGREDIENT",
-    message: "Không đủ nguyên liệu để bắt đầu chế biến",
+    message: "Không đủ nguyên liệu trong kho để xác nhận đơn hàng",
   },
   RECIPE_NOT_CONFIGURED: {
     status: 409,
@@ -29,7 +29,7 @@ const MAP: Record<string, ErrorMapping> = {
   DUPLICATE_CONSUMPTION: {
     status: 409,
     code: "DUPLICATE_CONSUMPTION",
-    message: "Thao tác bắt đầu chế biến đã được xử lý trước đó",
+    message: "Thao tác trừ kho nguyên liệu đã được xử lý trước đó",
   },
   ORDER_ITEMS_EMPTY: {
     status: 409,
@@ -74,6 +74,30 @@ const MAP: Record<string, ErrorMapping> = {
     status: 409,
     code: "STAFF_USERNAME_ALREADY_EXISTS",
     message: "Staff username already exists",
+  },
+  VOUCHER_NOT_FOUND: { status: 404, code: "VOUCHER_NOT_FOUND", message: "Voucher not found" },
+  VOUCHER_CODE_ALREADY_EXISTS: {
+    status: 409,
+    code: "VOUCHER_CODE_ALREADY_EXISTS",
+    message: "Voucher code already exists in this branch",
+  },
+  VOUCHER_INACTIVE: { status: 409, code: "VOUCHER_INACTIVE", message: "Voucher is inactive" },
+  VOUCHER_NOT_STARTED: { status: 409, code: "VOUCHER_NOT_STARTED", message: "Voucher is not active yet" },
+  VOUCHER_EXPIRED: { status: 409, code: "VOUCHER_EXPIRED", message: "Voucher has expired" },
+  VOUCHER_MIN_SUBTOTAL_NOT_REACHED: {
+    status: 409,
+    code: "VOUCHER_MIN_SUBTOTAL_NOT_REACHED",
+    message: "Cart subtotal does not meet voucher minimum",
+  },
+  VOUCHER_USAGE_LIMIT_REACHED: {
+    status: 409,
+    code: "VOUCHER_USAGE_LIMIT_REACHED",
+    message: "Voucher usage limit reached",
+  },
+  VOUCHER_SESSION_LIMIT_REACHED: {
+    status: 409,
+    code: "VOUCHER_SESSION_LIMIT_REACHED",
+    message: "Voucher session usage limit reached",
   },
 
   INVALID_TRANSITION: { status: 409, code: "INVALID_TRANSITION", message: "Invalid status transition" },
@@ -153,6 +177,16 @@ const MAP: Record<string, ErrorMapping> = {
   },
 
   INVALID_MODE: { status: 400, code: "INVALID_MODE", message: "mode is invalid" },
+  INVALID_VOUCHER_DATETIME: {
+    status: 400,
+    code: "INVALID_VOUCHER_DATETIME",
+    message: "Thời gian voucher không hợp lệ",
+  },
+  VOUCHER_TIME_RANGE_INVALID: {
+    status: 400,
+    code: "VOUCHER_TIME_RANGE_INVALID",
+    message: "Thời gian kết thúc phải sau thời gian bắt đầu",
+  },
 
   DEV_RESET_DISABLED: { status: 403, code: "DEV_RESET_DISABLED", message: "Dev reset is disabled" },
   CONFIRM_RESET_REQUIRED: { status: 400, code: "CONFIRM_RESET_REQUIRED", message: "confirm=RESET is required" },
@@ -161,6 +195,7 @@ const MAP: Record<string, ErrorMapping> = {
   ROOMS_REQUIRED: { status: 400, code: "ROOMS_REQUIRED", message: "rooms[] is required" },
   ROOM_NOT_SUPPORTED: { status: 400, code: "ROOM_NOT_SUPPORTED", message: "room type is not supported" },
   SESSION_KEY_REQUIRED: { status: 400, code: "SESSION_KEY_REQUIRED", message: "sessionKey is required" },
+  INVALID_VOUCHER_CODE: { status: 400, code: "INVALID_VOUCHER_CODE", message: "voucherCode is invalid" },
 };
 
 function toLowerCamelFromUpperSnake(s: string): string {
@@ -247,6 +282,3 @@ export function errorHandler(err: any, _req: Request, res: Response, _next: Next
     isDev ? { debug: { message: key || String(err), stack: err?.stack } } : undefined,
   );
 }
-
-
-

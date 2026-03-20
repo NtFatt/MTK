@@ -31,6 +31,11 @@ export type OrderSnapshot = {
     orderStatus: string;
     note: string | null;
     discountPercentApplied: number;
+    voucherCode: string | null;
+    voucherName: string | null;
+    voucherDiscountType: "PERCENT" | "FIXED_AMOUNT" | null;
+    voucherDiscountValue: number | null;
+    voucherDiscountAmount: number;
     subtotalAmount: number;
     discountAmount: number;
     deliveryFee: number;

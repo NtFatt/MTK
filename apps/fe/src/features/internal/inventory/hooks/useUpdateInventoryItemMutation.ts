@@ -4,6 +4,10 @@ import { updateInventoryItem } from "../services/inventoryIngredientsApi";
 export function useUpdateInventoryItemMutation(branchId: string | null) {
   return useAppMutation({
     mutationFn: updateInventoryItem,
-    invalidateKeys: [["inventory", "items", branchId]],
+    invalidateKeys: [
+      ["inventory-ingredients", branchId],
+      ["inventory-ingredient-alerts", branchId],
+      ["menu-recipe"],
+    ],
   });
 }

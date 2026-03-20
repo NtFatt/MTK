@@ -37,15 +37,13 @@ type CheckoutSummaryProps = {
 };
 
 export function CheckoutSummary({ cart }: CheckoutSummaryProps) {
-  const subtotal =
-    cart.subtotal ??
-    cart.items.reduce((sum, i) => sum + (i.unitPrice ?? 0) * i.qty, 0);
-
+  const subtotal = cart.subtotal ?? cart.items.reduce((sum, i) => sum + (i.unitPrice ?? 0) * i.qty, 0);
+  const discount = cart.discount ?? cart.voucher?.discountAmount ?? 0;
   const total = cart.total ?? subtotal;
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-3">
+    <div className="space-y-5">
+      <div className="space-y-4">
         {cart.items.map((item) => {
           const price = item.unitPrice ?? 0;
           const lineTotal = price * item.qty;
@@ -54,43 +52,50 @@ export function CheckoutSummary({ cart }: CheckoutSummaryProps) {
           return (
             <div
               key={String(item.itemId)}
-              className="flex items-start justify-between gap-4 rounded-xl border bg-background/60 p-4"
+              className="customer-hotpot-stat flex items-start justify-between gap-4 rounded-[22px] px-4 py-4"
             >
               <div className="min-w-0">
-                <div className="truncate text-sm font-medium text-foreground">
+                <div className="customer-mythmaker-title truncate text-2xl text-[#4e2916]">
                   {itemName}
                 </div>
-                <div className="mt-1 text-sm text-muted-foreground">
+                <div className="mt-2 text-sm text-[#7a5a43]">
                   {formatVnd(price)} × {item.qty}
                 </div>
               </div>
 
-              <div className="shrink-0 text-sm font-medium">
-                {formatVnd(lineTotal)}
-              </div>
+              <div className="shrink-0 text-sm font-semibold text-[#c43c2d]">{formatVnd(lineTotal)}</div>
             </div>
           );
         })}
       </div>
 
-      <Separator />
+      <Separator className="bg-[#e0c49d]/70" />
 
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Tạm tính</span>
-          <span>{formatVnd(subtotal)}</span>
+      <div className="space-y-3">
+        <div className="flex justify-between text-sm text-[#7a5a43]">
+          <span>Tạm tính</span>
+          <span className="font-medium text-[#5d341b]">{formatVnd(subtotal)}</span>
         </div>
 
-        {total !== subtotal && (
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Tổng cộng</span>
-            <span>{formatVnd(total)}</span>
+        {discount > 0 ? (
+          <div className="flex justify-between text-sm text-[#7a5a43]">
+            <span>
+              {cart.voucher?.code ? `Voucher ${cart.voucher.code}` : "Giảm giá"}
+            </span>
+            <span className="font-medium text-[#c43c2d]">-{formatVnd(discount)}</span>
           </div>
-        )}
+        ) : null}
 
-        <div className="flex justify-between text-base font-semibold">
+        {total !== subtotal ? (
+          <div className="flex justify-between text-sm text-[#7a5a43]">
+            <span>Tổng cộng</span>
+            <span className="font-medium text-[#5d341b]">{formatVnd(total)}</span>
+          </div>
+        ) : null}
+
+        <div className="flex justify-between text-lg font-semibold text-[#4b2817]">
           <span>Tổng thanh toán</span>
-          <span>{formatVnd(total)}</span>
+          <span className="text-[#c43c2d]">{formatVnd(total)}</span>
         </div>
       </div>
     </div>

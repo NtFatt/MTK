@@ -6,6 +6,7 @@ import { getOrCreateIdempotencyKey, clearIdempotencyKey } from "../../../../shar
 import { createOrder, type CreateOrderParams } from "../services/orderApi";
 import type { Order } from "../types";
 import type { HttpError } from "../../../../shared/http/errors";
+import { recoverInvalidCustomerSession } from "../../../../shared/customer/session/sessionRecovery";
 
 const IDEM_SCOPE_PREFIX = "order.create.";
 
@@ -35,9 +36,13 @@ export function useCreateOrderMutation() {
       clearIdempotencyKey(`${IDEM_SCOPE_PREFIX}${variables.sessionKey}`);
       queryClient.invalidateQueries({ queryKey: qk.cart.bySessionKey(variables.sessionKey) });
       queryClient.invalidateQueries({ queryKey: qk.cart.byCartKey(variables.cartKey) });
+      queryClient.invalidateQueries({ queryKey: ["menu", "view"] });
       if (data?.orderCode) {
         navigate(`/c/payment/${encodeURIComponent(data.orderCode)}`, { replace: true });
       }
+    },
+    onError: (error) => {
+      recoverInvalidCustomerSession(error);
     },
   });
 }

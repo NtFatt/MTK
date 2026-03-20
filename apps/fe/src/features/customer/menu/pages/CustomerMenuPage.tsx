@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import {
   useCustomerSessionStore,
   selectBranchId,
@@ -13,6 +13,7 @@ import { MenuSkeleton } from "../components/MenuSkeleton";
 import { MenuEmpty } from "../components/MenuEmpty";
 import { CustomerFooter } from "../components/CustomerFooter";
 import { HeroBanner } from "../components/HeroBanner";
+import { CustomerMythmakerBackdrop } from "../components/CustomerMythmakerBackdrop";
 
 import { useMenuQuery } from "../hooks/useMenuQuery";
 
@@ -20,6 +21,7 @@ import { cn } from "../../../../shared/utils/cn";
 import { StickyCartBar } from "../components/StickyCartBar";
 import { useCartQuery } from "../../cart/hooks/useCartQuery";
 import type { MenuCategory, MenuItem } from "../types";
+import { useRealtimeRoom } from "../../../../shared/realtime";
 
 type PageState = "ready" | "skeleton" | "empty";
 
@@ -87,6 +89,18 @@ export function CustomerMenuPage() {
   const branchId = useCustomerSessionStore(selectBranchId);
   const sessionKey = useCustomerSessionStore(selectSessionKey);
 
+  useRealtimeRoom(
+    sessionKey ? `sessionKey:${sessionKey}` : null,
+    !!sessionKey,
+    sessionKey
+      ? {
+          kind: "customer",
+          userKey: sessionKey,
+          branchId: branchId ?? undefined,
+        }
+      : undefined,
+  );
+
   const menuQuery = useMenuQuery(branchId ? { branchId } : {});
   const cartQuery = useCartQuery(sessionKey);
 
@@ -115,7 +129,9 @@ export function CustomerMenuPage() {
         0
       );
 
-    return { count, total };
+    const discount = Number(cartQuery.data?.discount ?? cartQuery.data?.voucher?.discountAmount ?? 0);
+
+    return { count, total, discount };
   }, [cartQuery.data]);
 
   const { categories, itemsUi, countByCategoryId } = useMemo(() => {
@@ -199,8 +215,7 @@ export function CustomerMenuPage() {
       const match = categories.find(
         (c) =>
           c.id !== "all" &&
-          (c.name.toLowerCase().includes("lẩu") ||
-            c.name.toLowerCase().includes("nước lẩu"))
+          (c.name.toLowerCase().includes("lẩu") || c.name.toLowerCase().includes("nước lẩu"))
       );
       setActiveCategoryId(match ? match.id : "all");
       scrollToMenuGrid();
@@ -226,51 +241,65 @@ export function CustomerMenuPage() {
   const showReadyContent = pageState === "ready" && !isLoading && !isError && itemsUi.length > 0;
 
   return (
-    <div className={cn("flex min-h-screen flex-col bg-background")}>
+    <div className={cn("customer-mythmaker-shell flex min-h-screen flex-col overflow-x-clip")}>
+      <CustomerMythmakerBackdrop />
       <CustomerNavbar />
 
-      <main className={cn("mx-auto w-full max-w-6xl flex-1 px-4 py-6 pb-24")}>
+      <main className={cn("relative z-10 mx-auto w-full max-w-6xl flex-1 px-4 py-6 pb-28 md:py-8")}>
         <HeroBanner
           cartItemCount={cartSummary.count}
           cartTotalLabel={formatVnd(cartSummary.total)}
+          cartSavingsLabel={cartSummary.discount > 0 ? formatVnd(cartSummary.discount) : null}
           activeQuickFilter={activeQuickFilter}
           onQuickFilterSelect={handleHeroQuickFilter}
+          onBrowseMenu={scrollToMenuGrid}
           featuredItems={featuredItems}
         />
 
         <div className="mt-8">
-          {pageState === "skeleton" && <MenuSkeleton />}
-          {pageState === "empty" && <MenuEmpty />}
-          {showLoading && <MenuSkeleton />}
+          {pageState === "skeleton" ? <MenuSkeleton /> : null}
+          {pageState === "empty" ? <MenuEmpty /> : null}
+          {showLoading ? <MenuSkeleton /> : null}
 
-          {showError && (
-            <div
-              className={cn(
-                "rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive"
-              )}
-            >
+          {showError ? (
+            <div className="customer-hotpot-receipt rounded-[28px] border border-[#e4bfb4] p-5 text-[#8e3028]">
               <p className="font-medium">{error?.message ?? "Có lỗi xảy ra."}</p>
-              {error?.correlationId && (
+              {error?.correlationId ? (
                 <p className="mt-1 text-xs opacity-80">Mã: {error.correlationId}</p>
-              )}
+              ) : null}
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => refetch()}
                   className={cn(
-                    "rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
+                    "rounded-full bg-[#c93d2d] px-4 py-2 text-sm font-medium text-[#fff6ef] shadow-[0_16px_30px_-22px_rgba(88,26,18,0.86)]"
                   )}
                 >
-                  Thử lại
+                  Tải lại thực đơn
                 </button>
               </div>
             </div>
-          )}
+          ) : null}
 
-          {showEmpty && <MenuEmpty />}
+          {showEmpty ? <MenuEmpty /> : null}
 
-          {showReadyContent && (
-            <>
+          {showReadyContent ? (
+            <section className="customer-mythmaker-panel rounded-[30px] p-4 sm:p-5">
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[11px] uppercase tracking-[0.3em] text-[#8f6f5f]">
+                    Danh mục treo bếp
+                  </div>
+                  <div className="customer-mythmaker-title mt-1 text-3xl font-semibold text-[#57121a]">
+                    Chọn món theo quầy
+                  </div>
+                </div>
+
+                <div className="hidden rounded-full border border-[#e4c89d]/80 bg-[#fff8ec] px-4 py-2 text-xs uppercase tracking-[0.24em] text-[#8b643e] md:block">
+                  The tre thuc don
+                </div>
+              </div>
+
               <CategoryTabs
                 categories={categories}
                 activeCategoryId={activeCategoryId}
@@ -282,53 +311,31 @@ export function CustomerMenuPage() {
                 countByCategoryId={countByCategoryId}
               />
 
-              {onlyAvailable && (
-                <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border bg-card p-3">
-                  <div className="text-sm text-muted-foreground">
-                    Đang lọc <span className="font-medium text-foreground">món còn hàng</span>.
+              {onlyAvailable ? (
+                <div className="customer-hotpot-receipt mt-4 flex items-center justify-between gap-3 rounded-[22px] px-4 py-3">
+                  <div className="text-sm text-[#7a5a43]">
+                    Đang lọc <span className="font-medium text-[#4d2a18]">món còn hàng</span>.
                   </div>
 
                   <button
                     type="button"
                     onClick={() => setOnlyAvailable(false)}
-                    className="rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-muted"
+                    className="rounded-full border border-[#e0c49d]/80 bg-[#fff8ed] px-4 py-2 text-sm font-medium text-[#7f5a37] transition hover:bg-[#fff2df]"
                   >
                     Bỏ lọc
                   </button>
                 </div>
-              )}
+              ) : null}
 
               <div id="menu-grid" className="mt-6">
                 <MenuGrid items={filteredItems} />
               </div>
-            </>
-          )}
+            </section>
+          ) : null}
         </div>
       </main>
 
       <StickyCartBar />
-
-      {sessionKey && cartSummary.count > 0 && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 pb-4">
-          <div className="mx-auto w-full max-w-6xl px-4">
-            <div className="pointer-events-auto flex items-center justify-between gap-3 rounded-xl border bg-background/95 p-3 shadow-lg backdrop-blur">
-              <div className="min-w-0">
-                <div className="text-sm font-semibold">Giỏ hàng • {cartSummary.count} món</div>
-                <div className="truncate text-xs text-muted-foreground">
-                  Tạm tính: {formatVnd(cartSummary.total)}
-                </div>
-              </div>
-
-              <Link
-                to="/c/cart"
-                className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
-              >
-                Xem giỏ
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
       <CustomerFooter />
     </div>
   );

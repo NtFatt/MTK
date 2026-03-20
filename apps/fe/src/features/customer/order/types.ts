@@ -21,7 +21,11 @@ export type Order = {
   sessionKey?: string;
   items?: OrderItem[];
   subtotal?: number;
+  discount?: number;
   total?: number;
+  voucherCode?: string | null;
+  voucherName?: string | null;
+  voucherDiscountAmount?: number;
   createdAt?: string;
   updatedAt?: string;
 };

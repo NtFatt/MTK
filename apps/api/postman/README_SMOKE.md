@@ -1,55 +1,45 @@
-# Hadilao Smoke (v7)
+# Hadilao Smoke Packs
 
-Mục tiêu: chạy **core flow** ổn định trên local (có/không Redis), hạn chế lỗi 409 kiểu `NO_TABLE_AVAILABLE` do trạng thái kẹt sau các lần chạy trước.
+Muc tieu: verify local runtime theo dung contract hien tai, khong chi happy path ma ca negative/idempotency/realtime/oversell.
 
-## Runbook (local)
-1) Reset DB (canonical + seed)
-```bash
-pnpm db:reset --yes
+## Root-safe commands
+Tu root repo:
+
+```powershell
+pnpm -C apps/api smoke
+pnpm -C apps/api smoke:full
+pnpm -C apps/api smoke:negative
+pnpm -C apps/api smoke:realtime
+pnpm -C apps/api smoke:oversell
+pnpm -C apps/api verify:smokes
 ```
 
-2) Start API
-```bash
-pnpm dev
-```
+## Packs
+- `smoke`: core flow toi thieu
+- `smoke:full`: customer + internal 7 roles + ops + inventory + realtime snapshot
+- `smoke:negative`: validation, rate limit, branch isolation, forbidden actions, idempotency, contract lock
+- `smoke:realtime`: replay/join/gap sanity
+- `smoke:oversell`: deterministic concurrency guard
 
-3) Run smoke
-```bash
-pnpm smoke
-```
+## Deterministic behavior
+- Moi smoke run co `reset-dev-state` truoc khi chay de don session/table/reservation cu.
+- `smoke:negative` tu seed mot `orderOther` fixture vao env tam truoc khi chay, de branch-mismatch test khong phu thuoc vao checkout cross-branch.
+- `smoke:oversell` ep stock = 1 roi dua 2 cart song song; ky vong dung la 1 success + 1 `409 OUT_OF_STOCK`.
 
-## Full smoke (7 roles + inventory + ops)
-Chạy thêm **core flow + internal ops + 7 roles (STAFF/KITCHEN/CASHIER/BRANCH_MANAGER) + inventory/menu cache + realtime snapshot**.
+## Postman environment
+File chinh: `postman/Hadilao_Smoke_Local.postman_environment.json`
 
-```bash
-pnpm smoke:full
-```
-
-Collection:
-- `postman/Hadilao_Smoke_FullFlow_7Roles_v1.postman_collection.json`
-
-## Biến môi trường Postman (Hadilao Smoke - Local)
-Các keys nằm trong file `postman/Hadilao_Smoke_Local.postman_environment.json`:
-
-- `baseUrl` (vd: http://localhost:3001)
-- `socketPath` (mặc định `/socket.io`)
-- `smokeRealtime=true` -> chạy Socket.IO sanity check sau khi Postman xong.
-
-### NEW: Dev reset trước smoke (khuyến nghị)
-Smoke runner sẽ gọi endpoint reset dev state nếu bật:
-
+Keys quan trong:
+- `baseUrl`
+- `socketPath`
+- `smokeRealtime=true`
 - `smokeReset=true`
-- `smokeResetFlushRedis=true` (tùy chọn) -> flush Redis DB (dev only)
-- `smokeBranchId` (tùy chọn) -> reset theo 1 branch
+- `smokeResetFlushRedis=true`
+- `smokeRestock=true`
+- `smokeRestockQty=100`
+- `branchOtherId=999`
 
-Endpoint được gọi:
-`POST /api/v1/admin/maintenance/reset-dev-state?branchId=<...>&flushRedis=true`
-
-Body:
-```json
-{ "confirm": "RESET", "flushRedis": true }
-```
-
-## Ghi chú
-- Reset dev state là **dev-only** (guarded bởi `DEV_RESET_ENABLED`, mặc định bật khi `NODE_ENV != production`).
-- Nếu Redis chưa chạy, smoke vẫn chạy được (realtime/redis steps tự skip hoặc fallback).
+## Notes
+- `reset-dev-state` va `dev/set-stock` la dev-only, khong phai production contract.
+- Legacy `/api/*` duoc kiem nhu negative case; khi `LEGACY_API_ENABLED=false` thi `/api/*` phai tra `404`.
+- Neu Redis tat, mot so buoc realtime se skip/fallback, nhung bo verify day du nen chay voi Redis bat.

@@ -65,7 +65,7 @@ async function fetchCategories(params: MenuApiParams = {}): Promise<MenuCategory
 
   // apiFetch đã proxy /api/v1, nên chỉ cần path sau /api/v1
   const path = `/menu/categories${qs ? `?${qs}` : ""}`;
-  const res = await apiFetch<unknown>(path);
+  const res = await apiFetch<unknown>(path, { cache: "no-store" });
   return asArray<MenuCategoryDto>(res);
 }
 
@@ -75,7 +75,7 @@ async function fetchItems(params: MenuApiParams = {}): Promise<MenuItemDto[]> {
   const qs = search.toString();
 
   const path = `/menu/items${qs ? `?${qs}` : ""}`;
-  const res = await apiFetch<unknown>(path);
+  const res = await apiFetch<unknown>(path, { cache: "no-store" });
   return asArray<MenuItemDto>(res);
 }
 

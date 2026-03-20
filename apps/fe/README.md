@@ -1,16 +1,48 @@
-# React + Vite
+# Hadilao FE
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend cho customer + internal operations cua Hadilao Online.
 
-Currently, two official plugins are available:
+## Stack
+- React
+- TypeScript
+- Vite
+- TanStack Query
+- Zustand
+- React Router
+- Socket.IO client
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Local start
+Tu root repo:
 
-## React Compiler
+```powershell
+pnpm install
+pnpm -C apps/api dev
+pnpm -C apps/fe dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+FE mac dinh chay o `http://localhost:5173` va goi API `http://localhost:3001`.
 
-## Expanding the ESLint configuration
+## Quality gates
+```powershell
+pnpm -C apps/fe lint
+pnpm -C apps/fe typecheck
+pnpm -C apps/fe build
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Main surfaces
+- Customer: QR bootstrap, menu, cart, checkout, payment, order status
+- Internal: login, tables, kitchen, cashier, inventory, menu management, recipes, reservations, observability, realtime admin
+
+## Important behavior
+- Customer menu hien thi availability theo sellable stock hien tai.
+- Cart mutations uu tien hold/release consistency, sau do invalidate lai menu/cart queries.
+- Internal inventory pages tach ro `DB qty / Reserved / Available` thay vi chi nhin `menu_item_stock.quantity`.
+
+## Known limits
+- Public stock visibility van co fallback polling; chua phai branch-wide public realtime full-spec.
+- Mot so flow van hanh nang cao van dua vao runbook/smoke de verify thay vi co FE automation hoan chinh.
+
+Docs lien quan:
+- [Runbook API](../api/docs/RUNBOOK.md)
+- [Source Of Truth](../../docs/final/SOURCE_OF_TRUTH.md)
+- [Known Issues](../../docs/final/KNOWN_ISSUES.md)

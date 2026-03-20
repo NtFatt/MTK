@@ -27,7 +27,9 @@ export class MySQLOrderSnapshotRepository implements IOrderSnapshotRepository {
     const [rows]: any = await pool.query(
       `SELECT o.order_id, o.order_code, o.branch_id, o.session_id, o.client_id,
               o.order_channel, o.order_status, o.note,
-              o.discount_percent_applied, o.subtotal_amount, o.discount_amount, o.delivery_fee, o.total_amount,
+              o.discount_percent_applied, o.voucher_code_snapshot, o.voucher_name_snapshot,
+              o.voucher_discount_type, o.voucher_discount_value, o.voucher_discount_amount,
+              o.subtotal_amount, o.discount_amount, o.delivery_fee, o.total_amount,
               o.created_at, o.updated_at, o.accepted_at, o.prepared_at, o.completed_at, o.paid_at, o.canceled_at
        FROM orders o
        WHERE o.order_id = ?
@@ -79,6 +81,11 @@ export class MySQLOrderSnapshotRepository implements IOrderSnapshotRepository {
         orderStatus: String(r.order_status),
         note: r.note ? String(r.note) : null,
         discountPercentApplied: toNum(r.discount_percent_applied),
+        voucherCode: r.voucher_code_snapshot ? String(r.voucher_code_snapshot) : null,
+        voucherName: r.voucher_name_snapshot ? String(r.voucher_name_snapshot) : null,
+        voucherDiscountType: r.voucher_discount_type ? String(r.voucher_discount_type) as "PERCENT" | "FIXED_AMOUNT" : null,
+        voucherDiscountValue: r.voucher_discount_value != null ? toNum(r.voucher_discount_value) : null,
+        voucherDiscountAmount: toNum(r.voucher_discount_amount),
         subtotalAmount: toNum(r.subtotal_amount),
         discountAmount: toNum(r.discount_amount),
         deliveryFee: toNum(r.delivery_fee),

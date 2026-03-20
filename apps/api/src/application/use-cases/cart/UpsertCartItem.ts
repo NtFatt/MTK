@@ -118,6 +118,7 @@ export class UpsertCartItem {
           type: "inventory.updated",
           at: new Date().toISOString(),
           scope: {
+            sessionKey,
             branchId: cart.branchId,
           },
           payload: {
@@ -197,6 +198,7 @@ export class UpsertCartItem {
         type: "inventory.updated",
         at: new Date().toISOString(),
         scope: {
+          sessionKey,
           branchId: cart.branchId,
         },
         payload: {

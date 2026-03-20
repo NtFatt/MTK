@@ -7,15 +7,22 @@ import { asyncHandler } from "./asyncHandler.js";
 export function createAdminRealtimeRouter(controller: AdminRealtimeController) {
   const r = Router();
   r.use(requireInternal);
-  r.use(requirePermission("realtime.admin"));
 
   // List admin realtime audit events
   // GET /api/v1/admin/realtime/audit?limit=100&room=admin
-  r.get("/realtime/audit", asyncHandler(controller.listAudit));
+  r.get(
+    "/realtime/audit",
+    requirePermission("realtime.admin"),
+    asyncHandler(controller.listAudit),
+  );
 
   // Replay admin realtime events (ascending by seq)
   // GET /api/v1/admin/realtime/replay?room=admin&fromSeq=1&limit=200
-  r.get("/realtime/replay", asyncHandler(controller.replay));
+  r.get(
+    "/realtime/replay",
+    requirePermission("realtime.admin"),
+    asyncHandler(controller.replay),
+  );
 
   return r;
 }

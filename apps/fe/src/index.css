@@ -1,43 +1,44 @@
+@import url("https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Caveat:wght@600;700&family=ZCOOL+XiaoWei&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Hadilao palette (CSS variables) — parity with UI sample app/globals.css */
 @layer base {
   :root {
-    --background: 30 15% 96%;
-    --foreground: 240 10% 20%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 20%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 20%;
-    --primary: 0 60% 32%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 30 10% 92%;
-    --secondary-foreground: 240 10% 25%;
-    --muted: 30 10% 94%;
-    --muted-foreground: 240 5% 46%;
-    --accent: 174 60% 38%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84.2% 60.2%;
+    --background: 35 73% 95%;
+    --foreground: 24 28% 20%;
+    --card: 44 60% 97%;
+    --card-foreground: 24 28% 20%;
+    --popover: 44 60% 97%;
+    --popover-foreground: 24 28% 20%;
+    --primary: 6 60% 49%;
+    --primary-foreground: 38 100% 97%;
+    --secondary: 38 44% 88%;
+    --secondary-foreground: 24 28% 20%;
+    --muted: 38 40% 92%;
+    --muted-foreground: 25 17% 42%;
+    --accent: 78 47% 42%;
+    --accent-foreground: 38 100% 97%;
+    --destructive: 0 74% 54%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 20% 88%;
-    --input: 0 15% 90%;
-    --ring: 174 60% 38%;
-    --chart-1: 0 60% 40%;
-    --chart-2: 174 60% 38%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 0 50% 50%;
-    --chart-5: 174 40% 50%;
+    --border: 34 39% 80%;
+    --input: 34 39% 86%;
+    --ring: 6 60% 49%;
+    --chart-1: 6 60% 49%;
+    --chart-2: 78 47% 42%;
+    --chart-3: 34 55% 56%;
+    --chart-4: 22 43% 44%;
+    --chart-5: 44 48% 65%;
     --radius: 0.5rem;
-    --sidebar-background: 30 15% 97%;
-    --sidebar-foreground: 240 10% 25%;
-    --sidebar-primary: 0 60% 32%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 30 10% 93%;
-    --sidebar-accent-foreground: 240 10% 25%;
-    --sidebar-border: 0 20% 88%;
-    --sidebar-ring: 174 60% 38%;
+    --sidebar-background: 40 67% 96%;
+    --sidebar-foreground: 24 28% 20%;
+    --sidebar-primary: 6 60% 49%;
+    --sidebar-primary-foreground: 38 100% 97%;
+    --sidebar-accent: 38 42% 90%;
+    --sidebar-accent-foreground: 24 28% 20%;
+    --sidebar-border: 34 39% 80%;
+    --sidebar-ring: 6 60% 49%;
   }
 
   * {
@@ -56,7 +57,6 @@
   }
 }
 
-/* Hadilao custom animations (float-ornament, float-blossom, float-paper, shimmer-text, pulse-jade, fade-in-up) */
 @keyframes float-ornament {
   0%,
   100% {
@@ -128,6 +128,91 @@
   }
 }
 
+@keyframes hotpot-lantern-sway {
+  0%,
+  100% {
+    transform: rotate(-3deg) translateY(0);
+  }
+  50% {
+    transform: rotate(3deg) translateY(4px);
+  }
+}
+
+@keyframes hotpot-steam-rise {
+  0% {
+    transform: translate3d(0, 12px, 0) scale(0.8);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.55;
+  }
+  70% {
+    opacity: 0.26;
+  }
+  100% {
+    transform: translate3d(10px, -32px, 0) scale(1.18);
+    opacity: 0;
+  }
+}
+
+@keyframes hotpot-neon-flicker {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(255, 211, 96, 0.45) inset,
+      0 0 12px rgba(255, 212, 88, 0.32),
+      0 0 22px rgba(183, 255, 52, 0.18);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(255, 230, 169, 0.68) inset,
+      0 0 16px rgba(255, 212, 88, 0.46),
+      0 0 28px rgba(183, 255, 52, 0.24);
+  }
+}
+
+@keyframes hotpot-bamboo-bounce {
+  0%,
+  100% {
+    transform: translateY(-2px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes hotpot-cart-flight {
+  0% {
+    transform: translate3d(var(--flight-start-x), var(--flight-start-y), 0) scale(1);
+    opacity: 1;
+  }
+  65% {
+    transform: translate3d(
+        calc((var(--flight-start-x) * 0.35) + (var(--flight-end-x) * 0.65)),
+        calc((var(--flight-start-y) * 0.4) + (var(--flight-end-y) * 0.6) - 42px),
+        0
+      )
+      scale(0.7);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--flight-end-x), var(--flight-end-y), 0) scale(0.28);
+    opacity: 0;
+  }
+}
+
+@keyframes hotpot-splash {
+  0%,
+  100% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+}
+
 .animate-float-ornament {
   animation: float-ornament 6s ease-in-out infinite;
 }
@@ -153,35 +238,474 @@
   animation: fade-in-up 0.6s ease-out both;
 }
 
-/* Scrollbar styling */
+.customer-mythmaker-shell {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at top, rgba(255, 246, 214, 0.72), transparent 28%),
+    linear-gradient(180deg, #fdf5e6 0%, #f7ead4 48%, #f1dcc3 100%);
+  color: #3f2a1b;
+  font-family: "Be Vietnam Pro", "Segoe UI", sans-serif;
+}
+
+.customer-mythmaker-title {
+  font-family: "ZCOOL XiaoWei", "Times New Roman", serif;
+  letter-spacing: 0.01em;
+}
+
+.customer-mythmaker-script {
+  font-family: "Caveat", cursive;
+  letter-spacing: 0.01em;
+}
+
+.customer-mythmaker-panel {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 251, 241, 0.96), rgba(247, 234, 209, 0.98)),
+    repeating-linear-gradient(
+      180deg,
+      rgba(128, 86, 49, 0.04) 0,
+      rgba(128, 86, 49, 0.04) 1px,
+      transparent 1px,
+      transparent 18px
+    );
+  border: 1px solid rgba(200, 162, 120, 0.72);
+  box-shadow:
+    0 24px 70px -48px rgba(77, 44, 18, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(10px);
+}
+
+.customer-mythmaker-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.54), transparent 22%),
+    radial-gradient(circle at bottom right, rgba(207, 65, 44, 0.05), transparent 20%);
+  pointer-events: none;
+}
+
+.customer-mythmaker-panel-strong {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(126, 77, 36, 0.98), rgba(76, 44, 18, 0.98)),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.04) 0,
+      rgba(255, 255, 255, 0.04) 2px,
+      transparent 2px,
+      transparent 24px
+    );
+  border: 1px solid rgba(222, 180, 122, 0.28);
+  box-shadow:
+    0 30px 90px -56px rgba(53, 28, 10, 0.88),
+    inset 0 1px 0 rgba(255, 248, 226, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.customer-hotpot-signboard {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(113, 67, 30, 0.96), rgba(77, 43, 16, 0.98)),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.04) 0,
+      rgba(255, 255, 255, 0.04) 2px,
+      transparent 2px,
+      transparent 22px
+    );
+  border: 1px solid rgba(229, 192, 132, 0.4);
+  box-shadow:
+    0 18px 40px -28px rgba(53, 28, 10, 0.88),
+    inset 0 1px 0 rgba(255, 236, 199, 0.12);
+}
+
+.customer-hotpot-signboard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 30%);
+  pointer-events: none;
+}
+
+.customer-hotpot-receipt {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 251, 243, 0.98), rgba(246, 234, 211, 0.98)),
+    repeating-linear-gradient(
+      180deg,
+      rgba(133, 96, 62, 0.05) 0,
+      rgba(133, 96, 62, 0.05) 1px,
+      transparent 1px,
+      transparent 16px
+    );
+  border: 1px solid rgba(207, 176, 140, 0.8);
+  box-shadow:
+    0 24px 60px -42px rgba(82, 47, 18, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.customer-hotpot-receipt::before,
+.customer-hotpot-receipt::after {
+  content: "";
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  height: 10px;
+  background:
+    radial-gradient(circle at 8px 10px, transparent 7px, rgba(205, 172, 130, 0.4) 7.6px)
+      0 0 / 18px 10px repeat-x;
+  opacity: 0.55;
+}
+
+.customer-hotpot-receipt::before {
+  top: -7px;
+}
+
+.customer-hotpot-receipt::after {
+  bottom: -7px;
+  transform: rotate(180deg);
+}
+
+.customer-hotpot-washi {
+  position: absolute;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(240, 214, 171, 0.94), rgba(230, 194, 146, 0.96));
+  box-shadow:
+    0 8px 18px -14px rgba(86, 46, 14, 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.44);
+  color: #7b4024;
+  font-family: "Caveat", cursive;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.customer-hotpot-bamboo-tag {
+  position: relative;
+  border: 1px solid rgba(188, 150, 101, 0.82);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(225, 202, 150, 0.98), rgba(199, 167, 112, 0.98)),
+    repeating-linear-gradient(
+      90deg,
+      rgba(95, 72, 38, 0.08) 0,
+      rgba(95, 72, 38, 0.08) 1px,
+      transparent 1px,
+      transparent 12px
+    );
+  box-shadow:
+    0 12px 24px -18px rgba(75, 42, 18, 0.72),
+    inset 0 1px 0 rgba(255, 248, 232, 0.42);
+  color: #6b4a22;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease,
+    color 180ms ease;
+}
+
+.customer-hotpot-bamboo-tag[data-active="true"] {
+  animation: hotpot-bamboo-bounce 0.42s ease;
+  background: linear-gradient(180deg, rgba(210, 67, 49, 0.98), rgba(174, 47, 35, 0.98));
+  border-color: rgba(155, 42, 34, 0.9);
+  box-shadow:
+    0 16px 28px -18px rgba(111, 31, 24, 0.82),
+    inset 0 1px 0 rgba(255, 228, 218, 0.24);
+  color: #fff8f1;
+}
+
+.customer-hotpot-neon {
+  border: 1px solid rgba(255, 214, 95, 0.44);
+  background: rgba(255, 247, 214, 0.08);
+  color: #fff0ac;
+  animation: hotpot-neon-flicker 2.8s ease-in-out infinite;
+}
+
+.customer-hotpot-lantern {
+  width: 84px;
+  height: 120px;
+  border-radius: 40px 40px 34px 34px / 26px 26px 38px 38px;
+  background:
+    linear-gradient(180deg, rgba(234, 82, 60, 0.96), rgba(177, 38, 32, 0.98)),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.12) 0,
+      rgba(255, 255, 255, 0.12) 4px,
+      transparent 4px,
+      transparent 18px
+    );
+  border: 1px solid rgba(255, 212, 152, 0.52);
+  box-shadow:
+    0 20px 48px -24px rgba(141, 36, 24, 0.72),
+    0 0 24px rgba(245, 159, 102, 0.24);
+  transform-origin: top center;
+  animation: hotpot-lantern-sway 4.8s ease-in-out infinite;
+}
+
+.customer-hotpot-lantern::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -16px;
+  width: 2px;
+  height: 18px;
+  margin-left: -1px;
+  background: #d5a766;
+}
+
+.customer-hotpot-lantern::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -18px;
+  width: 14px;
+  height: 18px;
+  margin-left: -7px;
+  border-radius: 0 0 999px 999px;
+  background: linear-gradient(180deg, #f3d08f, #d89238);
+  box-shadow: 0 8px 18px -10px rgba(126, 71, 16, 0.72);
+}
+
+.customer-hotpot-lantern-left {
+  animation-delay: -1.3s;
+}
+
+.customer-hotpot-lantern-right {
+  animation-delay: -3.1s;
+}
+
+.customer-hotpot-steam {
+  width: 62px;
+  height: 62px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.06) 68%, transparent 78%);
+  filter: blur(8px);
+  opacity: 0;
+  animation: hotpot-steam-rise 5.8s ease-in-out infinite;
+}
+
+.customer-hotpot-steam-delay-2 {
+  animation-delay: -1.9s;
+}
+
+.customer-hotpot-steam-delay-3 {
+  animation-delay: -3.4s;
+}
+
+.customer-hotpot-flight-token {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 90;
+  pointer-events: none;
+  animation: hotpot-cart-flight 820ms cubic-bezier(0.2, 0.76, 0.22, 1) forwards;
+}
+
+.customer-hotpot-flight-disc {
+  position: relative;
+  display: flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 249, 240, 0.96);
+  background:
+    radial-gradient(circle, rgba(255, 251, 247, 0.98) 0%, rgba(241, 229, 210, 0.98) 62%, rgba(118, 148, 173, 0.94) 62%, rgba(118, 148, 173, 0.94) 72%, rgba(255, 251, 247, 0.98) 72%, rgba(244, 235, 221, 0.98) 100%);
+  box-shadow: 0 16px 28px -18px rgba(73, 40, 16, 0.82);
+}
+
+.customer-hotpot-flight-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #8a3b29;
+  font-family: "ZCOOL XiaoWei", serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.customer-hotpot-flight-splash {
+  position: absolute;
+  inset: -6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 224, 167, 0.84);
+  opacity: 0;
+  animation: hotpot-splash 360ms ease-out 1;
+}
+
+.customer-hotpot-kicker {
+  color: #9f7751;
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.customer-hotpot-page-title {
+  color: #5a301a;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  line-height: 1.05;
+}
+
+.customer-hotpot-page-subtitle {
+  color: #7b5a42;
+  font-size: 0.95rem;
+  line-height: 1.75;
+  max-width: 48rem;
+}
+
+.customer-hotpot-stat {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(215, 184, 144, 0.8);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 249, 237, 0.96), rgba(249, 236, 209, 0.98)),
+    repeating-linear-gradient(
+      180deg,
+      rgba(133, 96, 62, 0.045) 0,
+      rgba(133, 96, 62, 0.045) 1px,
+      transparent 1px,
+      transparent 16px
+    );
+  box-shadow:
+    0 18px 36px -26px rgba(80, 42, 16, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.customer-hotpot-stat::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 40%);
+  pointer-events: none;
+}
+
+.customer-hotpot-input {
+  width: 100%;
+  border: 1px solid rgba(214, 183, 141, 0.88);
+  border-radius: 16px;
+  background: rgba(255, 251, 242, 0.94);
+  color: #4f311f;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 8px 18px -16px rgba(84, 44, 18, 0.28);
+}
+
+.customer-hotpot-input:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px rgba(215, 83, 60, 0.16),
+    0 0 0 4px rgba(255, 222, 171, 0.38);
+  border-color: rgba(203, 70, 52, 0.76);
+}
+
+.customer-hotpot-textarea {
+  min-height: 110px;
+  width: 100%;
+  border: 1px solid rgba(214, 183, 141, 0.88);
+  border-radius: 18px;
+  background: rgba(255, 251, 242, 0.94);
+  color: #4f311f;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 8px 18px -16px rgba(84, 44, 18, 0.28);
+}
+
+.customer-hotpot-textarea:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px rgba(215, 83, 60, 0.16),
+    0 0 0 4px rgba(255, 222, 171, 0.38);
+  border-color: rgba(203, 70, 52, 0.76);
+}
+
+.customer-hotpot-chip {
+  border: 1px solid rgba(217, 189, 149, 0.8);
+  border-radius: 999px;
+  background: rgba(255, 247, 235, 0.9);
+  color: #7d593a;
+}
+
+.customer-hotpot-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(215, 184, 144, 0.86);
+  background: rgba(255, 248, 237, 0.92);
+  color: #7d593a;
+}
+
+.customer-hotpot-status-pill[data-tone="positive"] {
+  border-color: rgba(148, 188, 108, 0.8);
+  background: rgba(239, 247, 231, 0.96);
+  color: #5f7a35;
+}
+
+.customer-hotpot-status-pill[data-tone="warn"] {
+  border-color: rgba(226, 187, 113, 0.84);
+  background: rgba(255, 247, 218, 0.96);
+  color: #8a5d1e;
+}
+
+.customer-hotpot-status-pill[data-tone="danger"] {
+  border-color: rgba(221, 154, 143, 0.82);
+  background: rgba(255, 239, 235, 0.96);
+  color: #a44b42;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .customer-hotpot-lantern,
+  .customer-hotpot-steam,
+  .customer-hotpot-neon,
+  .customer-hotpot-bamboo-tag[data-active="true"],
+  .customer-hotpot-flight-token,
+  .customer-hotpot-flight-splash {
+    animation: none !important;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: hsl(30 15% 95%);
+  background: hsl(38 55% 93%);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(0 40% 75%);
+  background: hsl(18 45% 62%);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(0 50% 60%);
+  background: hsl(8 52% 50%);
 }
 
-/* Paper texture utility */
 .paper-texture {
   background-image: radial-gradient(
       ellipse at 20% 50%,
-      rgba(185, 28, 28, 0.03) 0%,
+      rgba(185, 82, 28, 0.04) 0%,
       transparent 50%
     ),
     radial-gradient(
       ellipse at 80% 50%,
-      rgba(20, 184, 166, 0.03) 0%,
+      rgba(113, 148, 48, 0.04) 0%,
       transparent 50%
     );
 }

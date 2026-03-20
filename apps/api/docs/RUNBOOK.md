@@ -1,4 +1,4 @@
-# Hadilao Online API — RUNBOOK (Local / PR21 Final)
+# Hadilao Online API -- RUNBOOK (Local / Post-PR25 Hardening)
 
 Tài liệu này là runbook local chuẩn để người khác có thể:
 
@@ -192,24 +192,14 @@ Sau khi startup đúng, tối thiểu phải kiểm được:
 
 ### 8.1 Contracts / FE / API build gates
 ```powershell
-pnpm -C packages/contracts build
-
-pnpm -C apps/fe lint
-pnpm -C apps/fe typecheck
-pnpm -C apps/fe build
-
-pnpm -C apps/api typecheck
-pnpm -C apps/api build
+pnpm verify:static
 ```
 
 ### 8.2 Smoke packs
 Chạy khi API đang bật:
 
 ```powershell
-pnpm -C apps/api smoke:full
-pnpm -C apps/api smoke:negative
-pnpm -C apps/api smoke:realtime
-pnpm -C apps/api smoke:oversell
+pnpm verify:smokes
 ```
 
 Kỳ vọng:
@@ -218,6 +208,7 @@ Kỳ vọng:
 - `smoke:negative` pass
 - `smoke:realtime` pass
 - `smoke:oversell` pass, đúng pattern: 1 success + 1 fail `OUT_OF_STOCK`
+- `smoke:negative` tự seed fixture cross-branch trước khi chạy, không cần set tay `orderOther`
 
 ---
 
@@ -229,13 +220,9 @@ Dùng khi cần dry-run đầy đủ trước khi demo/chốt PR:
 ```powershell
 pnpm -C apps/api db:reset --yes
 pnpm -C apps/api seed:internal
-pnpm -C packages/contracts build
 pnpm -C apps/api dev
 pnpm -C apps/fe dev
-pnpm -C apps/api smoke:full
-pnpm -C apps/api smoke:negative
-pnpm -C apps/api smoke:realtime
-pnpm -C apps/api smoke:oversell
+pnpm verify:all
 ```
 
 ### Chế độ presentation
@@ -328,3 +315,4 @@ Khuyến nghị demo customer main flow bằng:
 - `docs/final/FINAL_HANDOVER.md`
 - `docs/final/KNOWN_ISSUES.md`
 - `docs/final/FINAL_STATUS.md`
+- `docs/final/SOURCE_OF_TRUTH.md`

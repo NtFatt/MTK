@@ -3,11 +3,20 @@ import type {
   CheckoutFromCartInput,
   CheckoutFromCartResult,
 } from "../../../../application/ports/services/IOrderCheckoutService.js";
+import type { IVoucherRepository } from "../../../../application/ports/repositories/IVoucherRepository.js";
 import { pool } from "../connection.js";
 import { MySQLMenuItemStockRepository } from "../repositories/MySQLMenuItemStockRepository.js";
+import { consumeOrderInventory } from "./orderInventoryMutations.js";
+import {
+  calculateVoucherPricing,
+  validateVoucherForSubtotal,
+} from "../../../../domain/policies/voucherPricing.js";
 
 export class MySQLOrderCheckoutService implements IOrderCheckoutService {
-  constructor(private readonly stockRepo: MySQLMenuItemStockRepository) {}
+  constructor(
+    private readonly stockRepo: MySQLMenuItemStockRepository,
+    private readonly voucherRepo: IVoucherRepository | null = null,
+  ) {}
 
   async checkoutFromCart(input: CheckoutFromCartInput): Promise<CheckoutFromCartResult> {
     const cart = input.cart;
@@ -17,14 +26,76 @@ export class MySQLOrderCheckoutService implements IOrderCheckoutService {
     const branchId = cart.branchId ? String(cart.branchId) : null;
     if (!branchId) throw new Error("BRANCH_REQUIRED");
 
+    const subtotalAmount = items.reduce((sum, item) => {
+      const qty = Number(item.quantity);
+      const unitPrice = Number(item.unitPrice);
+      return sum + unitPrice * qty;
+    }, 0);
+
     const conn: any = await pool.getConnection();
     try {
       await conn.beginTransaction();
 
+      const [cartRows]: any = await conn.query(
+        `SELECT cart_id, cart_status, applied_voucher_id
+         FROM carts
+         WHERE cart_id = ?
+         FOR UPDATE`,
+        [String(cart.id)],
+      );
+      const lockedCart = cartRows?.[0];
+      if (!lockedCart) throw new Error("CART_NOT_FOUND");
+      if (String(lockedCart.cart_status) !== "ACTIVE") throw new Error("CART_NOT_ACTIVE");
+
+      let voucherSnapshot: CheckoutFromCartResult["voucher"] = null;
+      let discountAmount = 0;
+      let totalAmount = subtotalAmount;
+
+      if (this.voucherRepo && lockedCart.applied_voucher_id) {
+        const voucher = await this.voucherRepo.findById(String(lockedCart.applied_voucher_id), {
+          conn,
+          forUpdate: true,
+        });
+        if (!voucher) throw new Error("VOUCHER_NOT_FOUND");
+
+        const sessionUsageCount =
+          cart.sessionId && voucher.usageLimitPerSession != null
+            ? await this.voucherRepo.countUsagesForSession(voucher.id, String(cart.sessionId), { conn })
+            : 0;
+
+        const validation = validateVoucherForSubtotal({
+          voucher,
+          subtotal: subtotalAmount,
+          sessionUsageCount,
+        });
+        if (!validation.ok) throw new Error(validation.code);
+
+        const pricing = calculateVoucherPricing({
+          subtotal: subtotalAmount,
+          voucher,
+        });
+
+        discountAmount = pricing.discountAmount;
+        totalAmount = pricing.totalAfterDiscount;
+        voucherSnapshot = {
+          id: voucher.id,
+          code: voucher.code,
+          name: voucher.name,
+          discountType: voucher.discountType,
+          discountValue: voucher.discountValue,
+          discountAmount: pricing.discountAmount,
+        };
+      }
+
       // 1) Create order (status NEW)
       const [orderRes]: any = await conn.query(
-        `INSERT INTO orders (branch_id, session_id, client_id, order_code, order_channel, order_status, note)
-         VALUES (?, ?, ?, ?, ?, 'NEW', ?)`,
+        `INSERT INTO orders (
+           branch_id, session_id, client_id, order_code, order_channel, order_status, note,
+           discount_percent_applied, subtotal_amount, discount_amount, delivery_fee, total_amount,
+           voucher_id_snapshot, voucher_code_snapshot, voucher_name_snapshot,
+           voucher_discount_type, voucher_discount_value, voucher_discount_amount
+         )
+         VALUES (?, ?, ?, ?, ?, 'NEW', ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)`,
         [
           branchId,
           cart.sessionId ? String(cart.sessionId) : null,
@@ -32,6 +103,16 @@ export class MySQLOrderCheckoutService implements IOrderCheckoutService {
           input.orderCode,
           cart.orderChannel,
           input.note ?? null,
+          voucherSnapshot?.discountType === "PERCENT" ? voucherSnapshot.discountValue : 0,
+          subtotalAmount,
+          discountAmount,
+          totalAmount,
+          voucherSnapshot?.id ?? null,
+          voucherSnapshot?.code ?? null,
+          voucherSnapshot?.name ?? null,
+          voucherSnapshot?.discountType ?? null,
+          voucherSnapshot?.discountValue ?? null,
+          voucherSnapshot?.discountAmount ?? 0,
         ],
       );
 
@@ -84,6 +165,24 @@ export class MySQLOrderCheckoutService implements IOrderCheckoutService {
         );
       }
 
+      await conn.query(
+        `UPDATE orders
+         SET discount_percent_applied = ?,
+             subtotal_amount = ?,
+             discount_amount = ?,
+             total_amount = ?,
+             voucher_discount_amount = ?
+         WHERE order_id = ?`,
+        [
+          voucherSnapshot?.discountType === "PERCENT" ? voucherSnapshot.discountValue : 0,
+          subtotalAmount,
+          discountAmount,
+          totalAmount,
+          voucherSnapshot?.discountAmount ?? 0,
+          orderId,
+        ],
+      );
+
       // 4) Decrement stock atomically per item
       const agg = new Map<string, number>();
       for (const it of items) {
@@ -99,11 +198,47 @@ export class MySQLOrderCheckoutService implements IOrderCheckoutService {
         if (!ok) throw new Error("OUT_OF_STOCK");
       }
 
-      // 5) Checkout cart
+      // 5) Commit ingredient inventory at the same business commit point as order creation.
+      const inventoryResult = await consumeOrderInventory(conn, {
+        orderId,
+        branchId,
+        triggerStatus: "ORDER_CREATED",
+      });
+
+      if (this.voucherRepo && voucherSnapshot) {
+        await this.voucherRepo.recordUsage(
+          {
+            voucherId: voucherSnapshot.id,
+            branchId,
+            orderId,
+            sessionId: cart.sessionId ? String(cart.sessionId) : null,
+            voucherCodeSnapshot: voucherSnapshot.code,
+            voucherNameSnapshot: voucherSnapshot.name,
+            discountType: voucherSnapshot.discountType,
+            discountValue: voucherSnapshot.discountValue,
+            discountAmount: voucherSnapshot.discountAmount,
+            subtotalAmount,
+            totalAfterDiscount: totalAmount,
+          },
+          { conn },
+        );
+      }
+
+      // 6) Checkout cart
       await conn.query(`UPDATE carts SET cart_status = 'CHECKED_OUT' WHERE cart_id = ?`, [String(cart.id)]);
 
       await conn.commit();
-      return { orderId, orderCode: input.orderCode };
+      return {
+        orderId,
+        orderCode: input.orderCode,
+        subtotalAmount,
+        discountAmount,
+        totalAmount,
+        voucher: voucherSnapshot,
+        affectedMenuItemIds: inventoryResult.affectedMenuItemIds,
+        consumedIngredients: inventoryResult.ingredientTotals,
+        inventoryCommitPoint: "ORDER_CREATED",
+      };
     } catch (err) {
       try {
         await conn.rollback();

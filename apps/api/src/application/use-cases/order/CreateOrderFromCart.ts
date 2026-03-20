@@ -25,6 +25,9 @@ export class CreateOrderFromCart {
     private sessionRepo: ITableSessionRepository | null,
     private stockHold: IStockHoldService = new NoopStockHoldService(),
     private eventBus: IEventBus = new NoopEventBus(),
+    private readonly syncHooks: {
+      syncMenuProjection?: ((input: { branchId: string; itemIds: string[] }) => Promise<unknown>) | null;
+    } = {},
   ) { }
 
   async execute(cartKey: string, note: string | null = null) {
@@ -52,18 +55,32 @@ export class CreateOrderFromCart {
       itemName: nameById.get(String(it.itemId ?? it.item_id)) ?? "",
     }));
 
-    const { orderId } = await this.checkoutSvc.checkoutFromCart({
+    const checkoutResult = await this.checkoutSvc.checkoutFromCart({
       orderCode,
       cart,
       items: itemsWithNames,
       note,
     });
+    const orderId = checkoutResult.orderId;
 
     // Consume holds after successful checkout (remove holds without restoring stock)
     try {
       await this.stockHold.consumeCart(cartKey);
     } catch {
       // ignore (order already created)
+    }
+
+    if (
+      cart.branchId &&
+      checkoutResult.affectedMenuItemIds.length > 0 &&
+      this.syncHooks.syncMenuProjection
+    ) {
+      await Promise.allSettled([
+        this.syncHooks.syncMenuProjection({
+          branchId: String(cart.branchId),
+          itemIds: checkoutResult.affectedMenuItemIds,
+        }),
+      ]);
     }
 
     const sessionKey = await resolveSessionKey(this.sessionRepo, cart.sessionId ?? null);
@@ -92,6 +109,7 @@ export class CreateOrderFromCart {
         type: "inventory.updated",
         at: new Date().toISOString(),
         scope: {
+          sessionKey,
           branchId: cart.branchId,
         },
         payload: {
@@ -99,10 +117,20 @@ export class CreateOrderFromCart {
           cartKey,
           orderCode,
           orderId: String(orderId),
+          consumedIngredients: checkoutResult.consumedIngredients,
+          affectedMenuItemIds: checkoutResult.affectedMenuItemIds,
+          triggerStatus: checkoutResult.inventoryCommitPoint,
           source: "order.checkout.consume",
         },
       });
     }
-    return { orderCode, orderId: String(orderId) };
+    return {
+      orderCode,
+      orderId: String(orderId),
+      subtotalAmount: checkoutResult.subtotalAmount,
+      discountAmount: checkoutResult.discountAmount,
+      totalAmount: checkoutResult.totalAmount,
+      voucher: checkoutResult.voucher,
+    };
   }
 }

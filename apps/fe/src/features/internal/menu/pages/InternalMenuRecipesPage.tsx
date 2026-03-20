@@ -8,6 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../../../shared/ui/
 import { Input } from "../../../../shared/ui/input";
 import { useInventoryItemsQuery } from "../../inventory/hooks/useInventoryItemsQuery";
 import { useAdminMenuItemsQuery } from "../hooks/useAdminMenuItemsQuery";
+import {
+  useMenuRecipePresenceMap,
+  type MenuRecipePresenceSummary,
+} from "../hooks/useMenuRecipePresenceMap";
 import { useMenuRecipeQuery } from "../hooks/useMenuRecipeQuery";
 import { useSaveMenuRecipeMutation } from "../hooks/useSaveMenuRecipeMutation";
 import type { AdminMenuItem } from "../services/adminMenuApi";
@@ -27,12 +31,72 @@ type IngredientOption = {
   isActive: boolean;
 };
 
+type FlashState =
+  | { kind: "success"; message: string }
+  | { kind: "error"; message: string }
+  | null;
+
+type RecipeFilter = "all" | "missing" | "ready";
+
 type RecipeLinesEditorProps = {
   initialLines: EditableRecipeLine[];
   ingredientOptions: IngredientOption[];
   disabled: boolean;
   onSave: (lines: SaveMenuRecipeLineInput[]) => Promise<void>;
 };
+
+function extractErrorMessage(error: unknown) {
+  if (typeof error === "object" && error && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) {
+      return message;
+    }
+  }
+  return "Lưu công thức thất bại.";
+}
+
+function getSellableQty(item: AdminMenuItem | null): number | null {
+  if (!item) return null;
+  if (item.stockQty == null || !Number.isFinite(Number(item.stockQty))) {
+    return null;
+  }
+  return Math.max(0, Number(item.stockQty));
+}
+
+function getRecipeReason(
+  item: AdminMenuItem | null,
+  recipeSummary?: MenuRecipePresenceSummary,
+): string {
+  if (!item) return "Chưa chọn món.";
+
+  const sellableQty = getSellableQty(item);
+
+  if (!item.isActive) {
+    return "Món đang inactive.";
+  }
+
+  if (!recipeSummary) {
+    return "Đang kiểm tra trạng thái công thức của món này.";
+  }
+
+  if (recipeSummary.status === "missing") {
+    return "Món chưa có công thức. Hãy thêm recipe line rồi lưu.";
+  }
+
+  if (recipeSummary.status === "error") {
+    return "Không đọc được trạng thái công thức của món này.";
+  }
+
+  if (sellableQty === null) {
+    return "Đã có công thức nhưng chưa đồng bộ được số có thể bán.";
+  }
+
+  if (sellableQty <= 0) {
+    return "Đã có công thức nhưng hiện không đủ nguyên liệu để bán.";
+  }
+
+  return "Món đã có công thức và đang có thể bán.";
+}
 
 function RecipeLinesEditor({
   initialLines,
@@ -42,7 +106,6 @@ function RecipeLinesEditor({
 }: RecipeLinesEditorProps) {
   const [lines, setLines] = useState<EditableRecipeLine[]>(() => initialLines);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
 
   function updateLine(idx: number, patch: Partial<EditableRecipeLine>) {
     setLines((prev) => prev.map((line, i) => (i === idx ? { ...line, ...patch } : line)));
@@ -151,8 +214,7 @@ function RecipeLinesEditor({
                       value={line.ingredientId}
                       onChange={(e) => {
                         const nextId = e.target.value;
-                        const picked =
-                          ingredientOptions.find((x) => x.id === nextId) ?? null;
+                        const picked = ingredientOptions.find((x) => x.id === nextId) ?? null;
 
                         updateLine(idx, {
                           ingredientId: nextId,
@@ -251,6 +313,8 @@ export function InternalMenuRecipesPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [q, setQ] = useState("");
+  const [recipeFilter, setRecipeFilter] = useState<RecipeFilter>("all");
+  const [flash, setFlash] = useState<FlashState>(null);
 
   const selectedId = searchParams.get("itemId")?.trim() ?? "";
 
@@ -275,23 +339,43 @@ export function InternalMenuRecipesPage() {
   }, [inventoryItemsQuery.data]);
 
   const allItems = useMemo<AdminMenuItem[]>(() => itemsQuery.data?.items ?? [], [itemsQuery.data]);
+  const recipePresenceQuery = useMenuRecipePresenceMap(
+    branchId ?? null,
+    allItems.map((item) => item.id),
+  );
+
+  const recipePresenceByItem = useMemo<Record<string, MenuRecipePresenceSummary>>(() => {
+    return recipePresenceQuery.data ?? {};
+  }, [recipePresenceQuery.data]);
 
   const filteredItems = useMemo(() => {
     const qq = q.trim().toLowerCase();
-    if (!qq) return allItems;
 
     return allItems.filter((item) => {
-      return (
+      const recipeState = recipePresenceByItem[item.id]?.status;
+      const matchKeyword =
+        !qq ||
         item.id.toLowerCase().includes(qq) ||
         item.name.toLowerCase().includes(qq) ||
         String(item.categoryId ?? "").toLowerCase().includes(qq) ||
-        String(item.categoryName ?? "").toLowerCase().includes(qq)
-      );
+        String(item.categoryName ?? "").toLowerCase().includes(qq);
+
+      if (!matchKeyword) return false;
+
+      switch (recipeFilter) {
+        case "missing":
+          return recipeState === "missing";
+        case "ready":
+          return recipeState === "ready";
+        case "all":
+        default:
+          return true;
+      }
     });
-  }, [allItems, q]);
+  }, [allItems, q, recipeFilter, recipePresenceByItem]);
 
   const selected = allItems.find((x) => x.id === selectedId) ?? null;
-
+  const selectedRecipePresence = selected ? recipePresenceByItem[selected.id] : undefined;
   const recipeQuery = useMenuRecipeQuery(branchId ?? null, selectedId || null);
   const saveMutation = useSaveMenuRecipeMutation(branchId ?? null, selectedId || null);
 
@@ -308,6 +392,7 @@ export function InternalMenuRecipesPage() {
     const next = new URLSearchParams(searchParams);
     next.set("itemId", itemId);
     setSearchParams(next);
+    setFlash(null);
   }
 
   return (
@@ -316,7 +401,7 @@ export function InternalMenuRecipesPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Công thức món</h1>
           <p className="text-sm text-muted-foreground">
-            Cấu hình định lượng nguyên liệu theo từng món. Đi từ Menu Management để mở đúng món cần sửa.
+            Cấu hình định lượng nguyên liệu theo từng món. PR25 bổ sung badge “chưa có công thức” và làm rõ vì sao món active nhưng sellable vẫn bằng 0.
           </p>
         </div>
 
@@ -329,6 +414,12 @@ export function InternalMenuRecipesPage() {
           </Link>
         ) : null}
       </div>
+
+      {flash && (
+        <Alert variant={flash.kind === "error" ? "destructive" : "default"}>
+          <AlertDescription>{flash.message}</AlertDescription>
+        </Alert>
+      )}
 
       {itemsQuery.isError && (
         <Alert variant="destructive">
@@ -348,21 +439,15 @@ export function InternalMenuRecipesPage() {
         </Alert>
       )}
 
-      {saveMutation.isError && (
-        <Alert variant="destructive">
-          <AlertDescription>Lưu công thức thất bại.</AlertDescription>
-        </Alert>
-      )}
-
-      {selectedId && !selected && !itemsQuery.isLoading && (
+      {selectedId && !selected && itemsQuery.isSuccess && allItems.length > 0 && (
         <Alert variant="destructive">
           <AlertDescription>
-            Không tìm thấy món đang được chọn. Món này có thể đã bị xóa hoặc không còn nằm trong danh sách admin.
+            Không tìm thấy món đang được chọn trong dữ liệu recipe hiện tại. Hãy quay lại danh sách món và chọn lại.
           </AlertDescription>
         </Alert>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
         <Card>
           <CardHeader>
             <CardTitle>Danh sách món</CardTitle>
@@ -375,6 +460,22 @@ export function InternalMenuRecipesPage() {
               placeholder="Tìm theo tên, ID hoặc danh mục..."
             />
 
+            <select
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={recipeFilter}
+              onChange={(e) => setRecipeFilter(e.target.value as RecipeFilter)}
+            >
+              <option value="all">Tất cả</option>
+              <option value="missing">Chưa có công thức</option>
+              <option value="ready">Đã có công thức</option>
+            </select>
+
+            {recipePresenceQuery.isLoading && !itemsQuery.isLoading ? (
+              <div className="text-xs text-muted-foreground">
+                Đang kiểm tra trạng thái công thức của từng món...
+              </div>
+            ) : null}
+
             {itemsQuery.isLoading ? (
               <div className="rounded-lg border border-dashed px-3 py-6 text-sm text-muted-foreground">
                 Đang tải danh sách món...
@@ -383,15 +484,14 @@ export function InternalMenuRecipesPage() {
               <div className="space-y-2">
                 {filteredItems.map((item) => {
                   const active = item.id === selectedId;
+                  const recipeState = recipePresenceByItem[item.id]?.status;
 
                   return (
                     <button
                       key={item.id}
                       type="button"
                       onClick={() => selectItem(item.id)}
-                      className={`w-full rounded-lg border px-3 py-3 text-left transition ${active
-                          ? "border-foreground bg-muted"
-                          : "border-border hover:bg-muted/40"
+                      className={`w-full rounded-lg border px-3 py-3 text-left transition ${active ? "border-foreground bg-muted" : "border-border hover:bg-muted/40"
                         }`}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -402,9 +502,21 @@ export function InternalMenuRecipesPage() {
                           </div>
                         </div>
 
-                        <Badge variant={item.isActive ? "default" : "secondary"}>
-                          {item.isActive ? "ACTIVE" : "INACTIVE"}
-                        </Badge>
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <Badge variant={item.isActive ? "default" : "secondary"}>
+                            {item.isActive ? "ACTIVE" : "INACTIVE"}
+                          </Badge>
+
+                          {recipeState === "missing" ? (
+                            <Badge variant="destructive">CHƯA CÓ CÔNG THỨC</Badge>
+                          ) : recipeState === "ready" ? (
+                            <Badge variant="outline">READY</Badge>
+                          ) : recipeState === "error" ? (
+                            <Badge variant="secondary">LỖI ĐỌC RECIPE</Badge>
+                          ) : (
+                            <Badge variant="secondary">ĐANG KIỂM TRA</Badge>
+                          )}
+                        </div>
                       </div>
                     </button>
                   );
@@ -432,33 +544,51 @@ export function InternalMenuRecipesPage() {
                   Chọn một món ở cột trái hoặc đi từ Menu Management bằng nút “Công thức”.
                 </div>
               ) : (
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-lg border p-4">
-                    <div className="text-xs uppercase text-muted-foreground">Tên món</div>
-                    <div className="mt-1 font-medium">{selected.name}</div>
-                  </div>
+                <div className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="rounded-lg border p-4">
+                      <div className="text-xs uppercase text-muted-foreground">Tên món</div>
+                      <div className="mt-1 font-medium">{selected.name}</div>
+                    </div>
 
-                  <div className="rounded-lg border p-4">
-                    <div className="text-xs uppercase text-muted-foreground">Danh mục</div>
-                    <div className="mt-1 font-medium">
-                      {selected.categoryName || selected.categoryId}
+                    <div className="rounded-lg border p-4">
+                      <div className="text-xs uppercase text-muted-foreground">Danh mục</div>
+                      <div className="mt-1 font-medium">{selected.categoryName || selected.categoryId}</div>
+                    </div>
+
+                    <div className="rounded-lg border p-4">
+                      <div className="text-xs uppercase text-muted-foreground">Giá bán</div>
+                      <div className="mt-1 font-medium">{selected.price.toLocaleString("vi-VN")} đ</div>
+                    </div>
+
+                    <div className="rounded-lg border p-4">
+                      <div className="text-xs uppercase text-muted-foreground">Số có thể bán</div>
+                      <div className="mt-1 font-medium">
+                        {getSellableQty(selected) === null
+                          ? "—"
+                          : getSellableQty(selected)?.toLocaleString("vi-VN")}
+                      </div>
                     </div>
                   </div>
 
-                  <div className="rounded-lg border p-4">
-                    <div className="text-xs uppercase text-muted-foreground">Giá bán</div>
-                    <div className="mt-1 font-medium">
-                      {selected.price.toLocaleString("vi-VN")} đ
-                    </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant={selected.isActive ? "default" : "secondary"}>
+                      {selected.isActive ? "ACTIVE" : "INACTIVE"}
+                    </Badge>
+
+                    {selectedRecipePresence?.status === "missing" ? (
+                      <Badge variant="destructive">CHƯA CÓ CÔNG THỨC</Badge>
+                    ) : selectedRecipePresence?.status === "ready" ? (
+                      <Badge variant="outline">ĐÃ CÓ CÔNG THỨC</Badge>
+                    ) : selectedRecipePresence?.status === "error" ? (
+                      <Badge variant="secondary">LỖI ĐỌC RECIPE</Badge>
+                    ) : (
+                      <Badge variant="secondary">ĐANG KIỂM TRA</Badge>
+                    )}
                   </div>
 
-                  <div className="rounded-lg border p-4">
-                    <div className="text-xs uppercase text-muted-foreground">Trạng thái</div>
-                    <div className="mt-1">
-                      <Badge variant={selected.isActive ? "default" : "secondary"}>
-                        {selected.isActive ? "ACTIVE" : "INACTIVE"}
-                      </Badge>
-                    </div>
+                  <div className="rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">
+                    {getRecipeReason(selected, selectedRecipePresence)}
                   </div>
                 </div>
               )}
@@ -480,21 +610,51 @@ export function InternalMenuRecipesPage() {
                   Đang tải công thức...
                 </div>
               ) : (
-                <RecipeLinesEditor
-                  key={`${selectedId}:${recipeQuery.dataUpdatedAt}`}
-                  initialLines={initialLines}
-                  ingredientOptions={ingredientOptions}
-                  disabled={saveMutation.isPending}
-                  onSave={async (lines) => {
-                    if (!branchId || !selectedId) return;
+                <>
+                  {selectedRecipePresence?.status === "missing" && (
+                    <Alert>
+                      <AlertDescription>
+                        Món này chưa có công thức. Hãy thêm recipe line rồi bấm “Lưu công thức”.
+                      </AlertDescription>
+                    </Alert>
+                  )}
 
-                    await saveMutation.mutateAsync({
-                      branchId,
-                      menuItemId: selectedId,
-                      lines,
-                    });
-                  }}
-                />
+                  {ingredientOptions.length === 0 && (
+                    <Alert variant="destructive">
+                      <AlertDescription>
+                        Chưa có nguyên liệu khả dụng để cấu hình recipe. Hãy tạo nguyên liệu trước.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  <RecipeLinesEditor
+                    key={`${selectedId}:${recipeQuery.dataUpdatedAt}`}
+                    initialLines={initialLines}
+                    ingredientOptions={ingredientOptions}
+                    disabled={saveMutation.isPending}
+                    onSave={async (lines) => {
+                      if (!branchId || !selectedId) return;
+
+                      try {
+                        await saveMutation.mutateAsync({
+                          branchId,
+                          menuItemId: selectedId,
+                          lines,
+                        });
+
+                        setFlash({
+                          kind: "success",
+                          message: `Đã lưu công thức cho ${selected.name}. Quay lại Menu Management để kiểm tra số có thể bán đã đổi đúng chưa.`,
+                        });
+                      } catch (error) {
+                        setFlash({
+                          kind: "error",
+                          message: extractErrorMessage(error),
+                        });
+                      }
+                    }}
+                  />
+                </>
               )}
             </CardContent>
           </Card>

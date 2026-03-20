@@ -8,6 +8,9 @@
     "build": "pnpm -r run --if-present build",
     "typecheck": "pnpm -r run --if-present typecheck",
     "lint": "pnpm -r run --if-present lint",
+    "verify:static": "pnpm -C packages/contracts build && pnpm -C apps/fe lint && pnpm -C apps/fe typecheck && pnpm -C apps/fe build && pnpm -C apps/api typecheck && pnpm -C apps/api build",
+    "verify:smokes": "pnpm -C apps/api verify:smokes",
+    "verify:all": "pnpm verify:static && pnpm verify:smokes",
 
     "contracts:dev": "pnpm -C packages/contracts dev",
     "contracts:build": "pnpm -C packages/contracts build",
@@ -23,9 +26,9 @@
     "api:db:diff": "pnpm -C apps/api db:diff",
 
     "pr21:reset": "pnpm -C apps/api db:reset --yes && pnpm -C packages/contracts build",
-    "pr21:verify:static": "pnpm -C packages/contracts build && pnpm -C apps/fe lint && pnpm -C apps/fe typecheck && pnpm -C apps/fe build && pnpm -C apps/api typecheck && pnpm -C apps/api build",
-    "pr21:verify:smokes": "pnpm -C apps/api smoke:full && pnpm -C apps/api smoke:negative && pnpm -C apps/api smoke:realtime && pnpm -C apps/api smoke:oversell",
-    "pr21:verify:all": "pnpm pr21:verify:static && pnpm pr21:verify:smokes"
+    "pr21:verify:static": "pnpm verify:static",
+    "pr21:verify:smokes": "pnpm verify:smokes",
+    "pr21:verify:all": "pnpm verify:all"
   },
   "pnpm": {
     "overrides": {

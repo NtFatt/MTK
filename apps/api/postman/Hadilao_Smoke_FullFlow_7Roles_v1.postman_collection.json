@@ -474,7 +474,13 @@
           "name": "Create Order from Cart",
           "request": {
             "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "type": "text"
+              }
+            ],
             "url": "{{baseUrl}}/api/v1/orders/from-cart/{{cartKey}}"
           },
           "event": [
@@ -906,7 +912,7 @@
           ]
         },
         {
-          "name": "STAFF: List tables (branch-scope)",
+          "name": "STAFF: List tables (own branch scope)",
           "request": {
             "method": "GET",
             "header": [
@@ -915,7 +921,7 @@
                 "value": "Bearer {{staffToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/admin/ops/tables?branchId=999&limit=50"
+            "url": "{{baseUrl}}/api/v1/admin/ops/tables?branchId={{branchId}}&limit=50"
           },
           "event": [
             {
@@ -1123,6 +1129,11 @@
               {
                 "key": "Authorization",
                 "value": "Bearer {{staffToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "type": "text"
               }
             ],
             "url": "{{baseUrl}}/api/v1/admin/ops/orders/from-cart/{{opsCartKey}}"

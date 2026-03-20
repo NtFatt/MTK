@@ -33,6 +33,7 @@ export type Permission =
   | "inventory.read"
   | "inventory.adjust"
   | "menu.manage"
+  | "promotions.manage"
   | "realtime.admin"
   | "observability.admin.read";
 
@@ -62,6 +63,7 @@ export const ROLE_PERMISSIONS: Record<InternalRole, ReadonlySet<Permission>> = {
     "inventory.read",
     "inventory.adjust",
     "menu.manage",
+    "promotions.manage",
     "realtime.admin",
     "observability.admin.read",
   ]),
@@ -90,6 +92,7 @@ export const ROLE_PERMISSIONS: Record<InternalRole, ReadonlySet<Permission>> = {
     "inventory.adjust",
     // Demo 10/10: Branch manager can invalidate menu cache version.
     "menu.manage",
+    "promotions.manage",
   ]),
 
   // STAFF (service) = ops + reservations

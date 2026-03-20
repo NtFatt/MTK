@@ -2,9 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 
 import { Alert, AlertDescription } from "../../../../shared/ui/alert";
-import { Badge } from "../../../../shared/ui/badge";
 import { Button, buttonVariants } from "../../../../shared/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../../../../shared/ui/card";
 import { Skeleton } from "../../../../shared/ui/skeleton";
 
 import { useCancelReservationMutation } from "../hooks/useCancelReservationMutation";
@@ -16,28 +14,28 @@ import type {
   PublicReservationRow,
   PublicReservationStatus,
 } from "../services/reservationsApi";
+import { CustomerHotpotShell } from "../../shared/components/CustomerHotpotShell";
+import { cn } from "../../../../shared/utils/cn";
 
 type FlashState =
   | { kind: "success"; message: string }
   | { kind: "error"; message: string }
   | null;
 
-function statusVariant(
-  status: PublicReservationStatus,
-): "default" | "secondary" | "destructive" | "outline" {
+function statusTone(status: PublicReservationStatus): "default" | "positive" | "warn" | "danger" {
   switch (status) {
     case "CONFIRMED":
     case "CHECKED_IN":
     case "COMPLETED":
-      return "default";
+      return "positive";
     case "PENDING":
-      return "secondary";
+      return "warn";
     case "CANCELED":
     case "EXPIRED":
     case "NO_SHOW":
-      return "destructive";
+      return "danger";
     default:
-      return "outline";
+      return "default";
   }
 }
 
@@ -80,9 +78,9 @@ export function CustomerReservationDetailPage() {
     !!code,
     code
       ? {
-        kind: "customer",
-        userKey: `reservation:${code}`,
-      }
+          kind: "customer",
+          userKey: `reservation:${code}`,
+        }
       : undefined,
   );
 
@@ -112,179 +110,211 @@ export function CustomerReservationDetailPage() {
 
   if (query.isLoading) {
     return (
-      <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-52 w-full" />
-      </div>
+      <CustomerHotpotShell contentClassName="max-w-5xl">
+        <div className="space-y-6">
+          <Skeleton className="customer-hotpot-receipt h-32 w-full rounded-[30px]" />
+          <Skeleton className="customer-hotpot-receipt h-64 w-full rounded-[30px]" />
+        </div>
+      </CustomerHotpotShell>
     );
   }
 
   if (query.error) {
     return (
-      <div className="mx-auto max-w-3xl space-y-4 px-4 py-6">
-        <Alert variant="destructive">
-          <AlertDescription>{getReservationErrorMessage(query.error)}</AlertDescription>
-        </Alert>
+      <CustomerHotpotShell contentClassName="max-w-5xl">
+        <div className="space-y-5">
+          <Alert variant="destructive" className="rounded-[20px] border-[#e4bfb4] bg-[#fff4ef]">
+            <AlertDescription>{getReservationErrorMessage(query.error)}</AlertDescription>
+          </Alert>
 
-        <div className="flex flex-wrap gap-3">
-          <Button variant="outline" onClick={() => query.refetch()}>
-            Thử lại
-          </Button>
-          <Link to="/c/reservations" className={buttonVariants({ variant: "outline" })}>
-            Tạo reservation khác
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              variant="outline"
+              onClick={() => query.refetch()}
+              className="rounded-full border-[#d9bd95]/80 bg-[#fff8ec] text-[#6a3b20] hover:bg-[#fff2df]"
+            >
+              Thử lại
+            </Button>
+            <Link
+              to="/c/reservations"
+              className={cn(
+                buttonVariants({ variant: "outline" }),
+                "rounded-full border-[#d9bd95]/80 bg-[#fff8ec] text-[#6a3b20] hover:bg-[#fff2df]",
+              )}
+            >
+              Tạo reservation khác
+            </Link>
+          </div>
         </div>
-      </div>
+      </CustomerHotpotShell>
     );
   }
 
   const row = query.data;
   if (!row) {
     return (
-      <div className="mx-auto max-w-3xl space-y-4 px-4 py-6">
-        <Alert variant="destructive">
-          <AlertDescription>Không tìm thấy reservation.</AlertDescription>
-        </Alert>
-        <Link to="/c/reservations" className={buttonVariants({ variant: "outline" })}>
-          Quay lại đặt bàn
-        </Link>
-      </div>
+      <CustomerHotpotShell contentClassName="max-w-5xl">
+        <div className="space-y-5">
+          <Alert variant="destructive" className="rounded-[20px] border-[#e4bfb4] bg-[#fff4ef]">
+            <AlertDescription>Không tìm thấy reservation.</AlertDescription>
+          </Alert>
+          <Link
+            to="/c/reservations"
+            className={cn(
+              buttonVariants({ variant: "outline" }),
+              "rounded-full border-[#d9bd95]/80 bg-[#fff8ec] text-[#6a3b20] hover:bg-[#fff2df]",
+            )}
+          >
+            Quay lại đặt bàn
+          </Link>
+        </div>
+      </CustomerHotpotShell>
     );
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
-      <section className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">Chi tiết reservation</h1>
-        <p className="text-sm text-muted-foreground">
-          Theo dõi trạng thái reservation và hủy nếu kế hoạch thay đổi.
-        </p>
-      </section>
-
-      {flash && (
-        <Alert
-          variant={flash.kind === "error" ? "destructive" : "default"}
-          className={flash.kind === "success" ? "border-emerald-500/30 bg-emerald-500/10" : undefined}
-        >
-          <AlertDescription>{flash.message}</AlertDescription>
-        </Alert>
-      )}
-
-      <Card className="rounded-2xl">
-        <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-xl font-mono">{row.reservationCode}</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Mã reservation của bạn. Hãy lưu lại để tra cứu khi cần.
+    <CustomerHotpotShell contentClassName="max-w-5xl">
+      <div className="space-y-6">
+        <section className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-2">
+            <div className="customer-hotpot-kicker">Chi tiết reservation</div>
+            <h1 className="customer-mythmaker-title customer-hotpot-page-title">Giữ chỗ của bạn tại quán</h1>
+            <p className="customer-hotpot-page-subtitle">
+              Theo dõi trạng thái reservation và hủy nếu kế hoạch thay đổi.
             </p>
           </div>
 
-          <Badge variant={statusVariant(row.status)}>{row.status}</Badge>
-        </CardHeader>
+          <span className="customer-hotpot-status-pill px-4 py-2 text-sm font-semibold" data-tone={statusTone(row.status)}>
+            {row.status}
+          </span>
+        </section>
 
-        <CardContent className="grid gap-6 lg:grid-cols-2">
-          <div className="space-y-4 rounded-xl border bg-card p-4">
-            <div className="text-sm font-medium">Thông tin đặt bàn</div>
+        {flash ? (
+          <Alert
+            variant={flash.kind === "error" ? "destructive" : "default"}
+            className={flash.kind === "success" ? "rounded-[20px] border-[#bfd1a8] bg-[#eef7e5]" : "rounded-[20px] border-[#e4bfb4] bg-[#fff4ef]"}
+          >
+            <AlertDescription>{flash.message}</AlertDescription>
+          </Alert>
+        ) : null}
 
-            <div className="grid gap-3 text-sm">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">Khu vực</span>
-                <span className="font-medium">{row.areaName ?? "—"}</span>
-              </div>
-
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">Bàn</span>
-                <span className="font-mono">{row.tableCode ?? "—"}</span>
-              </div>
-
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">Số lượng khách</span>
-                <span className="font-medium">{row.partySize}</span>
-              </div>
-
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">Bắt đầu</span>
-                <span className="font-medium">{formatDateTime(row.reservedFrom)}</span>
-              </div>
-
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">Kết thúc</span>
-                <span className="font-medium">{formatDateTime(row.reservedTo)}</span>
-              </div>
-
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">Hết hạn giữ bàn</span>
-                <span className="font-medium">{formatDateTime(row.expiresAt)}</span>
-              </div>
+        <section className="customer-hotpot-receipt rounded-[30px] p-5 sm:p-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-1">
+              <div className="customer-hotpot-kicker">Mã reservation</div>
+              <div className="font-mono text-xl font-semibold text-[#5a301a]">{row.reservationCode}</div>
+              <p className="text-sm text-[#7a5a43]">Lưu mã này để tra cứu khi cần.</p>
             </div>
           </div>
 
-          <div className="space-y-4 rounded-xl border bg-card p-4">
-            <div className="text-sm font-medium">Thông tin liên hệ</div>
-
-            <div className="grid gap-3 text-sm">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">Tên liên hệ</span>
-                <span className="font-medium">{row.contactName ?? "—"}</span>
-              </div>
-
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">Số điện thoại</span>
-                <span className="font-medium">{row.contactPhone ?? "—"}</span>
-              </div>
-
-              <div className="space-y-1">
-                <div className="text-muted-foreground">Ghi chú</div>
-                <div className="rounded-lg border bg-muted/30 p-3">
-                  {row.note?.trim() || "Không có ghi chú."}
+          <div className="mt-6 grid gap-6 lg:grid-cols-2">
+            <div className="customer-hotpot-stat rounded-[24px] px-5 py-5">
+              <div className="text-sm font-medium text-[#4e2916]">Thông tin đặt bàn</div>
+              <div className="mt-4 grid gap-3 text-sm text-[#7a5a43]">
+                <div className="flex items-center justify-between gap-3">
+                  <span>Khu vực</span>
+                  <span className="font-medium text-[#5a301a]">{row.areaName ?? "—"}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span>Bàn</span>
+                  <span className="font-mono font-semibold text-[#5a301a]">{row.tableCode ?? "—"}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span>Số lượng khách</span>
+                  <span className="font-medium text-[#5a301a]">{row.partySize}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span>Bắt đầu</span>
+                  <span className="font-medium text-[#5a301a]">{formatDateTime(row.reservedFrom)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span>Kết thúc</span>
+                  <span className="font-medium text-[#5a301a]">{formatDateTime(row.reservedTo)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span>Hết hạn giữ bàn</span>
+                  <span className="font-medium text-[#5a301a]">{formatDateTime(row.expiresAt)}</span>
                 </div>
               </div>
+            </div>
 
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">Tạo lúc</span>
-                <span className="font-medium">{formatDateTime(row.createdAt)}</span>
-              </div>
-
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">Cập nhật lúc</span>
-                <span className="font-medium">{formatDateTime(row.updatedAt)}</span>
+            <div className="customer-hotpot-stat rounded-[24px] px-5 py-5">
+              <div className="text-sm font-medium text-[#4e2916]">Thông tin liên hệ</div>
+              <div className="mt-4 grid gap-3 text-sm text-[#7a5a43]">
+                <div className="flex items-center justify-between gap-3">
+                  <span>Tên liên hệ</span>
+                  <span className="font-medium text-[#5a301a]">{row.contactName ?? "—"}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span>Số điện thoại</span>
+                  <span className="font-medium text-[#5a301a]">{row.contactPhone ?? "—"}</span>
+                </div>
+                <div className="space-y-2">
+                  <div>Ghi chú</div>
+                  <div className="rounded-[18px] border border-[#dcc19d]/80 bg-[#fff8ec] p-3 text-[#5a301a]">
+                    {row.note?.trim() || "Không có ghi chú."}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span>Tạo lúc</span>
+                  <span className="font-medium text-[#5a301a]">{formatDateTime(row.createdAt)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span>Cập nhật lúc</span>
+                  <span className="font-medium text-[#5a301a]">{formatDateTime(row.updatedAt)}</span>
+                </div>
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </section>
 
-      <Card className="rounded-2xl">
-        <CardContent className="pt-6 text-sm text-muted-foreground">
+        <div className="customer-hotpot-stat rounded-[24px] px-5 py-4 text-sm text-[#7a5a43]">
           {getReservationStatusHint(row)}
-        </CardContent>
-      </Card>
+        </div>
 
-      <div className="flex flex-wrap gap-3">
-        {canCancelReservation(row) && (
+        <div className="flex flex-wrap gap-3">
+          {canCancelReservation(row) ? (
+            <Button
+              variant="destructive"
+              onClick={() => void handleCancel()}
+              disabled={cancelMutation.isPending}
+              className="rounded-full"
+            >
+              {cancelMutation.isPending ? "Đang hủy..." : "Hủy reservation"}
+            </Button>
+          ) : null}
+
           <Button
-            variant="destructive"
-            onClick={() => void handleCancel()}
-            disabled={cancelMutation.isPending}
+            variant="outline"
+            onClick={() => query.refetch()}
+            className="rounded-full border-[#d9bd95]/80 bg-[#fff8ec] text-[#6a3b20] hover:bg-[#fff2df]"
           >
-            {cancelMutation.isPending ? "Đang hủy..." : "Hủy reservation"}
+            Làm mới
           </Button>
-        )}
 
-        <Button variant="outline" onClick={() => query.refetch()}>
-          Làm mới
-        </Button>
-
-        <Link to="/c/reservations" className={buttonVariants({ variant: "outline" })}>
-          Tạo reservation mới
-        </Link>
-
-        {["EXPIRED", "CANCELED", "NO_SHOW"].includes(row.status) && (
-          <Link to="/c/reservations" className={buttonVariants({ variant: "default" })}>
-            Đặt reservation mới
+          <Link
+            to="/c/reservations"
+            className={cn(
+              buttonVariants({ variant: "outline" }),
+              "rounded-full border-[#d9bd95]/80 bg-[#fff8ec] text-[#6a3b20] hover:bg-[#fff2df]",
+            )}
+          >
+            Tạo reservation mới
           </Link>
-        )}
+
+          {["EXPIRED", "CANCELED", "NO_SHOW"].includes(row.status) ? (
+            <Link
+              to="/c/reservations"
+              className={cn(
+                buttonVariants({ variant: "default" }),
+                "rounded-full border border-[#b83022] bg-[linear-gradient(180deg,#d34a34_0%,#a82e22_100%)] text-[#fff7f0] shadow-[0_18px_40px_-24px_rgba(94,26,16,0.9)] hover:brightness-110",
+              )}
+            >
+              Đặt reservation mới
+            </Link>
+          ) : null}
+        </div>
       </div>
-    </div>
+    </CustomerHotpotShell>
   );
 }

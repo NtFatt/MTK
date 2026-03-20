@@ -17,17 +17,31 @@ export function CategoryTabs({
 }: CategoryTabsProps) {
   return (
     <Tabs value={activeCategoryId} onValueChange={onChange} className="w-full">
-      <TabsList className={cn("flex w-full flex-wrap justify-start gap-1 bg-muted/60 p-1")}>
+      <TabsList className="flex h-auto w-full flex-wrap justify-start gap-3 bg-transparent p-0">
         {categories.map((cat) => {
           const count = countByCategoryId?.[cat.id];
+          const active = cat.id === activeCategoryId;
+
           return (
-            <TabsTrigger key={cat.id} value={cat.id} className="flex items-center gap-1.5">
+            <TabsTrigger
+              key={cat.id}
+              value={cat.id}
+              data-active={active ? "true" : "false"}
+              className={cn(
+                "customer-hotpot-bamboo-tag flex items-center gap-2 !bg-transparent px-4 py-3 text-sm data-[state=active]:!bg-transparent"
+              )}
+            >
               <span>{cat.name}</span>
-              {count !== undefined && (
-                <span className="rounded-full bg-muted-foreground/20 px-1.5 py-0.5 text-xs text-muted-foreground">
+              {count !== undefined ? (
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 text-[11px] font-semibold",
+                    active ? "bg-white/20 text-[#fff7ef]" : "bg-[#fff6ea] text-[#93633c]"
+                  )}
+                >
                   {count}
                 </span>
-              )}
+              ) : null}
             </TabsTrigger>
           );
         })}

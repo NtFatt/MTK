@@ -25,6 +25,12 @@ export interface IOrderRepository {
   findStatusByOrderCode(orderCode: string): Promise<{
     orderCode: string;
     orderStatus: OrderStatus;
+    subtotalAmount: number;
+    discountAmount: number;
+    totalAmount: number;
+    voucherCode: string | null;
+    voucherName: string | null;
+    voucherDiscountAmount: number;
     updatedAt: string;
   } | null>;
 
@@ -36,6 +42,12 @@ export interface IOrderRepository {
   findStatusByOrderCodeForBranch(orderCode: string, branchId: string): Promise<{
     orderCode: string;
     orderStatus: OrderStatus;
+    subtotalAmount: number;
+    discountAmount: number;
+    totalAmount: number;
+    voucherCode: string | null;
+    voucherName: string | null;
+    voucherDiscountAmount: number;
     updatedAt: string;
   } | null>;
 

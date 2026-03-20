@@ -9,6 +9,8 @@ export function createCartRouter(controller: CartController): ExpressRouter {
   router.get("/:cartKey", asyncHandler(controller.getByCartKey));
   router.put("/:cartKey/items", asyncHandler(controller.upsertCartItem));
   router.delete("/:cartKey/items/:itemId", asyncHandler(controller.removeCartItem));
+  router.put("/:cartKey/voucher", asyncHandler(controller.applyVoucher));
+  router.delete("/:cartKey/voucher", asyncHandler(controller.removeVoucher));
 
   return router;
 }

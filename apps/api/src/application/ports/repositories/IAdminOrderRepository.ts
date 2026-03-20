@@ -59,7 +59,28 @@ export interface IAdminOrderRepository {
   }): Promise<{
     orderCode: string;
     toStatus: "PREPARING";
+    inventoryChanged: boolean;
+    inventoryTriggerStatus: string;
+    affectedMenuItemIds: string[];
     consumedLines: Array<{
+      ingredientId: string;
+      qtyConsumed: number;
+    }>;
+  }>;
+
+  cancelWithInventoryRestockIfApplicable(input: {
+    orderCode: string;
+    branchId: string;
+    changedByType: "ADMIN" | "STAFF";
+    changedById: string | null;
+    note: string | null;
+  }): Promise<{
+    orderCode: string;
+    toStatus: "CANCELED";
+    inventoryChanged: boolean;
+    inventoryTriggerStatus: string | null;
+    affectedMenuItemIds: string[];
+    restoredLines: Array<{
       ingredientId: string;
       qtyConsumed: number;
     }>;

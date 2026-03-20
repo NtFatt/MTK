@@ -150,6 +150,14 @@ function enqueueInvalidate(queryKey: readonly unknown[], exact = false) {
   debouncer.enqueue({ queryKey, exact });
 }
 
+function enqueueMenuRefresh() {
+  enqueueInvalidate(["menu", "view"], false);
+}
+
+function enqueueVoucherRefresh() {
+  enqueueInvalidate(["vouchers", "available"], false);
+}
+
 const ORDER_EVENTS = new Set([
   "order.created",
   "order.updated",
@@ -204,6 +212,7 @@ export function routeRealtimeEvent(env: EventEnvelope) {
     if (sk) {
       enqueueInvalidate(qk.cart.bySessionKey(sk), true);
       enqueueInvalidate(qk.sessions.detail(sk), true);
+      enqueueMenuRefresh();
     }
 
     if (branchId != null) {
@@ -218,6 +227,7 @@ export function routeRealtimeEvent(env: EventEnvelope) {
 
       enqueueInvalidate(["inventory-ingredients", b], false);
       enqueueInvalidate(["inventory-ingredient-alerts", b], false);
+      enqueueMenuRefresh();
     }
     return;
   }
@@ -225,7 +235,11 @@ export function routeRealtimeEvent(env: EventEnvelope) {
   // 1) Cart
   if (type === "cart.updated" || type === "cart.abandoned") {
     const sk = tryExtractSessionKey(env);
-    if (sk) enqueueInvalidate(qk.cart.bySessionKey(sk), true);
+    if (sk) {
+      enqueueInvalidate(qk.cart.bySessionKey(sk), true);
+      enqueueMenuRefresh();
+      enqueueVoucherRefresh();
+    }
     if (branchId != null) {
       enqueueInvalidate(["ops", "tables", "list"], false);
     }
@@ -238,7 +252,11 @@ export function routeRealtimeEvent(env: EventEnvelope) {
     if (orderCode) enqueueInvalidate(qk.orders.byCode(orderCode), true);
 
     const sk = tryExtractSessionKey(env);
-    if (sk) enqueueInvalidate(qk.cart.bySessionKey(sk), true);
+    if (sk) {
+      enqueueInvalidate(qk.cart.bySessionKey(sk), true);
+      enqueueMenuRefresh();
+      enqueueVoucherRefresh();
+    }
 
     if (branchId != null) {
       const b = String(branchId);
@@ -249,6 +267,7 @@ export function routeRealtimeEvent(env: EventEnvelope) {
 
       enqueueInvalidate(["inventory-ingredients", b], false);
       enqueueInvalidate(["inventory-ingredient-alerts", b], false);
+      enqueueMenuRefresh();
     }
     return;
   }
@@ -306,6 +325,11 @@ export function routeRealtimeEvent(env: EventEnvelope) {
 
       enqueueInvalidate(["inventory-ingredients", b], false);
       enqueueInvalidate(["inventory-ingredient-alerts", b], false);
+    }
+
+    if (tryExtractSessionKey(env)) {
+      enqueueMenuRefresh();
+      enqueueVoucherRefresh();
     }
     return;
   }

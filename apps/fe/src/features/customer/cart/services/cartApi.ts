@@ -37,6 +37,50 @@ function withCartKey(cart: any, fallbackCartKey: string): Cart {
   return { ...(cart as any), cartKey } as Cart;
 }
 
+function mapVoucher(raw: any) {
+  if (!raw || typeof raw !== "object") return null;
+
+  return {
+    id: String(raw.id ?? raw.voucherId ?? raw.voucher_id ?? ""),
+    code: String(raw.code ?? raw.voucherCode ?? raw.voucher_code ?? ""),
+    name: String(raw.name ?? raw.voucherName ?? raw.voucher_name ?? ""),
+    description: raw.description ? String(raw.description) : null,
+    discountType:
+      String(raw.discountType ?? raw.discount_type ?? "PERCENT") === "FIXED_AMOUNT"
+        ? "FIXED_AMOUNT"
+        : "PERCENT",
+    discountValue: Number(raw.discountValue ?? raw.discount_value ?? 0),
+    maxDiscountAmount:
+      raw.maxDiscountAmount == null && raw.max_discount_amount == null
+        ? null
+        : Number(raw.maxDiscountAmount ?? raw.max_discount_amount ?? 0),
+    minSubtotal: Number(raw.minSubtotal ?? raw.min_subtotal ?? 0),
+    usageLimitTotal:
+      raw.usageLimitTotal == null && raw.usage_limit_total == null
+        ? null
+        : Number(raw.usageLimitTotal ?? raw.usage_limit_total ?? 0),
+    usageLimitPerSession:
+      raw.usageLimitPerSession == null && raw.usage_limit_per_session == null
+        ? null
+        : Number(raw.usageLimitPerSession ?? raw.usage_limit_per_session ?? 0),
+    startsAt: String(raw.startsAt ?? raw.starts_at ?? ""),
+    endsAt: String(raw.endsAt ?? raw.ends_at ?? ""),
+    isActive: Boolean(raw.isActive ?? raw.is_active ?? false),
+    isValid: Boolean(raw.isValid ?? raw.is_valid ?? false),
+    invalidReasonCode:
+      raw.invalidReasonCode != null || raw.invalid_reason_code != null
+        ? String(raw.invalidReasonCode ?? raw.invalid_reason_code ?? "")
+        : null,
+    invalidReasonMessage:
+      raw.invalidReasonMessage != null || raw.invalid_reason_message != null
+        ? String(raw.invalidReasonMessage ?? raw.invalid_reason_message ?? "")
+        : null,
+    discountAmount: Number(raw.discountAmount ?? raw.discount_amount ?? 0),
+    totalAfterDiscount: Number(raw.totalAfterDiscount ?? raw.total_after_discount ?? 0),
+    effectivePercent: Number(raw.effectivePercent ?? raw.effective_percent ?? 0),
+  };
+}
+
 // ✅ BE của bạn đang enforce branchId -> bắt buộc truyền branchId
 export async function openCartForSession(
   sessionKey: string,
@@ -92,6 +136,11 @@ export async function getCart(cartKey: string): Promise<Cart> {
       };
     });
   }
+
+  cart.discount = Number(cart.discount ?? cart.discountAmount ?? 0);
+  cart.total = Number(cart.total ?? cart.totalAmount ?? cart.subtotal ?? 0);
+  cart.subtotal = Number(cart.subtotal ?? cart.subtotalAmount ?? 0);
+  cart.voucher = mapVoucher(cart.voucher ?? cart.appliedVoucher ?? null);
 
   return cart as Cart;
 }

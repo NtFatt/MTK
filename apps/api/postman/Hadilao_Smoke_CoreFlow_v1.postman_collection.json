@@ -453,7 +453,13 @@
           "name": "Create Order from Cart",
           "request": {
             "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "type": "text"
+              }
+            ],
             "url": "{{baseUrl}}/api/v1/orders/from-cart/{{cartKey}}"
           },
           "event": [

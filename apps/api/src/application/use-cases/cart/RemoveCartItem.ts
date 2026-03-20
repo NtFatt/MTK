@@ -81,6 +81,7 @@ export class RemoveCartItem {
         type: "inventory.updated",
         at: new Date().toISOString(),
         scope: {
+          sessionKey,
           branchId: cart.branchId,
         },
         payload: {

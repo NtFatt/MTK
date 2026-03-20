@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { buttonVariants } from "../../../../shared/ui/button";
+import { cn } from "../../../../shared/utils/cn";
+import { CustomerHotpotShell } from "../../shared/components/CustomerHotpotShell";
 
 import { useReservationAvailabilityQuery } from "../hooks/useReservationAvailabilityQuery";
 import { useCreateReservationMutation } from "../hooks/useCreateReservationMutation";
@@ -16,7 +18,6 @@ import {
   validateReservationForm,
   addMinutesLocal,
 } from "../reservationForm";
-
 
 export function CustomerReservationPage() {
   const navigate = useNavigate();
@@ -102,6 +103,7 @@ export function CustomerReservationPage() {
       setFormError(getReservationErrorMessage(error));
     }
   };
+
   function handleReservedFromChange(value: string) {
     setReservedFromLocal(value);
 
@@ -119,63 +121,72 @@ export function CustomerReservationPage() {
       setReservedToLocal(addMinutesLocal(value, 90));
     }
   }
+
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 py-6">
-      <section className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">Đặt bàn</h1>
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          Điền thông tin đặt bàn để hệ thống kiểm tra bàn trống và tạo reservation.
-          Theo contract backend hiện tại, bạn đặt theo{" "}
-          <span className="font-medium">khu vực</span>.
-        </p>
-      </section>
+    <CustomerHotpotShell contentClassName="max-w-6xl">
+      <div className="space-y-6">
+        <section className="space-y-2">
+          <div className="customer-hotpot-kicker">Đặt bàn trước</div>
+          <h1 className="customer-mythmaker-title customer-hotpot-page-title">Giữ chỗ cho bữa lẩu của bạn</h1>
+          <p className="customer-hotpot-page-subtitle">
+            Chọn khu vực, số lượng khách và khung giờ để hệ thống kiểm tra bàn trống rồi tạo
+            reservation ngay trong app.
+          </p>
+        </section>
 
-      <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-        <div className="space-y-4">
-          <ReservationForm
-            areaName={areaName}
-            partySize={partySize}
-            contactName={contactName}
-            contactPhone={contactPhone}
-            note={note}
-            reservedFromLocal={reservedFromLocal}
-            reservedToLocal={reservedToLocal}
-            onAreaNameChange={setAreaName}
-            onPartySizeChange={setPartySize}
-            onContactNameChange={setContactName}
-            onContactPhoneChange={setContactPhone}
-            onNoteChange={setNote}
-            onReservedFromChange={handleReservedFromChange}
-            onReservedToChange={setReservedToLocal}
-            onSubmit={() => void handleSubmit()}
-            isSubmitting={createMutation.isPending}
-            errorMessage={submitErrorMessage}
-          />
+        <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="space-y-4">
+            <ReservationForm
+              areaName={areaName}
+              partySize={partySize}
+              contactName={contactName}
+              contactPhone={contactPhone}
+              note={note}
+              reservedFromLocal={reservedFromLocal}
+              reservedToLocal={reservedToLocal}
+              onAreaNameChange={setAreaName}
+              onPartySizeChange={setPartySize}
+              onContactNameChange={setContactName}
+              onContactPhoneChange={setContactPhone}
+              onNoteChange={setNote}
+              onReservedFromChange={handleReservedFromChange}
+              onReservedToChange={setReservedToLocal}
+              onSubmit={() => void handleSubmit()}
+              isSubmitting={createMutation.isPending}
+              errorMessage={submitErrorMessage}
+            />
 
-          <Link to="/" className={buttonVariants({ variant: "outline", size: "lg" })}>
-            Quay lại trang chọn chế độ
-          </Link>
-        </div>
+            <Link
+              to="/c/menu"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "lg" }),
+                "rounded-full border-[#d9bd95]/80 bg-[#fff8ec] text-[#6a3b20] hover:bg-[#fff2df]",
+              )}
+            >
+              Quay lại thực đơn
+            </Link>
+          </div>
 
-        <div className="space-y-6">
-          <ReservationAvailabilityCard
-            inputReady={availabilityInput !== null}
-            isLoading={availabilityQuery.isLoading || availabilityQuery.isFetching}
-            errorMessage={availabilityMessage}
-            data={availabilityQuery.data}
-          />
+          <div className="space-y-6">
+            <ReservationAvailabilityCard
+              inputReady={availabilityInput !== null}
+              isLoading={availabilityQuery.isLoading || availabilityQuery.isFetching}
+              errorMessage={availabilityMessage}
+              data={availabilityQuery.data}
+            />
 
-          <ReservationPreviewCard
-            areaName={areaName}
-            partySize={partySize}
-            reservedFromIso={reservedFromIso}
-            reservedToIso={reservedToIso}
-            contactPhone={contactPhone}
-          />
+            <ReservationPreviewCard
+              areaName={areaName}
+              partySize={partySize}
+              reservedFromIso={reservedFromIso}
+              reservedToIso={reservedToIso}
+              contactPhone={contactPhone}
+            />
 
-          <ReservationLookupCard />
+            <ReservationLookupCard />
+          </div>
         </div>
       </div>
-    </div>
+    </CustomerHotpotShell>
   );
 }

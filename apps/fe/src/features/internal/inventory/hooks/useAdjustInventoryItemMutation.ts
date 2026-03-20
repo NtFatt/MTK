@@ -10,6 +10,8 @@ export function useAdjustInventoryItemMutation(branchId: string | null) {
     invalidateKeys: [
       ["inventory-ingredients", branchId],
       ["inventory-ingredient-alerts", branchId],
+      ["admin", "menu", "items"],
+      ["menu", "view"],
     ],
   });
 }

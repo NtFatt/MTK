@@ -14,8 +14,10 @@ type HeroQuickFilter = "all" | "combo" | "available" | "lau" | null;
 type HeroBannerProps = {
   cartItemCount: number;
   cartTotalLabel: string;
+  cartSavingsLabel?: string | null;
   activeQuickFilter: HeroQuickFilter;
   onQuickFilterSelect: (filterId: Exclude<HeroQuickFilter, null>) => void;
+  onBrowseMenu: () => void;
   featuredItems: HeroFeaturedItem[];
 };
 
@@ -26,142 +28,175 @@ function formatVnd(price: number): string {
   }).format(price);
 }
 
-function getChipClass(active: boolean): string {
-  return active
-    ? "border-primary-foreground bg-primary-foreground text-primary shadow-sm"
-    : "border-primary-foreground/20 bg-white/10 text-primary-foreground hover:bg-white/15";
+function filterButtonClass(active: boolean): string {
+  return cn("customer-hotpot-bamboo-tag", active && "translate-y-[-2px] bg-[#c93d2d] text-[#fff9f0]");
 }
 
 export function HeroBanner({
   cartItemCount,
   cartTotalLabel,
+  cartSavingsLabel,
   activeQuickFilter,
   onQuickFilterSelect,
+  onBrowseMenu,
   featuredItems,
 }: HeroBannerProps) {
   const hasCart = cartItemCount > 0;
 
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-border">
-      <div className="relative bg-primary px-6 py-8 md:px-10 md:py-10">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-transparent via-black/10 to-black/30" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_30%_45%,rgba(255,255,255,0.14)_0%,rgba(255,255,255,0.06)_35%,rgba(0,0,0,0)_60%)]" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_80%_30%,rgba(0,0,0,0.32)_0%,rgba(0,0,0,0.18)_35%,rgba(0,0,0,0)_65%)]" />
+    <section className="customer-mythmaker-panel-strong relative overflow-hidden rounded-[34px] px-6 py-8 md:px-10 md:py-10">
+      <div className="pointer-events-none absolute inset-0 opacity-25 [background:repeating-linear-gradient(180deg,rgba(255,255,255,0.05)_0,rgba(255,255,255,0.05)_2px,transparent_2px,transparent_16px)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),transparent)]" />
+      <div className="pointer-events-none absolute right-[10%] top-[18%] h-32 w-32 rounded-full bg-[#ffcf6a]/12 blur-3xl" />
+      <div className="pointer-events-none absolute left-[14%] top-[16%] h-24 w-24 rounded-full bg-[#fff0bf]/16 blur-2xl" />
+      <span className="customer-hotpot-steam customer-hotpot-steam-delay-2 absolute left-[58%] top-[18%]" />
+      <span className="customer-hotpot-steam absolute right-[12%] top-[26%]" />
 
-        <div className="relative z-10 grid gap-6 md:grid-cols-[1.35fr_0.95fr] md:items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-primary-foreground md:text-4xl">
-              Thực đơn Hadilao
+      <div className="relative z-10 grid gap-6 md:grid-cols-[1.24fr_0.96fr] md:items-center">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#f6dca8]/30 bg-[#fff6dc]/10 px-3 py-1 text-[11px] uppercase tracking-[0.28em] text-[#ffe4af]">
+            Pho xua, bep nong, mon len nhanh
+          </div>
+
+          <div className="mt-5 max-w-2xl">
+            <div className="customer-mythmaker-script text-[2rem] text-[#ffd07a] md:text-[2.4rem]">
+              Tiệm lẩu Đường Hạnh Phúc
+            </div>
+            <h1 className="customer-mythmaker-title mt-2 text-4xl font-semibold leading-[1.05] text-[#fff5df] md:text-6xl">
+              Chọn món trong căn bếp luôn đỏ lửa
             </h1>
+          </div>
 
-            <p className="mt-3 max-w-2xl text-sm text-primary-foreground/85 md:text-base">
-              Lẩu và đồ nhúng tươi ngon, chọn món trực tiếp tại bàn. Ưu tiên món còn sẵn và combo
-              dễ chọn để đặt nhanh hơn.
-            </p>
-
-            <div className="mt-6 flex flex-wrap gap-3">
+          <div className="mt-7 flex flex-wrap items-center gap-3">
+            {hasCart ? (
               <Link
-                to={hasCart ? "/c/cart" : "#menu-grid"}
+                to="/c/cart"
                 className={cn(
                   buttonVariants({ size: "lg" }),
-                  "rounded-full bg-primary-foreground px-8 font-semibold text-primary hover:bg-primary-foreground/90"
+                  "rounded-full border border-[#f4ddb2]/70 bg-[#fff7e6] px-8 font-semibold text-[#6a2417] shadow-[0_18px_40px_-22px_rgba(41,17,7,0.65)] hover:bg-[#fff1d4]"
                 )}
               >
-                {hasCart ? "Xem giỏ hàng" : "Chọn món ngay"}
+                Xem giỏ hàng
               </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={onBrowseMenu}
+                className={cn(
+                  buttonVariants({ size: "lg" }),
+                  "rounded-full border border-[#f4ddb2]/70 bg-[#fff7e6] px-8 font-semibold text-[#6a2417] shadow-[0_18px_40px_-22px_rgba(41,17,7,0.65)] hover:bg-[#fff1d4]"
+                )}
+              >
+                Chọn món ngay
+              </button>
+            )}
 
-              {hasCart ? (
-                <div className="inline-flex min-h-11 items-center rounded-full border border-primary-foreground/20 bg-white/10 px-4 text-sm text-primary-foreground">
-                  Giỏ hàng • {cartItemCount} món • {cartTotalLabel}
-                </div>
-              ) : null}
+            <div className="rounded-full border border-[#f6dba6]/20 bg-[#fff4d8]/10 px-4 py-2 text-sm text-[#fff4dc]">
+              {hasCart ? `Giỏ hàng • ${cartItemCount} món • ${cartTotalLabel}` : "Món nóng đang chờ bạn gọi"}
             </div>
+            {hasCart && cartSavingsLabel ? (
+              <div className="rounded-full border border-[#d3e3a7]/25 bg-[#d6f0aa]/10 px-4 py-2 text-sm text-[#e9ffd0]">
+                Tiết kiệm {cartSavingsLabel}
+              </div>
+            ) : null}
+          </div>
 
-            <div className="mt-6 flex flex-wrap gap-2">
+          <div className="mt-7">
+            <div className="mb-3 text-[11px] uppercase tracking-[0.28em] text-[#f9ddb0]/70">
+              Lọc nhanh theo quầy
+            </div>
+            <div className="flex flex-wrap gap-3">
               <button
                 type="button"
                 onClick={() => onQuickFilterSelect("combo")}
-                className={cn(
-                  "rounded-full border px-4 py-2 text-sm font-medium transition",
-                  getChipClass(activeQuickFilter === "combo")
-                )}
+                className={filterButtonClass(activeQuickFilter === "combo")}
               >
                 Combo hot
               </button>
-
               <button
                 type="button"
                 onClick={() => onQuickFilterSelect("available")}
-                className={cn(
-                  "rounded-full border px-4 py-2 text-sm font-medium transition",
-                  getChipClass(activeQuickFilter === "available")
-                )}
+                className={filterButtonClass(activeQuickFilter === "available")}
               >
                 Còn hàng
               </button>
-
               <button
                 type="button"
                 onClick={() => onQuickFilterSelect("lau")}
-                className={cn(
-                  "rounded-full border px-4 py-2 text-sm font-medium transition",
-                  getChipClass(activeQuickFilter === "lau")
-                )}
+                className={filterButtonClass(activeQuickFilter === "lau")}
               >
                 Nước lẩu
               </button>
-
               <button
                 type="button"
                 onClick={() => onQuickFilterSelect("all")}
-                className={cn(
-                  "rounded-full border px-4 py-2 text-sm font-medium transition",
-                  getChipClass(activeQuickFilter === "all")
-                )}
+                className={filterButtonClass(activeQuickFilter === "all")}
               >
                 Tất cả món
               </button>
             </div>
           </div>
+        </div>
 
-          <div className="grid gap-3">
-            {featuredItems.slice(0, 2).map((item) => (
-              <div
-                key={item.id}
-                className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-sm text-primary-foreground/75">Gợi ý hôm nay</div>
-                    <div className="mt-1 text-lg font-semibold text-primary-foreground">
-                      {item.name}
-                    </div>
-                  </div>
-
-                  <span
-                    className={cn(
-                      "rounded-full px-2.5 py-1 text-xs font-medium",
-                      item.isAvailable
-                        ? "bg-emerald-500/20 text-white"
-                        : "bg-white/15 text-primary-foreground/80"
-                    )}
-                  >
-                    {item.isAvailable ? "Còn hàng" : "Hết hàng"}
-                  </span>
+        <div className="grid gap-3">
+          <div className="customer-hotpot-receipt rounded-[28px] p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.28em] text-[#9b7452]">
+                  BẢNG THÔNG BÁO CỦA QUÁN
                 </div>
-
-                <div className="mt-3 text-base font-semibold text-primary-foreground">
-                  {formatVnd(item.price)}
+                <div className="customer-mythmaker-title mt-2 text-3xl text-[#5a301a]">
+                  Bếp đang đỏ lửa
                 </div>
               </div>
-            ))}
-
-            {featuredItems.length === 0 ? (
-              <div className="rounded-2xl border border-white/15 bg-white/10 p-4 text-sm text-primary-foreground/80 backdrop-blur-sm">
-                Chưa có gợi ý nổi bật lúc này.
+              <div className="customer-hotpot-neon rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em]">
+                MỞ CỬA
               </div>
-            ) : null}
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-[#734a2a]">
+              <div className="rounded-2xl border border-[#dfc39a]/70 bg-[#fff7ea] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+                Đặt món nhanh
+              </div>
+              <div className="rounded-2xl border border-[#dfc39a]/70 bg-[#fff7ea] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+                Hiện rõ món còn
+              </div>
+            </div>
           </div>
+
+          {featuredItems.slice(0, 2).map((item, index) => (
+            <div key={item.id} className="customer-hotpot-receipt relative rounded-[26px] px-5 py-4">
+              <span className="customer-hotpot-washi left-5 top-[-10px]">
+                {index === 0 ? "Đặc trưng" : "Gợi ý hôm nay"}
+              </span>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm text-[#9d7858]">Món quán hay lên cùng bàn</div>
+                  <div className="customer-mythmaker-title mt-1 text-2xl font-semibold text-[#4b2715]">
+                    {item.name}
+                  </div>
+                </div>
+                <span
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-xs font-medium",
+                    item.isAvailable
+                      ? "border-[#c2d9ae] bg-[#f0f8e8] text-[#54712a]"
+                      : "border-[#e4c6bc] bg-[#fff0ed] text-[#a24d42]"
+                  )}
+                >
+                  {item.isAvailable ? "Con hang" : "Tam het"}
+                </span>
+              </div>
+
+              <div className="mt-3 text-lg font-semibold text-[#bd3b2d]">{formatVnd(item.price)}</div>
+            </div>
+          ))}
+
+          {featuredItems.length === 0 ? (
+            <div className="customer-hotpot-receipt rounded-[26px] p-5 text-sm text-[#7c5d46]">
+              Bảng gợi ý đang được bếp cập nhật. Bạn vẫn có thể xem toàn bộ thực đơn bên dưới.
+            </div>
+          ) : null}
         </div>
       </div>
     </section>

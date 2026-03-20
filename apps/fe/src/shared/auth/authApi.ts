@@ -63,6 +63,7 @@ function defaultPermissionsForRole(role: Role): string[] {
         "inventory.adjust",
         "inventory.holds.read",
         "menu.manage",
+        "promotions.manage",
         "payments.mock_success",
         "maintenance.run",
         "observability.admin.read",
@@ -88,6 +89,7 @@ function defaultPermissionsForRole(role: Role): string[] {
         "inventory.adjust",
         "inventory.holds.read",
         "menu.manage",
+        "promotions.manage",
       ];
     case "STAFF":
       return [

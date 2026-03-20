@@ -1,5 +1,5 @@
 import { Alert, AlertDescription } from "../../../../shared/ui/alert";
-import { Card, CardContent, CardHeader, CardTitle } from "../../../../shared/ui/card";
+import { CardContent } from "../../../../shared/ui/card";
 import { Skeleton } from "../../../../shared/ui/skeleton";
 import type { ReservationAvailabilityResult } from "../services/reservationsApi";
 
@@ -17,77 +17,74 @@ export function ReservationAvailabilityCard({
   data,
 }: ReservationAvailabilityCardProps) {
   return (
-    <Card className="rounded-2xl">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-xl">Kiểm tra khả dụng</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Hệ thống sẽ kiểm tra số bàn còn trống theo khu vực, thời gian và số khách.
-        </p>
-      </CardHeader>
+    <div className="customer-hotpot-receipt rounded-[28px]">
+      <CardContent className="space-y-4 p-5">
+        <div className="space-y-1">
+          <div className="customer-hotpot-kicker">Kiểm tra khả dụng</div>
+          <div className="customer-mythmaker-title text-3xl text-[#4e2916]">Bàn còn trống không?</div>
+          <p className="text-sm text-[#7a5a43]">
+            Hệ thống sẽ kiểm tra số bàn còn trống theo khu vực, thời gian và số khách.
+          </p>
+        </div>
 
-      <CardContent className="space-y-4">
-        {!inputReady && (
-          <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+        {!inputReady ? (
+          <div className="customer-hotpot-stat rounded-[22px] px-4 py-4 text-sm text-[#7a5a43]">
             Nhập đủ khu vực, số lượng khách và thời gian để kiểm tra bàn trống.
           </div>
-        )}
+        ) : null}
 
-        {inputReady && isLoading && (
+        {inputReady && isLoading ? (
           <div className="space-y-3">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-16 w-full rounded-[22px]" />
+            <Skeleton className="h-24 w-full rounded-[22px]" />
           </div>
-        )}
+        ) : null}
 
-        {inputReady && errorMessage && (
-          <Alert variant="destructive">
+        {inputReady && errorMessage ? (
+          <Alert variant="destructive" className="rounded-[20px] border-[#e4bfb4] bg-[#fff4ef]">
             <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
-        )}
+        ) : null}
 
-        {inputReady && !isLoading && !errorMessage && data && (
+        {inputReady && !isLoading && !errorMessage && data ? (
           <>
             <div
               className={
                 data.available
-                  ? "rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4"
-                  : "rounded-xl border border-destructive/30 bg-destructive/10 p-4"
+                  ? "customer-hotpot-stat rounded-[22px] px-4 py-4 text-[#5f7a35]"
+                  : "customer-hotpot-stat rounded-[22px] px-4 py-4 text-[#a44b42]"
               }
             >
               <div className="text-sm font-medium">
-                {data.available
-                  ? "Có bàn phù hợp cho khung giờ này"
-                  : "Hiện không còn bàn phù hợp"}
+                {data.available ? "Có bàn phù hợp cho khung giờ này" : "Hiện không còn bàn phù hợp"}
               </div>
-
-              <div className="mt-1 text-sm text-muted-foreground">
-                Số bàn khả dụng:{" "}
-                <span className="font-semibold text-foreground">{data.availableCount}</span>
+              <div className="mt-1 text-sm">
+                Số bàn khả dụng: <span className="font-semibold">{data.availableCount}</span>
               </div>
             </div>
 
-            {data.suggestedTable && (
-              <div className="rounded-xl border bg-muted/20 p-4 text-sm">
-                <div className="font-medium">Bàn gợi ý</div>
-                <div className="mt-2 grid gap-2">
+            {data.suggestedTable ? (
+              <div className="customer-hotpot-stat rounded-[22px] px-4 py-4 text-sm">
+                <div className="font-medium text-[#4e2916]">Bàn gợi ý</div>
+                <div className="mt-3 grid gap-2 text-[#7a5a43]">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground">Mã bàn</span>
-                    <span className="font-mono">{data.suggestedTable.tableCode}</span>
+                    <span>Mã bàn</span>
+                    <span className="font-mono font-semibold text-[#5a301a]">{data.suggestedTable.tableCode}</span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground">Khu vực</span>
-                    <span className="font-medium">{data.suggestedTable.areaName}</span>
+                    <span>Khu vực</span>
+                    <span className="font-medium text-[#5a301a]">{data.suggestedTable.areaName}</span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground">Số ghế</span>
-                    <span className="font-medium">{data.suggestedTable.seats}</span>
+                    <span>Số ghế</span>
+                    <span className="font-medium text-[#5a301a]">{data.suggestedTable.seats}</span>
                   </div>
                 </div>
               </div>
-            )}
+            ) : null}
           </>
-        )}
+        ) : null}
       </CardContent>
-    </Card>
+    </div>
   );
 }

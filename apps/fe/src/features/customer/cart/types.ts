@@ -23,7 +23,29 @@ export type Cart = {
   branchId?: string | number;
   items: CartItem[];
   subtotal?: number;
+  discount?: number;
   total?: number;
+  voucher?: {
+    id: string;
+    code: string;
+    name: string;
+    description?: string | null;
+    discountType: "PERCENT" | "FIXED_AMOUNT";
+    discountValue: number;
+    maxDiscountAmount?: number | null;
+    minSubtotal: number;
+    usageLimitTotal?: number | null;
+    usageLimitPerSession?: number | null;
+    startsAt: string;
+    endsAt: string;
+    isActive: boolean;
+    isValid: boolean;
+    invalidReasonCode?: string | null;
+    invalidReasonMessage?: string | null;
+    discountAmount: number;
+    totalAfterDiscount: number;
+    effectivePercent: number;
+  } | null;
 };
 
 export type UpsertCartItemsBody = {
