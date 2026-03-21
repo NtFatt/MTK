@@ -11,6 +11,15 @@ export type OpsTableActiveSummary = {
   activeItemsCount: number | null;
   activeItemsTop: Array<{ name: string; qty: number }> | null;
   activeItemsPreview: string | null;
+
+  unpaidOrdersCount: number;
+  unpaidOrderCode: string | null;
+  unpaidOrderStatus: OrderStatus | null;
+  unpaidOrderUpdatedAt: string | null;
+
+  unpaidItemsCount: number | null;
+  unpaidItemsTop: Array<{ name: string; qty: number }> | null;
+  unpaidItemsPreview: string | null;
 };
 
 export interface IOpsTableOrderSummaryRepository {

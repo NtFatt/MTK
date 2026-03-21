@@ -52,6 +52,13 @@ export const qk = {
     },
   },
 
+  dashboard: {
+    overview: (params: { branchId?: string | number } = {}) => {
+      const normalized = normalizeBranchId(params);
+      return ["dashboard", "overview", normalized] as const;
+    },
+  },
+
   menu: {
     categories: (params: { branchId?: string | number } = {}) => {
       const normalized = normalizeBranchId(params);

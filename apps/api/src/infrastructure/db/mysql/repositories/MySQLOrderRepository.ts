@@ -1,13 +1,83 @@
 import type {
   IOrderRepository,
+  LiveDineInOrderSummary,
   OrderStatusHistoryActor,
   OrderRealtimeScope,
+  UnpaidDineInConflict,
 } from "../../../../application/ports/repositories/IOrderRepository.js";
 import type { OrderStatus } from "../../../../domain/entities/Order.js";
 import { pool } from "../connection.js";
 import type { PoolConnection } from "mysql2/promise";
 
 export class MySQLOrderRepository implements IOrderRepository {
+  private mapLiveDineInOrderRow(row: any): LiveDineInOrderSummary {
+    return {
+      orderId: String(row.order_id),
+      orderCode: String(row.order_code),
+      orderStatus: String(row.order_status) as OrderStatus,
+      sessionId: row.session_id ? String(row.session_id) : null,
+      subtotalAmount: Number(row.subtotal_amount ?? 0),
+      discountAmount: Number(row.discount_amount ?? 0),
+      totalAmount: Number(row.total_amount ?? 0),
+      voucherId: row.voucher_id_snapshot ? String(row.voucher_id_snapshot) : null,
+      voucherCode: row.voucher_code_snapshot ? String(row.voucher_code_snapshot) : null,
+      voucherName: row.voucher_name_snapshot ? String(row.voucher_name_snapshot) : null,
+      voucherDiscountType: row.voucher_discount_type
+        ? String(row.voucher_discount_type) as LiveDineInOrderSummary["voucherDiscountType"]
+        : null,
+      voucherDiscountValue:
+        row.voucher_discount_value === null || row.voucher_discount_value === undefined
+          ? null
+          : Number(row.voucher_discount_value),
+      voucherDiscountAmount: Number(row.voucher_discount_amount ?? 0),
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString(),
+    };
+  }
+
+  private async findUnpaidDineInConflict(input: {
+    joinSql?: string;
+    whereSql: string;
+    params: Array<string>;
+  }): Promise<UnpaidDineInConflict | null> {
+    const joinSql = input.joinSql ? ` ${input.joinSql} ` : " ";
+    const whereSql = input.whereSql.trim();
+    const baseParams = [...input.params];
+
+    const [countRows]: any = await pool.query(
+      `SELECT COUNT(*) AS unresolved_count
+       FROM orders o
+       ${joinSql}
+       WHERE ${whereSql}
+         AND o.order_channel = 'DINE_IN'
+         AND o.order_status NOT IN ('PAID', 'CANCELED')`,
+      baseParams,
+    );
+
+    const count = Number(countRows?.[0]?.unresolved_count ?? 0);
+    if (!Number.isFinite(count) || count <= 0) return null;
+
+    const [latestRows]: any = await pool.query(
+      `SELECT o.order_code, o.order_status, o.updated_at
+       FROM orders o
+       ${joinSql}
+       WHERE ${whereSql}
+         AND o.order_channel = 'DINE_IN'
+         AND o.order_status NOT IN ('PAID', 'CANCELED')
+       ORDER BY o.updated_at DESC, o.order_id DESC
+       LIMIT 1`,
+      baseParams,
+    );
+
+    const latest = latestRows?.[0];
+    return {
+      count,
+      latestOrderCode: latest?.order_code ? String(latest.order_code) : null,
+      latestOrderStatus: latest?.order_status ? String(latest.order_status) as OrderStatus : null,
+      latestUpdatedAt: latest?.updated_at ? new Date(latest.updated_at).toISOString() : null,
+    };
+  }
+
   async create(input: {
     orderCode: string;
     clientId: string | null;
@@ -209,6 +279,53 @@ export class MySQLOrderRepository implements IOrderRepository {
       branchId: r.branch_id !== null && r.branch_id !== undefined ? String(r.branch_id) : null,
     };
   }
+
+  async findLatestLiveDineInOrderBySessionId(sessionId: string): Promise<LiveDineInOrderSummary | null> {
+    const [rows]: any = await pool.query(
+      `SELECT
+          order_id,
+          order_code,
+          order_status,
+          session_id,
+          subtotal_amount,
+          discount_amount,
+          total_amount,
+          voucher_id_snapshot,
+          voucher_code_snapshot,
+          voucher_name_snapshot,
+          voucher_discount_type,
+          voucher_discount_value,
+          voucher_discount_amount,
+          created_at,
+          updated_at
+       FROM orders
+       WHERE session_id = ?
+         AND order_channel = 'DINE_IN'
+         AND order_status NOT IN ('PAID', 'CANCELED')
+       ORDER BY updated_at DESC, order_id DESC
+       LIMIT 1`,
+      [sessionId],
+    );
+
+    const row = rows?.[0];
+    return row ? this.mapLiveDineInOrderRow(row) : null;
+  }
+
+  async findUnpaidDineInConflictByTableId(tableId: string): Promise<UnpaidDineInConflict | null> {
+    return this.findUnpaidDineInConflict({
+      joinSql: "JOIN table_sessions s ON s.session_id = o.session_id",
+      whereSql: "s.table_id = ?",
+      params: [tableId],
+    });
+  }
+
+  async findUnpaidDineInConflictBySessionId(sessionId: string): Promise<UnpaidDineInConflict | null> {
+    return this.findUnpaidDineInConflict({
+      whereSql: "o.session_id = ?",
+      params: [sessionId],
+    });
+  }
+
   async setPaidByOrderCode(orderCode: string): Promise<void> {
     await pool.query(
       `UPDATE orders

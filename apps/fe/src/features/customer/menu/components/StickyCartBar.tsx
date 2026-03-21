@@ -38,6 +38,13 @@ export function StickyCartBar() {
   if (!cartQuery.data) return null;
   if (count <= 0) return null;
 
+  const openBill = cartQuery.data.openBill ?? null;
+  const headline = openBill ? `Gọi thêm món • ${count} Món mới` : `Noi dang cho • ${count} mon`;
+  const subline = openBill
+    ? `Bill ${openBill.orderCode} • Tạm tính Món mới: ${formatVnd(total)}`
+    : `Tạm tính: ${formatVnd(total)}`;
+  const buttonLabel = openBill ? "Xem món sắp thêm" : "Xem nồi lẩu";
+
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 pb-4">
       <div className="mx-auto w-full max-w-6xl px-4">
@@ -56,10 +63,10 @@ export function StickyCartBar() {
 
               <div className="min-w-0">
                 <div className="customer-mythmaker-title text-2xl font-semibold text-[#fff1d7]">
-                  Nồi đang chờ • {count} món
+                  {headline}
                 </div>
                 <div className="truncate text-xs uppercase tracking-[0.22em] text-[#f6d9a7]/75">
-                  Tạm tính: {formatVnd(total)}
+                  {subline}
                 </div>
                 {discount > 0 ? (
                   <div className="truncate text-[11px] uppercase tracking-[0.18em] text-[#cbe3a5]">
@@ -76,7 +83,7 @@ export function StickyCartBar() {
                 "shrink-0 rounded-full border border-[#f3dfb8]/80 bg-[#fff6e3] px-5 py-3 text-sm font-semibold text-[#6b291d] shadow-[0_18px_36px_-24px_rgba(36,17,5,0.9)] transition hover:bg-[#ffeecf]"
               )}
             >
-              Xem nồi lẩu
+              {buttonLabel}
             </Link>
           </div>
         </div>

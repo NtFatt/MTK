@@ -13,6 +13,8 @@ export const routePermissions = {
 
   "/api/v1/admin/vouchers/:voucherId/active": ["promotions.manage"],
 
+  "/api/v1/admin/dashboard/overview": ["observability.metrics.read"],
+
   "/api/v1/admin/kitchen/queue": ["kitchen.queue.read"],
 
   "/api/v1/admin/orders/:orderCode/status": ["orders.status.change"],

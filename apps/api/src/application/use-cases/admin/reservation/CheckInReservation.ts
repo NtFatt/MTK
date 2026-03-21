@@ -1,6 +1,7 @@
 import type { ITableReservationRepository } from "../../../ports/repositories/ITableReservationRepository.js";
 import type { ITableRepository } from "../../../ports/repositories/ITableRepository.js";
 import type { ITableSessionRepository } from "../../../ports/repositories/ITableSessionRepository.js";
+import type { IOrderRepository } from "../../../ports/repositories/IOrderRepository.js";
 import type { IEventBus } from "../../../ports/events/IEventBus.js";
 import { NoopEventBus } from "../../../ports/events/NoopEventBus.js";
 import { addMinutes } from "../../reservation/reservationTime.js";
@@ -10,6 +11,7 @@ export class CheckInReservation {
     private reservationRepo: ITableReservationRepository,
     private tableRepo: ITableRepository,
     private sessionRepo: ITableSessionRepository,
+    private orderRepo: IOrderRepository,
     private cfg: { earlyMinutes: number; lateMinutes: number } = { earlyMinutes: 30, lateMinutes: 15 },
     private eventBus: IEventBus = new NoopEventBus(),
   ) {}
@@ -86,6 +88,19 @@ export class CheckInReservation {
     const table = await this.tableRepo.findById(r.tableId);
     if (!table) throw new Error("TABLE_NOT_FOUND");
     if (table.status === "OUT_OF_SERVICE") throw new Error("TABLE_OUT_OF_SERVICE");
+
+    const unpaidConflict = await this.orderRepo.findUnpaidDineInConflictByTableId(r.tableId);
+    if (unpaidConflict) {
+      const err: Error & { details?: Record<string, unknown> } = new Error("TABLE_UNPAID_ORDER_EXISTS");
+      err.details = {
+        tableId: r.tableId,
+        unresolvedCount: unpaidConflict.count,
+        latestOrderCode: unpaidConflict.latestOrderCode,
+        latestOrderStatus: unpaidConflict.latestOrderStatus,
+        latestUpdatedAt: unpaidConflict.latestUpdatedAt,
+      };
+      throw err;
+    }
 
     // Occupy + open session
     await this.tableRepo.updateStatus(r.tableId, "OCCUPIED");

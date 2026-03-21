@@ -16,6 +16,7 @@ export type OrderItem = {
 
 export type Order = {
   orderCode: string;
+  checkoutMode?: "CREATED" | "APPENDED";
   status?: OrderStatus;
   branchId?: string | number;
   sessionKey?: string;

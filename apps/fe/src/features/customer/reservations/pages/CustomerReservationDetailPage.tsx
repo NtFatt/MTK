@@ -165,7 +165,7 @@ export function CustomerReservationDetailPage() {
     code
       ? {
           kind: "customer",
-          userKey: `reservation:${code}`,
+          userKey: "reservation-public",
         }
       : undefined,
   );

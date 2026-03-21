@@ -158,6 +158,22 @@ function enqueueVoucherRefresh() {
   enqueueInvalidate(["vouchers", "available"], false);
 }
 
+function enqueueDashboardRefresh(branchId?: string | number | null) {
+  if (branchId != null) {
+    enqueueInvalidate(qk.dashboard.overview({ branchId }), false);
+    return;
+  }
+  enqueueInvalidate(["dashboard", "overview"], false);
+}
+
+function enqueueCashierRefresh(branchId?: string | number | null) {
+  if (branchId != null) {
+    enqueueInvalidate(qk.orders.cashierUnpaid({ branchId }), false);
+    return;
+  }
+  enqueueInvalidate(["orders", "cashier", "unpaid"], false);
+}
+
 const ORDER_EVENTS = new Set([
   "order.created",
   "order.updated",
@@ -224,11 +240,12 @@ export function routeRealtimeEvent(env: EventEnvelope) {
       const b = String(branchId);
       enqueueInvalidate(["ops", "tables", "list"], false);
       enqueueInvalidate(["orders", "kitchen", "queue"], false);
-      enqueueInvalidate(["orders", "cashier", "unpaid"], false);
+      enqueueCashierRefresh(branchId);
       enqueueInvalidate(["inventory", "stock"], false);
       enqueueInvalidate(["inventory", "holds"], false);
       enqueueInvalidate(["inventory", "adjustments"], false);
       enqueueInvalidate(["reservations", "list"], false);
+      enqueueDashboardRefresh(branchId);
 
       enqueueInvalidate(["inventory-ingredients", b], false);
       enqueueInvalidate(["inventory-ingredient-alerts", b], false);
@@ -267,8 +284,9 @@ export function routeRealtimeEvent(env: EventEnvelope) {
       const b = String(branchId);
 
       enqueueInvalidate(["orders", "kitchen", "queue"], false);
-      enqueueInvalidate(["orders", "cashier", "unpaid"], false);
+      enqueueCashierRefresh(branchId);
       enqueueInvalidate(["ops", "tables", "list"], false);
+      enqueueDashboardRefresh(branchId);
 
       enqueueInvalidate(["inventory-ingredients", b], false);
       enqueueInvalidate(["inventory-ingredient-alerts", b], false);
@@ -282,8 +300,17 @@ export function routeRealtimeEvent(env: EventEnvelope) {
     const orderCode = tryExtractOrderCode(env);
     if (orderCode) enqueueInvalidate(qk.orders.byCode(orderCode), true);
 
+    const sk = tryExtractSessionKey(env);
+    if (sk) {
+      enqueueInvalidate(qk.cart.bySessionKey(sk), true);
+      enqueueInvalidate(qk.sessions.detail(sk), true);
+      enqueueMenuRefresh();
+      enqueueVoucherRefresh();
+    }
+
     if (branchId != null) {
-      enqueueInvalidate(["orders", "cashier", "unpaid"], false);
+      enqueueCashierRefresh(branchId);
+      enqueueDashboardRefresh(branchId);
     }
     return;
   }
@@ -292,10 +319,16 @@ export function routeRealtimeEvent(env: EventEnvelope) {
   if (TABLE_SESSION_EVENTS.has(type)) {
     if (branchId != null) {
       enqueueInvalidate(["ops", "tables", "list"], false);
+      enqueueDashboardRefresh(branchId);
     }
 
     const sk = tryExtractSessionKey(env);
-    if (sk) enqueueInvalidate(qk.sessions.detail(sk), true);
+    if (sk) {
+      enqueueInvalidate(qk.sessions.detail(sk), true);
+      enqueueInvalidate(qk.cart.bySessionKey(sk), true);
+      enqueueMenuRefresh();
+      enqueueVoucherRefresh();
+    }
 
     return;
   }
@@ -314,6 +347,7 @@ export function routeRealtimeEvent(env: EventEnvelope) {
     if (branchId != null) {
       enqueueInvalidate(["ops", "tables", "list"], false);
       enqueueInvalidate(["reservations", "list"], false);
+      enqueueDashboardRefresh(branchId);
     }
 
     return;
@@ -327,6 +361,7 @@ export function routeRealtimeEvent(env: EventEnvelope) {
       enqueueInvalidate(["inventory", "stock"], false);
       enqueueInvalidate(["inventory", "holds"], false);
       enqueueInvalidate(["inventory", "adjustments"], false);
+      enqueueDashboardRefresh(branchId);
 
       enqueueInvalidate(["inventory-ingredients", b], false);
       enqueueInvalidate(["inventory-ingredient-alerts", b], false);

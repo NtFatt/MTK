@@ -14,6 +14,7 @@ export type CartItem = {
   unitPrice?: number;
   note?: string;
   options?: CartItemOption[];
+  itemOptions?: Record<string, unknown> | null;
   optionsHash?: string;
 };
 
@@ -45,6 +46,19 @@ export type Cart = {
     discountAmount: number;
     totalAfterDiscount: number;
     effectivePercent: number;
+  } | null;
+  openBill?: {
+    orderId: string;
+    orderCode: string;
+    status: string;
+    subtotal: number;
+    discount: number;
+    total: number;
+    voucherCode?: string | null;
+    voucherName?: string | null;
+    voucherDiscountAmount?: number;
+    createdAt: string;
+    updatedAt: string;
   } | null;
 };
 

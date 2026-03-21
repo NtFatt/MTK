@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { RequireCustomerSession } from "../../../../shared/customer/session/guards";
+import { markCustomerSessionClosedAfterPayment } from "../../../../shared/customer/session/sessionRecovery";
 import { useOrderQuery } from "../../order/hooks/useOrderQuery";
 import { useCreatePaymentMutation } from "../hooks/useCreatePaymentMutation";
 import { Alert, AlertDescription } from "../../../../shared/ui/alert";
@@ -89,6 +90,7 @@ function PaymentContent() {
   const orderQuery = useOrderQuery(orderCode);
   const paymentMutation = useCreatePaymentMutation();
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
+  const status = orderQuery.data?.status ?? null;
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -101,6 +103,12 @@ function PaymentContent() {
       window.removeEventListener("offline", handleOffline);
     };
   }, []);
+
+  useEffect(() => {
+    if (status === "PAID" || status === "COMPLETED") {
+      markCustomerSessionClosedAfterPayment();
+    }
+  }, [status]);
 
   if (!orderCode) return null;
 
@@ -171,17 +179,17 @@ function PaymentContent() {
   }
 
   const order = orderQuery.data;
-  const status = order?.status ?? "UNKNOWN";
-  const label = statusLabel[status] ?? status;
+  const statusText = order?.status ?? "UNKNOWN";
+  const label = statusLabel[statusText] ?? statusText;
   const total = getOrderTotal(order);
   const discount = getOrderDiscount(order);
   const itemCount = getOrderItemCount(order);
 
   const canPay =
-    status !== "PAID" &&
-    status !== "COMPLETED" &&
-    status !== "CANCELLED" &&
-    status !== "CANCELED";
+    statusText !== "PAID" &&
+    statusText !== "COMPLETED" &&
+    statusText !== "CANCELLED" &&
+    statusText !== "CANCELED";
 
   return (
     <div className="space-y-6">
@@ -194,7 +202,7 @@ function PaymentContent() {
           </p>
         </div>
 
-        <span className="customer-hotpot-status-pill px-4 py-2 text-sm font-semibold" data-tone={getStatusTone(status)}>
+        <span className="customer-hotpot-status-pill px-4 py-2 text-sm font-semibold" data-tone={getStatusTone(statusText)}>
           {label}
         </span>
       </section>
@@ -250,14 +258,22 @@ function PaymentContent() {
           {!canPay ? (
             <div className="customer-hotpot-stat rounded-[24px] px-5 py-4 text-sm text-[#7a5a43]">
               {status === "PAID"
-                ? "Đơn hàng này đã thanh toán thành công. Bạn có thể quay lại theo dõi tiến trình phục vụ."
-                : "Đơn hàng này không còn ở trạng thái cho phép thanh toán."}
+                ? "Đơn hàng này đã thanh toán thành công. Phiên gọi món hiện tại sẽ kết thúc cùng bill này; muốn gọi thêm, bạn cần mở lại bàn."
+                : statusText === "COMPLETED"
+                  ? "Bill này đã hoàn tất. Nếu khách muốn gọi thêm, hãy mở lại bàn để tạo lượt mới."
+                  : "Đơn hàng này không còn ở trạng thái cho phép thanh toán."}
             </div>
           ) : (
-            <div className="customer-hotpot-stat rounded-[24px] px-5 py-4 text-sm text-[#7a5a43]">
-              {isOnline
-                ? "Nhấn nút bên dưới để chuyển sang VNPay. Sau khi hoàn tất, hệ thống sẽ đưa bạn quay lại trang kết quả."
-                : "Thiết bị đang offline. Kết nối mạng trước khi khởi tạo thanh toán."}
+            <div className="space-y-3">
+              <div className="customer-hotpot-stat rounded-[24px] px-5 py-4 text-sm text-[#7a5a43]">
+                {isOnline
+                  ? "Nhấn nút bên dưới để chuyển sang VNPay. Sau khi hoàn tất, hệ thống sẽ đưa bạn quay lại trang kết quả."
+                  : "Thiết bị đang offline. Kết nối mạng trước khi khởi tạo thanh toán."}
+              </div>
+
+              <div className="customer-hotpot-stat rounded-[24px] px-5 py-4 text-sm text-[#7a5a43]">
+                Nếu giao dịch bị hủy hoặc thất bại, đơn hàng vẫn được giữ lại để bạn quay về thử lại an toàn. Hệ thống đã bọc idempotency cho bước khởi tạo thanh toán.
+              </div>
             </div>
           )}
 
@@ -283,6 +299,18 @@ function PaymentContent() {
               </Link>
             )}
 
+            {canPay ? (
+              <Link
+                to="/c/menu"
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "lg" }),
+                  "w-full rounded-full border-[#d9bd95]/80 bg-[#fff8ec] text-[#6a3b20] hover:bg-[#fff2df] sm:w-auto",
+                )}
+              >
+                Gọi thêm món
+              </Link>
+            ) : null}
+
             <Link
               to={`/c/orders/${encodeURIComponent(orderCode)}`}
               className={cn(
@@ -292,6 +320,18 @@ function PaymentContent() {
             >
               Theo dõi đơn
             </Link>
+
+            {!canPay && (statusText === "PAID" || statusText === "COMPLETED") ? (
+              <Link
+                to="/c/qr?next=%2Fc%2Fmenu"
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "lg" }),
+                  "w-full rounded-full border-[#d9bd95]/80 bg-[#fff8ec] text-[#6a3b20] hover:bg-[#fff2df] sm:w-auto",
+                )}
+              >
+                Mở lại bàn để gọi thêm món
+              </Link>
+            ) : null}
           </div>
 
           {!isOnline && canPay ? (

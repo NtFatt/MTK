@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { useOrderQuery } from "../hooks/useOrderQuery";
@@ -6,6 +7,7 @@ import {
   selectSessionKey,
   selectBranchId,
 } from "../../../../shared/customer/session/sessionStore";
+import { markCustomerSessionClosedAfterPayment } from "../../../../shared/customer/session/sessionRecovery";
 import { useRealtimeRoom } from "../../../../shared/realtime";
 import { buttonVariants } from "../../../../shared/ui/button";
 import { cn } from "../../../../shared/utils/cn";
@@ -112,6 +114,12 @@ export function CustomerOrderStatusPage() {
   const total = getOrderTotal(data);
   const discount = getOrderDiscount(data);
   const itemCount = getOrderItemCount(data);
+
+  useEffect(() => {
+    if (status === "PAID" || status === "COMPLETED") {
+      markCustomerSessionClosedAfterPayment();
+    }
+  }, [status]);
 
   const canPay =
     !!orderCode &&
@@ -241,7 +249,7 @@ export function CustomerOrderStatusPage() {
 
               {status === "PAID" ? (
                 <div className="customer-hotpot-stat rounded-[24px] px-5 py-4 text-sm text-[#5f7a35]">
-                  Đơn này đã thanh toán. Bạn có thể tiếp tục theo dõi tiến trình phục vụ.
+                  Đơn này đã thanh toán. Phiên gọi món hiện tại sẽ kết thúc cùng bill này; nếu muốn gọi thêm, bạn cần mở lại bàn.
                 </div>
               ) : null}
 
@@ -259,32 +267,58 @@ export function CustomerOrderStatusPage() {
 
               {status === "COMPLETED" ? (
                 <div className="customer-hotpot-stat rounded-[24px] px-5 py-4 text-sm text-[#5f7a35]">
-                  Đơn hàng đã hoàn tất.
+                  Đơn hàng đã hoàn tất. Muốn tiếp tục gọi thêm món, hãy mở lại bàn để tạo lượt mới.
                 </div>
               ) : null}
             </div>
 
             <div className="space-y-3">
               {canPay ? (
-                <Link
-                  to={`/c/payment/${encodeURIComponent(orderCode!)}`}
-                  className={cn(
-                    buttonVariants({ size: "lg", variant: "default" }),
-                    "w-full rounded-full border border-[#b83022] bg-[linear-gradient(180deg,#d34a34_0%,#a82e22_100%)] text-[#fff7f0] shadow-[0_18px_40px_-24px_rgba(94,26,16,0.9)] hover:brightness-110",
-                  )}
-                >
-                  Thanh toán ngay
-                </Link>
+                <>
+                  <Link
+                    to={`/c/payment/${encodeURIComponent(orderCode!)}`}
+                    className={cn(
+                      buttonVariants({ size: "lg", variant: "default" }),
+                      "w-full rounded-full border border-[#b83022] bg-[linear-gradient(180deg,#d34a34_0%,#a82e22_100%)] text-[#fff7f0] shadow-[0_18px_40px_-24px_rgba(94,26,16,0.9)] hover:brightness-110",
+                    )}
+                  >
+                    Thanh toán ngay
+                  </Link>
+
+                  <Link
+                    to="/c/menu"
+                    className={cn(
+                      buttonVariants({ size: "lg", variant: "outline" }),
+                      "w-full rounded-full border-[#d9bd95]/80 bg-[#fff8ec] text-[#6a3b20] hover:bg-[#fff2df]",
+                    )}
+                  >
+                    Gọi thêm món
+                  </Link>
+                </>
               ) : (
-                <Link
-                  to={`/c/payment/${encodeURIComponent(orderCode!)}`}
-                  className={cn(
-                    buttonVariants({ size: "lg", variant: "outline" }),
-                    "w-full rounded-full border-[#d9bd95]/80 bg-[#fff8ec] text-[#6a3b20] hover:bg-[#fff2df]",
-                  )}
-                >
-                  Xem trang thanh toán
-                </Link>
+                <>
+                  <Link
+                    to={`/c/payment/${encodeURIComponent(orderCode!)}`}
+                    className={cn(
+                      buttonVariants({ size: "lg", variant: "outline" }),
+                      "w-full rounded-full border-[#d9bd95]/80 bg-[#fff8ec] text-[#6a3b20] hover:bg-[#fff2df]",
+                    )}
+                  >
+                    Xem trang thanh toán
+                  </Link>
+
+                  {(status === "PAID" || status === "COMPLETED") ? (
+                    <Link
+                      to="/c/qr?next=%2Fc%2Fmenu"
+                      className={cn(
+                        buttonVariants({ size: "lg", variant: "outline" }),
+                        "w-full rounded-full border-[#d9bd95]/80 bg-[#fff8ec] text-[#6a3b20] hover:bg-[#fff2df]",
+                      )}
+                    >
+                      Mở lại bàn để gọi thêm món
+                    </Link>
+                  ) : null}
+                </>
               )}
 
               <button

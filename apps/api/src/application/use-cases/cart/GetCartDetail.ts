@@ -1,5 +1,6 @@
 import type { ICartRepository } from "../../ports/repositories/ICartRepository.js";
 import type { ICartItemRepository } from "../../ports/repositories/ICartItemRepository.js";
+import type { IOrderRepository } from "../../ports/repositories/IOrderRepository.js";
 import type { IVoucherRepository } from "../../ports/repositories/IVoucherRepository.js";
 import { buildVoucherPreview } from "./cartVoucherPreview.js";
 
@@ -7,6 +8,7 @@ export class GetCartDetail {
   constructor(
     private cartRepo: ICartRepository,
     private cartItemRepo: ICartItemRepository,
+    private orderRepo: IOrderRepository,
     private voucherRepo: IVoucherRepository | null = null,
   ) {}
 
@@ -33,7 +35,11 @@ export class GetCartDetail {
 
     const discount = voucher?.discountAmount ?? 0;
     const total = voucher?.totalAfterDiscount ?? subtotal;
+    const openBill =
+      cart.orderChannel === "DINE_IN" && cart.sessionId
+        ? await this.orderRepo.findLatestLiveDineInOrderBySessionId(String(cart.sessionId))
+        : null;
 
-    return { cart, items, subtotal, discount, total, voucher };
+    return { cart, items, subtotal, discount, total, voucher, openBill };
   }
 }

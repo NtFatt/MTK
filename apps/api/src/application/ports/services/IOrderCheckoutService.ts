@@ -8,9 +8,12 @@ export type CheckoutFromCartInput = {
   note?: string | null;
 };
 
+export type CheckoutMode = "CREATED" | "APPENDED";
+
 export type CheckoutFromCartResult = {
   orderId: string;
   orderCode: string;
+  checkoutMode: CheckoutMode;
   subtotalAmount: number;
   discountAmount: number;
   totalAmount: number;
@@ -28,6 +31,12 @@ export type CheckoutFromCartResult = {
     qtyConsumed: number;
   }>;
   inventoryCommitPoint: "ORDER_CREATED";
+  previousOrderStatus: string | null;
+  currentOrderStatus: string;
+  statusTransition: null | {
+    fromStatus: string;
+    toStatus: string;
+  };
 };
 
 /**

@@ -186,6 +186,8 @@ function CheckoutContent() {
     0,
   );
   const discount = cart.discount ?? cart.voucher?.discountAmount ?? 0;
+  const openBill = cart.openBill ?? null;
+  const hasOpenBill = Boolean(openBill?.orderCode);
 
   const total =
     Number(cart.total ?? cart.subtotal ?? NaN) ||
@@ -208,9 +210,13 @@ function CheckoutContent() {
       <section className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
           <div className="customer-hotpot-kicker">Bước 1 / 2</div>
-          <h1 className="customer-mythmaker-title customer-hotpot-page-title">Kiểm tra đơn hàng</h1>
+          <h1 className="customer-mythmaker-title customer-hotpot-page-title">
+            {hasOpenBill ? "Gọi thêm món" : "Kiểm tra đơn hàng"}
+          </h1>
           <p className="customer-hotpot-page-subtitle">
-            Xác nhận món ăn, thêm ghi chú cho bếp nếu cần, rồi tiếp tục sang bước thanh toán.
+            {hasOpenBill
+              ? "Xác nhận các món mới, thêm ghi chú nếu cần, rồi cộng vào đúng bill đang mở của bạn."
+              : "Xác nhận món ăn, thêm ghi chú cho bếp nếu cần, rồi tiếp tục sang bước thanh toán."}
           </p>
         </div>
 
@@ -227,12 +233,12 @@ function CheckoutContent() {
 
       <div className={`grid gap-4 ${discount > 0 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
         <div className="customer-hotpot-stat px-5 py-4">
-          <div className="customer-hotpot-kicker">Số lượng món</div>
+          <div className="customer-hotpot-kicker">{hasOpenBill ? "Món mới sap them" : "So luong mon"}</div>
           <div className="customer-mythmaker-title mt-2 text-4xl text-[#5a301a]">{itemCount}</div>
         </div>
 
         <div className="customer-hotpot-stat px-5 py-4">
-          <div className="customer-hotpot-kicker">Tạm tính</div>
+          <div className="customer-hotpot-kicker">{hasOpenBill ? "Tạm tính Món mới" : "Tạm tính"}</div>
           <div className="customer-mythmaker-title mt-2 text-4xl text-[#c43c2d]">{formatVnd(total)}</div>
         </div>
 
@@ -247,10 +253,12 @@ function CheckoutContent() {
       </div>
 
       <section className="customer-hotpot-receipt rounded-[30px] p-5 sm:p-6">
-        <div className="space-y-2">
-          <div className="customer-hotpot-kicker">Phiếu xác nhận</div>
-          <h2 className="customer-mythmaker-title text-3xl text-[#4e2916]">Kiểm tra lần cuối trước khi gửi bếp</h2>
-        </div>
+          <div className="space-y-2">
+            <div className="customer-hotpot-kicker">Phiếu xác nhận</div>
+            <h2 className="customer-mythmaker-title text-3xl text-[#4e2916]">
+              {hasOpenBill ? "Xac nhan lan Gọi thêm món" : "Kiem tra lan cuoi truoc khi gui bep"}
+            </h2>
+          </div>
 
         <div className="mt-6 space-y-6">
           <CheckoutSummary cart={cart} />
@@ -315,11 +323,17 @@ function CheckoutContent() {
               disabled={createOrder.isPending}
               onClick={handleSubmit}
             >
-              {createOrder.isPending ? "Đang xử lý..." : "Đặt món và tiếp tục thanh toán"}
+              {createOrder.isPending
+                ? "Dang xu ly..."
+                : hasOpenBill
+                  ? "Gọi thêm món vào bill hiện tại"
+                  : "Đặt món và tiếp tục thanh toán"}
             </Button>
 
             <p className="text-center text-xs text-[#8a694f]">
-              Sau khi tạo đơn, hệ thống sẽ chuyển bạn sang bước thanh toán.
+              {hasOpenBill
+                ? `He thong se cong mon vao bill ${openBill?.orderCode} roi dua ban sang lai trang thanh toan cung ma don.`
+                : "Sau khi tao don, he thong se chuyen ban sang buoc thanh toan."}
             </p>
           </div>
         </div>

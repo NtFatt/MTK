@@ -2,6 +2,7 @@ import type { ITableRepository } from "../../ports/repositories/ITableRepository
 import type { ITableSessionRepository } from "../../ports/repositories/ITableSessionRepository.js";
 import type { ITableReservationRepository } from "../../ports/repositories/ITableReservationRepository.js";
 import type { ICartRepository } from "../../ports/repositories/ICartRepository.js";
+import type { IOrderRepository } from "../../ports/repositories/IOrderRepository.js";
 import type { IStockHoldService } from "../../ports/services/IStockHoldService.js";
 import { NoopStockHoldService } from "../../ports/services/NoopStockHoldService.js";
 import type { IEventBus } from "../../ports/events/IEventBus.js";
@@ -11,6 +12,7 @@ export class CloseTableSession {
   constructor(
     private tableRepo: ITableRepository,
     private sessionRepo: ITableSessionRepository,
+    private orderRepo: IOrderRepository,
     private reservationRepo: ITableReservationRepository,
     private lockAheadMinutes: number = 30,
     private eventBus: IEventBus = new NoopEventBus(),
@@ -20,6 +22,26 @@ export class CloseTableSession {
 
   async execute(sessionKey: string) {
     const now = new Date();
+    const current = await this.sessionRepo.findBySessionKey(sessionKey);
+    if (!current) return null;
+
+    if (current.status === "OPEN") {
+      const unpaidConflict = await this.orderRepo.findUnpaidDineInConflictBySessionId(current.id);
+      if (unpaidConflict) {
+        const err: Error & { details?: Record<string, unknown> } = new Error("SESSION_HAS_UNPAID_ORDERS");
+        err.details = {
+          sessionId: current.id,
+          sessionKey: current.sessionKey,
+          tableId: current.tableId,
+          unresolvedCount: unpaidConflict.count,
+          latestOrderCode: unpaidConflict.latestOrderCode,
+          latestOrderStatus: unpaidConflict.latestOrderStatus,
+          latestUpdatedAt: unpaidConflict.latestUpdatedAt,
+        };
+        throw err;
+      }
+    }
+
     const session = await this.sessionRepo.closeBySessionKey(sessionKey, now);
     if (!session) return null;
 

@@ -95,6 +95,15 @@ function buildReplayPayload(room: string, fromSeq: number, ctx: RealtimeContext)
   return payload;
 }
 
+function isJoinConfirmed(ack: Ack, room: string): boolean {
+  if (!ack) return false;
+  if (ack.ok === true && Array.isArray(ack.joined)) {
+    return ack.joined.includes(room);
+  }
+  if (ack.ok === true && ack.room === room) return true;
+  return false;
+}
+
 /**
  * Join a room using BE protocol:
  * - emit: "realtime:join.v1"
@@ -110,6 +119,12 @@ export async function joinV1(socket: Socket, room: string, lastSeq: number, ctx:
 
   if (ack && looksForbiddenJoinAck(ack, room)) {
     const err = new Error("FORBIDDEN_JOIN");
+    (err as any).ack = ack;
+    throw err;
+  }
+
+  if (!isJoinConfirmed(ack, room)) {
+    const err = new Error("JOIN_UNCONFIRMED");
     (err as any).ack = ack;
     throw err;
   }

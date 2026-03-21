@@ -62,6 +62,7 @@ export function CustomerQrPage() {
 
   const openSessionMutation = useOpenSessionMutation({ next });
   const [localError, setLocalError] = useState<string | null>(null);
+  const [sessionRecoveryReason] = useState(() => getCustomerSessionRecoveryReason());
   const [sessionRecoveryMessage] = useState<string | null>(() => {
     const reason = getCustomerSessionRecoveryReason();
     return reason ? formatCustomerSessionRecoveryMessage(reason) : null;
@@ -233,6 +234,11 @@ export function CustomerQrPage() {
               Quét QR trên bàn hoặc nhập mã bàn để vào đúng phiên gọi món. Sau khi mở bàn, bạn sẽ
               đi thẳng vào thực đơn của quán.
             </p>
+            {sessionRecoveryReason === "SESSION_CLOSED_AFTER_PAYMENT" ? (
+              <p className="text-sm text-[#8a694f]">
+                Bill trước đã thanh toán xong. Muốn gọi thêm, hãy mở lại bàn để bắt đầu lượt mới.
+              </p>
+            ) : null}
           </div>
 
           <div className="customer-mythmaker-panel-strong relative overflow-hidden rounded-[32px] px-6 py-6 text-[#fff2da] shadow-[0_30px_80px_-40px_rgba(56,29,10,0.86)]">
@@ -283,7 +289,14 @@ export function CustomerQrPage() {
 
                 {sessionRecoveryMessage ? (
                   <Alert className="rounded-[20px] border-[#e0c49d]/80 bg-[#fff8ec]">
-                    <AlertDescription>{sessionRecoveryMessage}</AlertDescription>
+                    <AlertDescription>
+                      {sessionRecoveryMessage}
+                      {sessionRecoveryReason === "SESSION_CLOSED_AFTER_PAYMENT" ? (
+                        <span className="mt-2 block text-xs text-[#8a694f]">
+                          Đây là hành vi bình thường của hệ thống: thanh toán xong sẽ khép phiên bàn cũ để tránh gọi món nhầm vào bill đã chốt.
+                        </span>
+                      ) : null}
+                    </AlertDescription>
                   </Alert>
                 ) : null}
 
@@ -293,6 +306,8 @@ export function CustomerQrPage() {
                       {openSessionMutation.error.code === "NO_TABLE_AVAILABLE" ||
                       openSessionMutation.error.code === "TABLE_RESERVED_SOON"
                         ? "Không thể mở bàn lúc này (bàn không khả dụng hoặc sắp có đặt trước)."
+                        : openSessionMutation.error.code === "TABLE_UNPAID_ORDER_EXISTS"
+                          ? "Bàn này vẫn còn khách chưa thanh toán. Vui lòng nhờ nhân viên hỗ trợ."
                         : openSessionMutation.error.code === "TABLE_OUT_OF_SERVICE"
                           ? "Bàn đang tạm ngưng phục vụ."
                           : openSessionMutation.error.code === "TABLE_NOT_FOUND"

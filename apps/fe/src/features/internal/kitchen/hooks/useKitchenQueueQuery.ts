@@ -3,6 +3,7 @@ import { qk } from "@hadilao/contracts";
 import { fetchKitchenQueue, type KitchenQueueRow } from "../services/kitchenQueueApi";
 
 const STALE_MS = 2000;
+const REFRESH_MS = 1500;
 
 export function useKitchenQueueQuery(input: {
   branchId: string | number | undefined;
@@ -15,9 +16,11 @@ export function useKitchenQueueQuery(input: {
   const limit = Number(input.limit ?? 50);
 
   return useAppQuery<KitchenQueueRow[], KitchenQueueRow[], readonly unknown[]>({
-    // ✅ prefix = qk.orders.kitchenQueue => realtime + mutation invalidate match
-queryKey: qk.orders.kitchenQueue({ branchId: b, statuses, limit }),    queryFn: () => fetchKitchenQueue({ branchId: b, statuses, limit }),
+    queryKey: qk.orders.kitchenQueue({ branchId: b, statuses, limit }),
+    queryFn: () => fetchKitchenQueue({ branchId: b, statuses, limit }),
     enabled: input.enabled && b.length > 0,
     staleTime: STALE_MS,
+    refetchInterval: input.enabled && b.length > 0 ? REFRESH_MS : false,
+    refetchIntervalInBackground: true,
   });
 }

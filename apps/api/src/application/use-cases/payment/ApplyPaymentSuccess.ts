@@ -1,7 +1,9 @@
 import type { IPaymentRepository } from "../../ports/repositories/IPaymentRepository.js";
 import type { IOrderRepository, OrderStatusHistoryActor } from "../../ports/repositories/IOrderRepository.js";
+import type { ITableSessionRepository } from "../../ports/repositories/ITableSessionRepository.js";
 import type { IEventBus } from "../../ports/events/IEventBus.js";
 import { NoopEventBus } from "../../ports/events/NoopEventBus.js";
+import type { CloseTableSession } from "../table/CloseTableSession.js";
 
 /**
  * Apply side-effects when a payment is confirmed SUCCESS.
@@ -15,6 +17,8 @@ export class ApplyPaymentSuccess {
     private paymentRepo: IPaymentRepository,
     private orderRepo: IOrderRepository,
     private eventBus: IEventBus = new NoopEventBus(),
+    private sessionRepo: ITableSessionRepository | null = null,
+    private closeTableSession: CloseTableSession | null = null,
   ) {}
 
   async execute(
@@ -48,7 +52,20 @@ export class ApplyPaymentSuccess {
 
     if (r.changed) {
       const scope = await this.orderRepo.getRealtimeScopeByOrderCode(orderCode);
+      const scopedSession =
+        scope?.sessionId && this.sessionRepo
+          ? await this.sessionRepo.findById(scope.sessionId)
+          : null;
       const at = new Date().toISOString();
+      const realtimeScope = scope
+        ? {
+            orderId: scope.orderId,
+            sessionId: scope.sessionId,
+            sessionKey: scopedSession?.sessionKey ?? null,
+            tableId: scope.tableId,
+            branchId: scope.branchId,
+          }
+        : null;
 
       const paymentSuccessEvent = {
         type: "payment.success",
@@ -57,15 +74,10 @@ export class ApplyPaymentSuccess {
       };
 
       await this.eventBus.publish(
-        scope
+        realtimeScope
           ? {
               ...paymentSuccessEvent,
-              scope: {
-                orderId: scope.orderId,
-                sessionId: scope.sessionId,
-                tableId: scope.tableId,
-                branchId: scope.branchId,
-              },
+              scope: realtimeScope,
             }
           : paymentSuccessEvent,
       );
@@ -83,18 +95,24 @@ export class ApplyPaymentSuccess {
       };
 
       await this.eventBus.publish(
-        scope
+        realtimeScope
           ? {
               ...orderStatusChangedEvent,
-              scope: {
-                orderId: scope.orderId,
-                sessionId: scope.sessionId,
-                tableId: scope.tableId,
-                branchId: scope.branchId,
-              },
+              scope: realtimeScope,
             }
           : orderStatusChangedEvent,
       );
+
+      if (scope?.sessionId && this.sessionRepo && this.closeTableSession) {
+        try {
+          const session = scopedSession ?? (await this.sessionRepo.findById(scope.sessionId));
+          if (session?.status === "OPEN") {
+            await this.closeTableSession.execute(session.sessionKey);
+          }
+        } catch {
+          // Payment success must stay committed even if post-payment session cleanup fails.
+        }
+      }
     }
 
     return {

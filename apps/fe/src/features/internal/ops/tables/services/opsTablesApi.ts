@@ -15,6 +15,13 @@ export type OpsTableDto = {
   activeItemsCount?: number | null;
   activeItemsPreview?: string | null;
   activeItemsTop?: Array<{ name: string; qty: number }> | null;
+  unpaidOrdersCount?: number;
+  unpaidOrderCode?: string | null;
+  unpaidOrderStatus?: string | null;
+  unpaidOrderUpdatedAt?: string | null;
+  unpaidItemsCount?: number | null;
+  unpaidItemsPreview?: string | null;
+  unpaidItemsTop?: Array<{ name: string; qty: number }> | null;
 };
 
 
@@ -135,6 +142,62 @@ function normalizeOne(x: unknown): OpsTableDto | null {
         })
         .filter(Boolean)
       : ((o as any).activeItemsTop === null || (table as any)?.activeItemsTop === null ? null : undefined);
+
+  const unpaidOrdersCount =
+    typeof (o as any).unpaidOrdersCount === "number" ? (o as any).unpaidOrdersCount :
+      table && typeof (table as any).unpaidOrdersCount === "number" ? (table as any).unpaidOrdersCount :
+        0;
+
+  const unpaidOrderCode =
+    typeof (o as any).unpaidOrderCode === "string" ? (o as any).unpaidOrderCode :
+      table && typeof (table as any).unpaidOrderCode === "string" ? (table as any).unpaidOrderCode :
+        (o as any).unpaidOrderCode === null ? null :
+          table && (table as any).unpaidOrderCode === null ? null :
+            undefined;
+
+  const unpaidOrderStatus =
+    typeof (o as any).unpaidOrderStatus === "string" ? (o as any).unpaidOrderStatus :
+      table && typeof (table as any).unpaidOrderStatus === "string" ? (table as any).unpaidOrderStatus :
+        (o as any).unpaidOrderStatus === null ? null :
+          table && (table as any).unpaidOrderStatus === null ? null :
+            undefined;
+
+  const unpaidOrderUpdatedAt =
+    typeof (o as any).unpaidOrderUpdatedAt === "string" ? (o as any).unpaidOrderUpdatedAt :
+      table && typeof (table as any).unpaidOrderUpdatedAt === "string" ? (table as any).unpaidOrderUpdatedAt :
+        (o as any).unpaidOrderUpdatedAt === null ? null :
+          table && (table as any).unpaidOrderUpdatedAt === null ? null :
+            undefined;
+
+  const unpaidItemsCount =
+    typeof (o as any).unpaidItemsCount === "number" ? (o as any).unpaidItemsCount :
+      table && typeof (table as any).unpaidItemsCount === "number" ? (table as any).unpaidItemsCount :
+        (o as any).unpaidItemsCount === null ? null :
+          table && (table as any).unpaidItemsCount === null ? null :
+            undefined;
+
+  const unpaidItemsPreview =
+    typeof (o as any).unpaidItemsPreview === "string" ? (o as any).unpaidItemsPreview :
+      table && typeof (table as any).unpaidItemsPreview === "string" ? (table as any).unpaidItemsPreview :
+        (o as any).unpaidItemsPreview === null ? null :
+          table && (table as any).unpaidItemsPreview === null ? null :
+            undefined;
+
+  const unpaidItemsTopRaw =
+    Array.isArray((o as any).unpaidItemsTop) ? (o as any).unpaidItemsTop :
+      (table && Array.isArray((table as any).unpaidItemsTop) ? (table as any).unpaidItemsTop : null);
+
+  const unpaidItemsTop =
+    unpaidItemsTopRaw
+      ? unpaidItemsTopRaw
+        .map((it: any) => {
+          const name = typeof it?.name === "string" ? it.name : null;
+          const qty = typeof it?.qty === "number" ? it.qty : null;
+          return name && qty != null ? { name, qty } : null;
+        })
+        .filter(Boolean)
+      : ((o as any).unpaidItemsTop === null || (table as any)?.unpaidItemsTop === null ? null : undefined);
+
   return {
     id, code, status, seats, area, sessionKey, cartKey,
     activeOrdersCount,
@@ -144,6 +207,13 @@ function normalizeOne(x: unknown): OpsTableDto | null {
     activeItemsCount,
     activeItemsPreview,
     activeItemsTop,
+    unpaidOrdersCount,
+    unpaidOrderCode,
+    unpaidOrderStatus,
+    unpaidOrderUpdatedAt,
+    unpaidItemsCount,
+    unpaidItemsPreview,
+    unpaidItemsTop,
   };
 }
 

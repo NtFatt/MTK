@@ -62,6 +62,8 @@ export class CreateOrderFromCart {
       note,
     });
     const orderId = checkoutResult.orderId;
+    const actualOrderCode = checkoutResult.orderCode;
+    const isAppendMode = checkoutResult.checkoutMode === "APPENDED";
 
     // Consume holds after successful checkout (remove holds without restoring stock)
     try {
@@ -86,7 +88,7 @@ export class CreateOrderFromCart {
     const sessionKey = await resolveSessionKey(this.sessionRepo, cart.sessionId ?? null);
 
     await this.eventBus.publish({
-      type: "order.created",
+      type: isAppendMode ? "order.updated" : "order.created",
       at: new Date().toISOString(),
       scope: {
         orderId: String(orderId),
@@ -97,13 +99,36 @@ export class CreateOrderFromCart {
       },
       payload: {
         orderId: String(orderId),
-        orderCode,
+        orderCode: actualOrderCode,
         sessionId: cart.sessionId ?? null,
         clientId: cart.clientId ?? null,
         itemCount: items.length,
+        checkoutMode: checkoutResult.checkoutMode,
         subtotal: items.reduce((s: number, it: any) => s + Number(it.unitPrice ?? it.unit_price) * Number(it.quantity ?? 0), 0),
       },
     });
+
+    if (checkoutResult.statusTransition) {
+      await this.eventBus.publish({
+        type: "order.status.changed",
+        at: new Date().toISOString(),
+        scope: {
+          orderId: String(orderId),
+          sessionId: cart.sessionId ?? null,
+          sessionKey,
+          clientId: cart.clientId ?? null,
+          branchId: cart.branchId ?? null,
+        },
+        payload: {
+          orderId: String(orderId),
+          orderCode: actualOrderCode,
+          fromStatus: checkoutResult.statusTransition.fromStatus,
+          toStatus: checkoutResult.statusTransition.toStatus,
+          checkoutMode: checkoutResult.checkoutMode,
+        },
+      });
+    }
+
     if (cart.branchId) {
       await this.eventBus.publish({
         type: "inventory.updated",
@@ -115,18 +140,20 @@ export class CreateOrderFromCart {
         payload: {
           branchId: cart.branchId,
           cartKey,
-          orderCode,
+          orderCode: actualOrderCode,
           orderId: String(orderId),
           consumedIngredients: checkoutResult.consumedIngredients,
           affectedMenuItemIds: checkoutResult.affectedMenuItemIds,
           triggerStatus: checkoutResult.inventoryCommitPoint,
+          checkoutMode: checkoutResult.checkoutMode,
           source: "order.checkout.consume",
         },
       });
     }
     return {
-      orderCode,
+      orderCode: actualOrderCode,
       orderId: String(orderId),
+      checkoutMode: checkoutResult.checkoutMode,
       subtotalAmount: checkoutResult.subtotalAmount,
       discountAmount: checkoutResult.discountAmount,
       totalAmount: checkoutResult.totalAmount,

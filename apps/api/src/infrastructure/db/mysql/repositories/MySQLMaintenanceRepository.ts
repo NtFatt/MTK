@@ -56,7 +56,7 @@ export class MySQLMaintenanceRepository implements IMaintenanceRepository {
     // - session OPEN
     // - older than staleMinutes
     // - no ACTIVE cart
-    // - no in-progress order (anything not final)
+    // - no unpaid dine-in order left on that session
     const [result]: any = await pool.query(
       `UPDATE table_sessions s
        SET s.status = 'CLOSED', s.closed_at = ?
@@ -70,7 +70,8 @@ export class MySQLMaintenanceRepository implements IMaintenanceRepository {
          AND NOT EXISTS (
            SELECT 1 FROM orders o
            WHERE o.session_id = s.session_id
-             AND o.order_status NOT IN ('PAID','COMPLETED','CANCELED')
+             AND o.order_channel = 'DINE_IN'
+             AND o.order_status NOT IN ('PAID','CANCELED')
          )`,
       [now, now, staleMinutes],
     );
@@ -81,6 +82,7 @@ export class MySQLMaintenanceRepository implements IMaintenanceRepository {
     // Canonical policy:
     // - OUT_OF_SERVICE stays OUT_OF_SERVICE
     // - If there is any OPEN session => OCCUPIED
+    // - Else if there is any unpaid dine-in order tied to that table => OCCUPIED
     // - Else if there is an active reservation that starts soon (<= lockAheadMinutes) => RESERVED
     // - Else AVAILABLE
 
@@ -96,6 +98,14 @@ export class MySQLMaintenanceRepository implements IMaintenanceRepository {
            SELECT 1 FROM table_sessions s
            WHERE s.table_id = t.table_id
              AND s.status = 'OPEN'
+         ) THEN 'OCCUPIED'
+         WHEN EXISTS (
+           SELECT 1
+           FROM orders o
+           JOIN table_sessions s ON s.session_id = o.session_id
+           WHERE s.table_id = t.table_id
+             AND o.order_channel = 'DINE_IN'
+             AND o.order_status NOT IN ('PAID','CANCELED')
          ) THEN 'OCCUPIED'
          WHEN EXISTS (
            SELECT 1 FROM table_reservations r

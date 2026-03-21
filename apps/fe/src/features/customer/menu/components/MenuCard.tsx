@@ -10,12 +10,14 @@ import { customerSessionStore, selectSessionKey } from "../../../../shared/custo
 import { recoverInvalidCustomerSession } from "../../../../shared/customer/session/sessionRecovery";
 import { useAddCartItem } from "../../cart/hooks/useCartMutations";
 import { savePendingAction } from "../../../../shared/customer/session/pendingActions";
+import { CustomerMenuItemCustomizer } from "./CustomerMenuItemCustomizer";
 
 const ADD_FEEDBACK_MS = 1200;
 const FLIGHT_MS = 820;
 
 type MenuCardProps = {
   item: MenuItem;
+  variant?: "card" | "book";
 };
 
 type FlightToken = {
@@ -86,7 +88,7 @@ function resolveCartTargetRect(): DOMRect | null {
   return null;
 }
 
-export function MenuCard({ item }: MenuCardProps) {
+export function MenuCard({ item, variant = "card" }: MenuCardProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const sessionKey = useStore(customerSessionStore, selectSessionKey);
@@ -98,6 +100,7 @@ export function MenuCard({ item }: MenuCardProps) {
 
   const [addedFeedback, setAddedFeedback] = useState(false);
   const [flightTokens, setFlightTokens] = useState<FlightToken[]>([]);
+  const [showCustomizer, setShowCustomizer] = useState(false);
   const [apiOutOfStock, setApiOutOfStock] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.sessionStorage.getItem(`oos:${item.id}`) === "1";
@@ -112,6 +115,22 @@ export function MenuCard({ item }: MenuCardProps) {
   const tapeLabel = pickTapeLabel(item);
   const steamy = isSteamyItem(item);
   const servingNote = buildServingNote(item);
+  const isBookVariant = variant === "book";
+  const primaryActionLabel = outOfStock
+    ? isBookVariant
+      ? "Hết"
+      : "Hết hàng"
+    : addedFeedback
+      ? isBookVariant
+        ? "Đã thêm"
+        : "Đã thêm vào nồi"
+      : addCartItem.isPending
+        ? isBookVariant
+          ? "Đang thêm"
+          : "Đang thêm..."
+        : isBookVariant
+          ? "Gọi món"
+          : "Thêm vào giỏ";
 
   useEffect(() => {
     return () => {
@@ -152,7 +171,7 @@ export function MenuCard({ item }: MenuCardProps) {
     }, FLIGHT_MS);
   };
 
-  const handleAdd = () => {
+  const handleAdd = (payload?: { qty?: number; itemOptions?: Record<string, unknown> }) => {
     if (outOfStock) return;
 
     if (apiOutOfStock && recoveredAvailability) {
@@ -160,22 +179,26 @@ export function MenuCard({ item }: MenuCardProps) {
       window.sessionStorage.removeItem(`oos:${item.id}`);
     }
 
+    const quantity = Math.max(1, Math.trunc(payload?.qty ?? 1));
+    const itemOptions = payload?.itemOptions;
+
     if (!sessionKey) {
       const next = `${location.pathname}${location.search}`;
       savePendingAction({
         kind: "ADD_CART_ITEM",
         returnTo: next,
-        payload: { itemId: item.id, quantity: 1, note: "" },
+        payload: { itemId: item.id, quantity, note: "", itemOptions },
       });
       navigate(`/c/qr?next=${encodeURIComponent(next)}`);
       return;
     }
 
     addCartItem.mutate(
-      { itemId: item.id, qty: 1, note: "" },
+      { itemId: item.id, qty: quantity, note: "", itemOptions },
       {
         onSuccess: () => {
           setAddedFeedback(true);
+          setShowCustomizer(false);
           launchCartAnimation();
           scheduleTimeout(() => setAddedFeedback(false), ADD_FEEDBACK_MS);
         },
@@ -193,7 +216,7 @@ export function MenuCard({ item }: MenuCardProps) {
                 savePendingAction({
                   kind: "ADD_CART_ITEM",
                   returnTo: `${location.pathname}${location.search}`,
-                  payload: { itemId: item.id, quantity: 1, note: "" },
+                  payload: { itemId: item.id, quantity, note: "", itemOptions },
                 });
               },
             })
@@ -207,125 +230,238 @@ export function MenuCard({ item }: MenuCardProps) {
 
   return (
     <>
-      <Card
-        className={cn(
-          "customer-hotpot-receipt group relative overflow-hidden rounded-[28px] border-none bg-transparent transition duration-500 hover:-translate-y-1 hover:shadow-[0_30px_80px_-46px_rgba(78,38,14,0.65)]",
-          outOfStock && "opacity-80"
-        )}
-      >
-        {tapeLabel ? (
-          <div className="pointer-events-none absolute left-5 top-2 z-20">
-            <span className="customer-hotpot-washi">{tapeLabel}</span>
-          </div>
-        ) : null}
-
-        {outOfStock ? (
-          <>
-            <div className="pointer-events-none absolute inset-0 z-10 bg-[#fff6ef]/56 backdrop-blur-[1px]" />
-            <div className="absolute right-4 top-4 z-20 rounded-full bg-[#c93d2d] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#fff5ef] shadow">
+      {isBookVariant ? (
+        <article
+          className={cn(
+            "customer-menu-book-entry group relative overflow-hidden rounded-[26px] border border-[#e4c9aa]/85 bg-[#fffaf1]/96 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_44px_-34px_rgba(79,43,17,0.6)] sm:grid sm:grid-cols-[210px_minmax(0,1fr)]",
+            outOfStock && "opacity-80"
+          )}
+        >
+          {outOfStock ? (
+            <div className="absolute right-3 top-3 z-10 rounded-full bg-[#c93d2d] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#fff6ef]">
               Tạm hết
             </div>
-          </>
-        ) : null}
+          ) : null}
 
-        <div className="relative aspect-[4/3] overflow-hidden rounded-[22px] bg-[linear-gradient(180deg,#e9dcc2_0%,#dcc8a4_100%)]">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_22%,rgba(255,255,255,0.66),transparent_26%),linear-gradient(180deg,rgba(255,255,255,0.08),rgba(117,74,30,0.12))]" />
-          <div className="absolute left-1/2 top-1/2 h-[74%] w-[74%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,#fffdf9_0%,#f6f0e6_60%,#7c99b2_60%,#7c99b2_66%,#f9f4ea_66%,#e7dbc5_100%)] shadow-[0_24px_40px_-24px_rgba(78,45,20,0.9)]" />
-          <div className="absolute left-1/2 top-1/2 h-[60%] w-[60%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/45" />
+          <div className="customer-menu-book-entry-plate relative min-h-[242px] overflow-hidden sm:min-h-full">
+              {steamy ? (
+                <>
+                  <span className="customer-hotpot-steam absolute left-[18%] top-[2%] z-[1] scale-[0.68]" />
+                  <span className="customer-hotpot-steam customer-hotpot-steam-delay-2 absolute right-[12%] top-[6%] z-[1] scale-[0.6]" />
+                </>
+              ) : null}
 
-          {steamy ? (
+              {tapeLabel ? (
+                <span className="absolute left-4 top-4 z-10 rounded-full border border-[#ead0a8]/85 bg-[#fff7e7]/94 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8d6038] shadow-[0_12px_24px_-20px_rgba(77,44,18,0.45)]">
+                  {tapeLabel}
+                </span>
+              ) : null}
+
+              {item.imageUrl ? (
+                <img
+                  src={item.imageUrl}
+                  alt={item.name}
+                  className="absolute inset-0 h-full w-full object-cover object-center transition duration-500 group-hover:scale-[1.05]"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center bg-[linear-gradient(180deg,#ead8b6_0%,#dcc295_100%)] px-6 text-center">
+                  <div className="customer-mythmaker-title text-2xl font-semibold leading-tight text-[#573119]">
+                    {item.name}
+                  </div>
+                </div>
+              )}
+
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02)_0%,rgba(0,0,0,0.16)_100%)]" />
+          </div>
+            <div className="min-w-0 p-4 sm:p-5">
+              {remain != null ? (
+                <div className="mb-2 flex">
+                  <span
+                    className={cn(
+                      "inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]",
+                      outOfStock
+                        ? "border-[#e4b6aa] bg-[#fff0eb] text-[#a34d41]"
+                        : "border-[#bfd1a8] bg-[#eef7e5] text-[#5d7a34]"
+                    )}
+                  >
+                    {outOfStock ? "Tạm hết" : `Còn ${remain}`}
+                  </span>
+                </div>
+              ) : null}
+
+              <h3 className="customer-mythmaker-title text-[2rem] font-semibold leading-[1.02] text-[#4b2817] sm:text-[2.35rem]">
+                {item.name}
+              </h3>
+
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <div className="text-[1.7rem] font-semibold leading-none text-[#c43c2d] sm:text-[1.9rem]">
+                  {formatVnd(item.price)}
+                </div>
+
+                {item.tags && item.tags.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {item.tags.slice(0, 2).map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="outline"
+                        className="rounded-full border-[#e3c9a3] bg-[#fff8ee] px-2.5 py-0.5 text-[10px] uppercase tracking-[0.14em] text-[#855e3b]"
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              <p className="customer-menu-book-note mt-3 text-sm leading-6 text-[#8a694f]">
+                {servingNote}
+              </p>
+
+              <div ref={actionRef} className="mt-4 flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  className="rounded-full border border-[#b83022] bg-[linear-gradient(180deg,#d34a34_0%,#a82e22_100%)] px-5 py-2.5 text-sm text-[#fff7f0] shadow-[0_16px_34px_-24px_rgba(94,26,16,0.9)] transition hover:brightness-110"
+                  disabled={outOfStock || addCartItem.isPending}
+                  onClick={() => handleAdd()}
+                >
+                  {primaryActionLabel}
+                </Button>
+
+                <button
+                  type="button"
+                  className="rounded-full border border-[#e0c49d]/80 bg-[#fff8ec] px-4 py-2.5 text-sm font-medium text-[#6a3b20] transition hover:bg-[#fff2df] disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={outOfStock || addCartItem.isPending}
+                  onClick={() => setShowCustomizer(true)}
+                >
+                  Tùy chọn
+                </button>
+              </div>
+            </div>
+        </article>
+      ) : (
+        <Card
+          className={cn(
+            "customer-hotpot-receipt group relative overflow-hidden rounded-[28px] border-none bg-transparent transition duration-500 hover:-translate-y-1 hover:shadow-[0_30px_80px_-46px_rgba(78,38,14,0.65)]",
+            outOfStock && "opacity-80"
+          )}
+        >
+          {tapeLabel ? (
+            <div className="pointer-events-none absolute left-5 top-2 z-20">
+              <span className="customer-hotpot-washi">{tapeLabel}</span>
+            </div>
+          ) : null}
+
+          {outOfStock ? (
             <>
-              <span className="customer-hotpot-steam absolute left-[22%] top-[10%] scale-[0.8]" />
-              <span className="customer-hotpot-steam customer-hotpot-steam-delay-2 absolute left-[38%] top-[4%] scale-[0.7]" />
-              <span className="customer-hotpot-steam customer-hotpot-steam-delay-3 absolute right-[22%] top-[12%] scale-[0.72]" />
+              <div className="pointer-events-none absolute inset-0 z-10 bg-[#fff6ef]/56 backdrop-blur-[1px]" />
+              <div className="absolute right-4 top-4 z-20 rounded-full bg-[#c93d2d] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#fff5ef] shadow">
+                Tạm hết
+              </div>
             </>
           ) : null}
 
-          {item.imageUrl ? (
-            <img
-              src={item.imageUrl}
-              alt={item.name}
-              className="absolute left-1/2 top-1/2 z-[1] h-[58%] w-[58%] -translate-x-1/2 -translate-y-1/2 rounded-full object-cover shadow-[0_16px_30px_-16px_rgba(74,42,18,0.85)] transition duration-500 group-hover:scale-[1.05]"
-            />
-          ) : (
-            <div className="absolute left-1/2 top-1/2 z-[1] flex h-[58%] w-[58%] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#fffaf1] px-5 text-center shadow-[0_16px_30px_-16px_rgba(74,42,18,0.85)]">
-              <div className="customer-mythmaker-title text-2xl font-semibold leading-tight text-[#573119]">
-                {item.name}
-              </div>
-            </div>
-          )}
-        </div>
+          <div className="relative aspect-[4/3] overflow-hidden rounded-[22px] bg-[linear-gradient(180deg,#e9dcc2_0%,#dcc8a4_100%)]">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_22%,rgba(255,255,255,0.66),transparent_26%),linear-gradient(180deg,rgba(255,255,255,0.08),rgba(117,74,30,0.12))]" />
+            <div className="absolute left-1/2 top-1/2 h-[74%] w-[74%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,#fffdf9_0%,#f6f0e6_60%,#7c99b2_60%,#7c99b2_66%,#f9f4ea_66%,#e7dbc5_100%)] shadow-[0_24px_40px_-24px_rgba(78,45,20,0.9)]" />
+            <div className="absolute left-1/2 top-1/2 h-[60%] w-[60%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/45" />
 
-        <CardHeader className="pb-2 pt-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-[11px] uppercase tracking-[0.24em] text-[#9f7751]">
-                Phieu goi mon
-              </div>
-              <h3 className="customer-mythmaker-title mt-1 text-3xl font-semibold leading-tight text-[#4b2817]">
-                {item.name}
-              </h3>
-            </div>
-
-            <div className="rounded-full border border-[#dcc19d]/80 bg-[#fff9ef] px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-[#8e643f]">
-              Quầy nóng
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-3 pb-2">
-          <div className="flex items-end justify-between gap-3">
-            <p className="text-xl font-semibold text-[#c43c2d]">{formatVnd(item.price)}</p>
-            {remain != null ? (
-              <span
-                className={cn(
-                  "rounded-full border px-3 py-1 text-xs font-medium",
-                  outOfStock
-                    ? "border-[#e4b6aa] bg-[#fff0eb] text-[#a34d41]"
-                    : "border-[#bfd1a8] bg-[#eef7e5] text-[#5d7a34]"
-                )}
-              >
-                {outOfStock ? "Tạm hết" : `Còn ${remain}`}
-              </span>
+            {steamy ? (
+              <>
+                <span className="customer-hotpot-steam absolute left-[22%] top-[10%] scale-[0.8]" />
+                <span className="customer-hotpot-steam customer-hotpot-steam-delay-2 absolute left-[38%] top-[4%] scale-[0.7]" />
+                <span className="customer-hotpot-steam customer-hotpot-steam-delay-3 absolute right-[22%] top-[12%] scale-[0.72]" />
+              </>
             ) : null}
+
+            {item.imageUrl ? (
+              <img
+                src={item.imageUrl}
+                alt={item.name}
+                className="absolute left-1/2 top-1/2 z-[1] h-[58%] w-[58%] -translate-x-1/2 -translate-y-1/2 rounded-full object-cover shadow-[0_16px_30px_-16px_rgba(74,42,18,0.85)] transition duration-500 group-hover:scale-[1.05]"
+              />
+            ) : (
+              <div className="absolute left-1/2 top-1/2 z-[1] flex h-[58%] w-[58%] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#fffaf1] px-5 text-center shadow-[0_16px_30px_-16px_rgba(74,42,18,0.85)]">
+                <div className="customer-mythmaker-title text-2xl font-semibold leading-tight text-[#573119]">
+                  {item.name}
+                </div>
+              </div>
+            )}
           </div>
 
-          <p className="text-sm leading-6 text-[#7b5a42]">{servingNote}</p>
+          <CardHeader className="pb-2 pt-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.24em] text-[#9f7751]">
+                  Phiếu gọi món
+                </div>
+                <h3 className="customer-mythmaker-title mt-1 text-3xl font-semibold leading-tight text-[#4b2817]">
+                  {item.name}
+                </h3>
+              </div>
 
-          {item.tags && item.tags.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {item.tags.map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="outline"
-                  className="rounded-full border-[#e3c9a3] bg-[#fff8ee] px-2.5 py-1 text-[11px] text-[#855e3b]"
-                >
-                  {tag}
-                </Badge>
-              ))}
+              <div className="rounded-full border border-[#dcc19d]/80 bg-[#fff9ef] px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-[#8e643f]">
+                Quầy nóng
+              </div>
             </div>
-          ) : null}
-        </CardContent>
+          </CardHeader>
 
-        <CardFooter className="pb-5 pt-3">
-          <div ref={actionRef} className="w-full">
-            <Button
-              size="sm"
-              className="w-full rounded-full border border-[#b83022] bg-[linear-gradient(180deg,#d34a34_0%,#a82e22_100%)] py-5 text-[#fff7f0] shadow-[0_18px_40px_-24px_rgba(94,26,16,0.9)] transition hover:brightness-110"
-              disabled={outOfStock || addCartItem.isPending}
-              onClick={handleAdd}
-            >
-              {outOfStock
-                ? "Hết hàng"
-                : addedFeedback
-                  ? "Đã thêm vào nồi"
-                  : addCartItem.isPending
-                    ? "Đang thêm..."
-                    : "Thêm vào giỏ"}
-            </Button>
-          </div>
-        </CardFooter>
-      </Card>
+          <CardContent className="space-y-3 pb-2">
+            <div className="flex items-end justify-between gap-3">
+              <p className="text-xl font-semibold text-[#c43c2d]">{formatVnd(item.price)}</p>
+              {remain != null ? (
+                <span
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-xs font-medium",
+                    outOfStock
+                      ? "border-[#e4b6aa] bg-[#fff0eb] text-[#a34d41]"
+                      : "border-[#bfd1a8] bg-[#eef7e5] text-[#5d7a34]"
+                  )}
+                >
+                  {outOfStock ? "Tạm hết" : `Còn ${remain}`}
+                </span>
+              ) : null}
+            </div>
+
+            <p className="text-sm leading-6 text-[#7b5a42]">{servingNote}</p>
+
+            {item.tags && item.tags.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {item.tags.map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant="outline"
+                    className="rounded-full border-[#e3c9a3] bg-[#fff8ee] px-2.5 py-1 text-[11px] text-[#855e3b]"
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            ) : null}
+          </CardContent>
+
+          <CardFooter className="pb-5 pt-3">
+            <div ref={actionRef} className="w-full space-y-2.5">
+              <Button
+                size="sm"
+                className="w-full rounded-full border border-[#b83022] bg-[linear-gradient(180deg,#d34a34_0%,#a82e22_100%)] py-5 text-[#fff7f0] shadow-[0_18px_40px_-24px_rgba(94,26,16,0.9)] transition hover:brightness-110"
+                disabled={outOfStock || addCartItem.isPending}
+                onClick={() => handleAdd()}
+              >
+                {primaryActionLabel}
+              </Button>
+
+              <button
+                type="button"
+                className="w-full rounded-full border border-[#e0c49d]/80 bg-[#fff8ec] px-4 py-3 text-sm font-medium text-[#6a3b20] transition hover:bg-[#fff2df] disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={outOfStock || addCartItem.isPending}
+                onClick={() => setShowCustomizer(true)}
+              >
+                Tùy chọn và ghi chú bếp
+              </button>
+            </div>
+          </CardFooter>
+        </Card>
+      )}
 
       {flightTokens.map((token) => (
         <span
@@ -350,6 +486,15 @@ export function MenuCard({ item }: MenuCardProps) {
           </span>
         </span>
       ))}
+
+      <CustomerMenuItemCustomizer
+        key={`${item.id}:${showCustomizer ? "open" : "closed"}`}
+        item={item}
+        open={showCustomizer}
+        pending={addCartItem.isPending}
+        onClose={() => setShowCustomizer(false)}
+        onConfirm={({ qty, itemOptions }) => handleAdd({ qty, itemOptions })}
+      />
     </>
   );
 }

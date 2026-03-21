@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
 
 import { Alert, AlertDescription } from "../../../../shared/ui/alert";
 import { Badge } from "../../../../shared/ui/badge";
@@ -37,6 +37,10 @@ type FlashState =
   | null;
 
 type RecipeFilter = "all" | "missing" | "ready";
+
+type RecipePageNavigationState = {
+  preselectedItem?: unknown;
+} | null;
 
 type RecipeLinesEditorProps = {
   initialLines: EditableRecipeLine[];
@@ -96,6 +100,64 @@ function getRecipeReason(
   }
 
   return "Món đã có công thức và đang có thể bán.";
+}
+
+function normalizeMenuItemSnapshot(value: unknown): AdminMenuItem | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+
+  const row = value as Record<string, unknown>;
+  const id = String(row.id ?? row.itemId ?? "").trim();
+  const categoryId = String(row.categoryId ?? row.category_id ?? "").trim();
+  const name = String(row.name ?? row.itemName ?? "").trim();
+  const price = Number(row.price ?? 0);
+
+  if (!id || !categoryId || !name || !Number.isFinite(price)) {
+    return null;
+  }
+
+  return {
+    id,
+    categoryId,
+    categoryName:
+      row.categoryName != null
+        ? String(row.categoryName)
+        : row.category_name != null
+          ? String(row.category_name)
+          : undefined,
+    name,
+    price,
+    description: row.description == null ? null : String(row.description),
+    imageUrl:
+      row.imageUrl != null
+        ? String(row.imageUrl)
+        : row.image_url != null
+          ? String(row.image_url)
+          : null,
+    isActive:
+      row.isActive != null
+        ? Boolean(row.isActive)
+        : Boolean(Number(row.is_active ?? 0)),
+    isCombo:
+      row.isCombo != null
+        ? Boolean(row.isCombo)
+        : row.is_combo != null
+          ? Boolean(Number(row.is_combo))
+          : undefined,
+    isMeat:
+      row.isMeat != null
+        ? Boolean(row.isMeat)
+        : row.is_meat != null
+          ? Boolean(Number(row.is_meat))
+          : undefined,
+    stockQty:
+      row.stockQty != null
+        ? Number(row.stockQty)
+        : row.stock_qty != null
+          ? Number(row.stock_qty)
+          : null,
+  };
 }
 
 function RecipeLinesEditor({
@@ -311,16 +373,27 @@ function RecipeLinesEditor({
 
 export function InternalMenuRecipesPage() {
   const { branchId } = useParams<{ branchId: string }>();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [q, setQ] = useState("");
   const [recipeFilter, setRecipeFilter] = useState<RecipeFilter>("all");
   const [flash, setFlash] = useState<FlashState>(null);
 
   const selectedId = searchParams.get("itemId")?.trim() ?? "";
+  const navigationState = location.state as RecipePageNavigationState;
+  const fallbackSelectedItem = useMemo(() => {
+    const candidate = normalizeMenuItemSnapshot(navigationState?.preselectedItem);
+    if (!candidate || !selectedId || candidate.id !== selectedId) {
+      return null;
+    }
+    return candidate;
+  }, [navigationState, selectedId]);
 
   const itemsQuery = useAdminMenuItemsQuery({
     branchId: branchId ?? undefined,
     limit: 1000,
+  }, {
+    refetchOnMount: selectedId ? "always" : true,
   });
 
   const inventoryItemsQuery = useInventoryItemsQuery(branchId ?? null);
@@ -338,7 +411,18 @@ export function InternalMenuRecipesPage() {
       .sort((a, b) => a.ingredientName.localeCompare(b.ingredientName, "vi"));
   }, [inventoryItemsQuery.data]);
 
-  const allItems = useMemo<AdminMenuItem[]>(() => itemsQuery.data?.items ?? [], [itemsQuery.data]);
+  const itemsFromQuery = useMemo<AdminMenuItem[]>(() => itemsQuery.data?.items ?? [], [itemsQuery.data]);
+  const allItems = useMemo<AdminMenuItem[]>(() => {
+    if (!fallbackSelectedItem) {
+      return itemsFromQuery;
+    }
+
+    if (itemsFromQuery.some((item) => item.id === fallbackSelectedItem.id)) {
+      return itemsFromQuery;
+    }
+
+    return [fallbackSelectedItem, ...itemsFromQuery];
+  }, [fallbackSelectedItem, itemsFromQuery]);
   const recipePresenceQuery = useMenuRecipePresenceMap(
     branchId ?? null,
     allItems.map((item) => item.id),
@@ -378,6 +462,12 @@ export function InternalMenuRecipesPage() {
   const selectedRecipePresence = selected ? recipePresenceByItem[selected.id] : undefined;
   const recipeQuery = useMenuRecipeQuery(branchId ?? null, selectedId || null);
   const saveMutation = useSaveMenuRecipeMutation(branchId ?? null, selectedId || null);
+
+  const shouldShowSelectedNotFoundAlert =
+    Boolean(selectedId) &&
+    !selected &&
+    itemsQuery.isSuccess &&
+    !itemsQuery.isFetching;
 
   const initialLines = useMemo<EditableRecipeLine[]>(() => {
     const recipeLines = recipeQuery.data ?? [];
@@ -439,7 +529,7 @@ export function InternalMenuRecipesPage() {
         </Alert>
       )}
 
-      {selectedId && !selected && itemsQuery.isSuccess && allItems.length > 0 && (
+      {shouldShowSelectedNotFoundAlert && (
         <Alert variant="destructive">
           <AlertDescription>
             Không tìm thấy món đang được chọn trong dữ liệu recipe hiện tại. Hãy quay lại danh sách món và chọn lại.

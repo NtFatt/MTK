@@ -15,6 +15,7 @@ export type CreateOrderParams = {
 // BE DTO (thực tế đang trả orderStatus)
 type OrderDto = {
   orderCode: string;
+  checkoutMode?: "CREATED" | "APPENDED";
   status?: string;
   orderStatus?: string;
   subtotalAmount?: number;
@@ -29,6 +30,7 @@ type OrderDto = {
 function toOrder(dto: OrderDto): Order {
   return {
     orderCode: dto.orderCode,
+    checkoutMode: dto.checkoutMode,
     status: dto.status ?? dto.orderStatus ?? "UNKNOWN",
     subtotal: dto.subtotalAmount,
     discount: dto.discountAmount,

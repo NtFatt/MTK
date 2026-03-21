@@ -13,6 +13,7 @@ export type PendingAddCartItem = {
     quantity: number;
     note?: string;
     optionsHash?: string;
+    itemOptions?: Record<string, unknown>;
   };
 };
 
@@ -49,7 +50,13 @@ export function clearPendingAction() {
 
 type CartLike = {
   cartKey: string;
-  items?: Array<{ itemId: string | number; qty: number; note?: string; optionsHash?: string }>;
+  items?: Array<{
+    itemId: string | number;
+    qty: number;
+    note?: string;
+    optionsHash?: string;
+    itemOptions?: Record<string, unknown>;
+  }>;
 };
 
 
@@ -92,7 +99,7 @@ export async function applyPendingAction(
       body: JSON.stringify({
         itemId: String(p.itemId),
         quantity: q,
-        // itemOptions: p.itemOptions (nếu sau này có)
+        itemOptions: p.itemOptions ?? undefined,
       }),
     });
 

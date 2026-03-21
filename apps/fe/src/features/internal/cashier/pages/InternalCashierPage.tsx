@@ -1,34 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useStore } from "zustand";
-
-import { authStore } from "../../../../shared/auth/authStore";
-import { useAppQuery } from "../../../../shared/http/useAppQuery";
-import { useAppMutation } from "../../../../shared/http/useAppMutation";
-import { apiFetchAuthed } from "../../../../shared/http/authedFetch";
-import { Can } from "../../../../shared/auth/guards";
-import { useRealtimeRoom } from "../../../../shared/realtime";
-
-import { Card, CardContent, CardHeader, CardTitle } from "../../../../shared/ui/card";
-import { Input } from "../../../../shared/ui/input";
-import { Button } from "../../../../shared/ui/button";
-import { Badge } from "../../../../shared/ui/badge";
-import { Alert, AlertDescription } from "../../../../shared/ui/alert";
 import { qk } from "@hadilao/contracts";
 
-type OrderRow = {
-  orderCode: string;
-  orderStatus: string;
-  createdAt: string;
-  updatedAt: string;
-  branchId: string | null;
-  tableCode: string | null;
-  total?: number;
-  subtotal?: number;
-  payableTotal?: number;
-  totalAmount?: number;
-  amount?: number;
-};
+import { authStore } from "../../../../shared/auth/authStore";
+import { Can } from "../../../../shared/auth/guards";
+import { apiFetchAuthed } from "../../../../shared/http/authedFetch";
+import { useAppMutation } from "../../../../shared/http/useAppMutation";
+import { subscribeRealtime, useRealtimeRoom, type EventEnvelope } from "../../../../shared/realtime";
+import { Alert, AlertDescription } from "../../../../shared/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../../shared/ui/card";
+import { Input } from "../../../../shared/ui/input";
+import { CashierOrderCard } from "../components/CashierOrderCard";
+import { CashierPaymentDialog } from "../components/CashierPaymentDialog";
+import { useCashierQueueQuery } from "../hooks/useCashierQueueQuery";
+import { formatElapsedFrom, formatVnd, getCashierTotal, getSeatAnchor } from "../utils/cashierDisplay";
 
 type SettleCashResponse = {
   orderCode: string;
@@ -41,24 +27,14 @@ function isAdminRole(role: unknown): boolean {
   return String(role ?? "").toUpperCase() === "ADMIN";
 }
 
+function normStatus(value: string | undefined): string {
+  return String(value ?? "").trim().toUpperCase();
+}
+
 function uuid(): string {
-  const c = globalThis.crypto as Crypto | undefined;
-  if (c?.randomUUID) return c.randomUUID();
+  const cryptoApi = globalThis.crypto as Crypto | undefined;
+  if (cryptoApi?.randomUUID) return cryptoApi.randomUUID();
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function formatVnd(n: number): string {
-  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n);
-}
-
-function getTotal(it: any): number {
-  const raw = it?.total ?? it?.totalAmount ?? it?.payableTotal ?? it?.subtotal ?? it?.amount ?? it?.grandTotal;
-  const v = Number(raw);
-  return Number.isFinite(v) ? v : 0;
-}
-
-function roundUp(x: number, step: number) {
-  return Math.ceil(x / step) * step;
 }
 
 function getIdemKey(scope: string): string {
@@ -66,9 +42,9 @@ function getIdemKey(scope: string): string {
     const key = `idem:${scope}`;
     const existing = sessionStorage.getItem(key);
     if (existing) return existing;
-    const v = uuid();
-    sessionStorage.setItem(key, v);
-    return v;
+    const value = uuid();
+    sessionStorage.setItem(key, value);
+    return value;
   } catch {
     return uuid();
   }
@@ -82,69 +58,141 @@ function clearIdemKey(scope: string) {
   }
 }
 
+function getCashierActionErrorMessage(error: unknown): string {
+  const e = error as any;
+  const code =
+    e?.response?.data?.code ??
+    e?.data?.code ??
+    e?.code ??
+    null;
+
+  const messageMap: Record<string, string> = {
+    FORBIDDEN: "Bạn không có quyền thanh toán đơn này.",
+    ORDER_NOT_FOUND: "Không tìm thấy đơn hàng để thanh toán.",
+    ORDER_NOT_PAYABLE: "Đơn hàng này không còn ở trạng thái có thể thanh toán.",
+    BRANCH_SCOPE_REQUIRED: "Phiên đăng nhập hiện tại chưa có chi nhánh hợp lệ để settle cash.",
+    INVALID_TOKEN: "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.",
+  };
+
+  if (code && messageMap[code]) return messageMap[code];
+  return e?.response?.data?.message || e?.message || "Có lỗi xảy ra khi xác nhận thanh toán.";
+}
+
+function extractBranchIdFromRealtime(env: EventEnvelope): string | null {
+  const prefixes = ["cashier:", "branch:", "ops:", "order:"];
+  for (const prefix of prefixes) {
+    if (env.room.startsWith(prefix) && prefix !== "order:") {
+      const rest = env.room.slice(prefix.length).trim();
+      if (rest) return rest;
+    }
+  }
+
+  const scope =
+    env.scope && typeof env.scope === "object"
+      ? (env.scope as Record<string, unknown>)
+      : null;
+  const payload =
+    env.payload && typeof env.payload === "object"
+      ? (env.payload as Record<string, unknown>)
+      : null;
+  const raw = scope?.branchId ?? scope?.branch_id ?? payload?.branchId ?? payload?.branch_id;
+  return raw != null && String(raw).trim() ? String(raw).trim() : null;
+}
+
+function isCashierRealtimeEvent(env: EventEnvelope, branchId: string): boolean {
+  if (!branchId) return false;
+  if (env.type === "realtime.gap" && env.room.startsWith(`cashier:${branchId}`)) return true;
+  if (env.room.startsWith(`cashier:${branchId}`)) return true;
+
+  const branchFromEvent = extractBranchIdFromRealtime(env);
+  if (branchFromEvent !== branchId) return false;
+
+  return (
+    env.type === "order.created" ||
+    env.type === "order.updated" ||
+    env.type === "order.status_changed" ||
+    env.type === "order.status.changed" ||
+    env.type === "order.statusChanged" ||
+    env.type === "payment.success" ||
+    env.type === "payment.updated" ||
+    env.type === "payment.completed"
+  );
+}
+
 export function InternalCashierPage() {
-  const session = useStore(authStore, (s) => s.session);
+  const session = useStore(authStore, (state) => state.session);
   const { branchId } = useParams<{ branchId: string }>();
-  const bid = String(branchId ?? "").trim();
+  const branchParam = String(branchId ?? "").trim();
 
   const role = session?.role;
   const userBranch = session?.branchId;
 
   const isBranchMismatch =
-    !isAdminRole(role) && userBranch != null && bid && String(userBranch) !== String(bid);
+    !isAdminRole(role) && userBranch != null && branchParam && String(userBranch) !== String(branchParam);
 
   const canRead = useMemo(() => {
-    const perms = session?.permissions ?? [];
-    return perms.includes("cashier.unpaid.read");
+    const permissions = session?.permissions ?? [];
+    return permissions.includes("cashier.unpaid.read");
+  }, [session?.permissions]);
+  const canSettle = useMemo(() => {
+    const permissions = session?.permissions ?? [];
+    return permissions.includes("cashier.settle_cash");
   }, [session?.permissions]);
 
-  const enabled = !!session && !!bid && !isBranchMismatch && canRead;
-
-  const rtCtx = session
-    ? {
-      kind: "internal" as const,
-      userKey: session.user?.id ? String(session.user.id) : "internal",
-      branchId: bid ? String(bid) : session?.branchId != null ? String(session.branchId) : undefined,
-      token: session.accessToken,
-    }
-    : undefined;
+  const enabled = !!session && !!branchParam && !isBranchMismatch && canRead;
 
   useRealtimeRoom(
-    bid ? `cashier:${bid}` : null,
-    enabled && !!bid,
-    rtCtx
+    branchParam ? `cashier:${branchParam}` : null,
+    enabled && !!branchParam,
+    session
+      ? {
+          kind: "internal",
+          userKey: session.user?.id ? String(session.user.id) : "internal",
+          branchId: branchParam || (session.branchId != null ? String(session.branchId) : undefined),
+          token: session.accessToken,
+        }
+      : undefined,
   );
 
-  const [q, setQ] = useState("");
-  const [paying, setPaying] = useState<OrderRow | null>(null);
-  const [payMethod, setPayMethod] = useState<"CASH" | "SHOPEEPAY" | "VISA" | "MASTER" | "JCB" | "ATM" | "OTHER">(
-    "CASH"
-  );
-  const [received, setReceived] = useState<number>(0);
+  const [query, setQuery] = useState("");
+  const [payingOrderCode, setPayingOrderCode] = useState<string | null>(null);
 
-  const listKey = useMemo(() => qk.orders.cashierUnpaid({ branchId: bid }), [bid]);
-
-  const listQuery = useAppQuery<{ items: OrderRow[] }>({
-    queryKey: listKey,
+  const listKey = useMemo(() => qk.orders.cashierUnpaid({ branchId: branchParam }), [branchParam]);
+  const { data, isLoading, isFetching, error, refetch } = useCashierQueueQuery({
+    branchId: branchParam,
     enabled,
-    queryFn: async () => {
-      const qs = new URLSearchParams();
-      qs.set("branchId", bid);
-      return apiFetchAuthed<{ items: OrderRow[] }>(`/admin/cashier/unpaid?${qs.toString()}`);
-    },
-    staleTime: 3000,
+    limit: 50,
   });
 
   useEffect(() => {
     if (!enabled) return;
 
     const handler: EventListener = () => {
-      void listQuery.refetch();
+      void refetch();
     };
 
     window.addEventListener("internal.refresh", handler);
     return () => window.removeEventListener("internal.refresh", handler);
-  }, [enabled, listQuery]);
+  }, [enabled, refetch]);
+
+  useEffect(() => {
+    if (!enabled || !branchParam) return;
+
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const unsubscribe = subscribeRealtime((env) => {
+      if (!isCashierRealtimeEvent(env, branchParam)) return;
+
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        void refetch();
+      }, 80);
+    });
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      unsubscribe();
+    };
+  }, [enabled, branchParam, refetch]);
 
   const settleMutation = useAppMutation<SettleCashResponse, any, { orderCode: string }>({
     invalidateKeys: [[...listKey] as unknown as unknown[]],
@@ -152,33 +200,72 @@ export function InternalCashierPage() {
       const scope = `cashier.settle:${orderCode}`;
       const idem = getIdemKey(scope);
 
-      const res = await apiFetchAuthed<SettleCashResponse>(
+      const response = await apiFetchAuthed<SettleCashResponse>(
         `/admin/cashier/settle-cash/${encodeURIComponent(orderCode)}`,
         {
           method: "POST",
           idempotencyKey: idem,
-        }
+        },
       );
 
       clearIdemKey(scope);
-      return res;
+      return response;
     },
   });
 
   const filtered = useMemo(() => {
-    const items = listQuery.data?.items ?? [];
-    const s = q.trim().toLowerCase();
-    if (!s) return items;
-    return items.filter((it) => {
+    const keyword = query.trim().toLowerCase();
+    const rows = data ?? [];
+    if (!keyword) return rows;
+
+    return rows.filter((row) => {
+      const itemText = (row.items ?? []).map((item) => item.itemName).join(" ").toLowerCase();
       return (
-        String(it.orderCode ?? "").toLowerCase().includes(s) ||
-        String(it.tableCode ?? "").toLowerCase().includes(s)
+        String(row.orderCode ?? "").toLowerCase().includes(keyword) ||
+        String(row.tableCode ?? "").toLowerCase().includes(keyword) ||
+        String(row.voucherName ?? "").toLowerCase().includes(keyword) ||
+        String(row.voucherCode ?? "").toLowerCase().includes(keyword) ||
+        itemText.includes(keyword)
       );
     });
-  }, [listQuery.data, q]);
+  }, [data, query]);
+
+  const stats = useMemo(() => {
+    const rows = data ?? [];
+    const totalDue = rows.reduce((sum, row) => sum + getCashierTotal(row), 0);
+    const openTables = new Set(
+      rows
+        .map((row) => row.tableCode)
+        .filter((tableCode): tableCode is string => typeof tableCode === "string" && tableCode.trim().length > 0),
+    ).size;
+    const readyCount = rows.filter((row) => {
+      const status = normStatus(row.orderStatus);
+      return status === "READY" || status === "COMPLETED" || status === "RECEIVED";
+    }).length;
+    const longestSeated = rows
+      .filter((row) => getSeatAnchor(row))
+      .sort((left, right) => Date.parse(getSeatAnchor(left) ?? "") - Date.parse(getSeatAnchor(right) ?? ""))[0];
+
+    return {
+      total: rows.length,
+      openTables,
+      readyCount,
+      totalDue,
+      longestSeatLabel: formatElapsedFrom(getSeatAnchor(longestSeated ?? {})),
+    };
+  }, [data]);
+
+  const activeOrder = useMemo(() => {
+    if (!payingOrderCode) return null;
+    return (data ?? []).find((row) => row.orderCode === payingOrderCode) ?? null;
+  }, [data, payingOrderCode]);
+
+  const mutationError = settleMutation.error as any;
+  const mutationErrorMessage = mutationError ? getCashierActionErrorMessage(mutationError) : null;
+  const mutationCorrelationId = mutationError?.correlationId ?? null;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6">
       {isBranchMismatch && (
         <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
           Bạn không được phép truy cập dữ liệu chi nhánh khác.
@@ -194,300 +281,139 @@ export function InternalCashierPage() {
             </div>
           }
         >
-          <section className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <Input
-                className="max-w-sm"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Tìm ORD... / mã bàn..."
-              />
-              {listQuery.isFetching && (
-                <div className="text-sm text-muted-foreground">Đang làm mới...</div>
-              )}
-            </div>
+          <section className="rounded-[28px] border border-[#ead8c0] bg-[linear-gradient(180deg,#fffaf4_0%,#fff5ea_100%)] px-5 py-5 shadow-[0_20px_40px_-32px_rgba(60,29,9,0.45)]">
+            <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+              <div className="space-y-2">
+                <div className="text-xs uppercase tracking-[0.28em] text-[#9f7751]">Cashier queue</div>
+                <h1 className="text-3xl font-semibold text-[#4e2916]">Thu ngân nhìn bill, thời gian ngồi và thanh toán trên một màn</h1>
+              </div>
 
-            {listQuery.error && (
-              <Alert variant="destructive">
-                <AlertDescription>
-                  {listQuery.error.message}
-                  {listQuery.error.correlationId && (
-                    <span className="mt-1 block text-xs">Mã: {listQuery.error.correlationId}</span>
-                  )}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {settleMutation.error && (
-              <Alert variant="destructive">
-                <AlertDescription>
-                  {settleMutation.error.message}
-                  {settleMutation.error.correlationId && (
-                    <span className="mt-1 block text-xs">Mã: {settleMutation.error.correlationId}</span>
-                  )}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <div className="grid gap-4 md:grid-cols-2">
-              {filtered.map((it) => (
-                <Card key={it.orderCode}>
+              <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[560px] xl:grid-cols-4">
+                <Card className="border-[#ecd9bf] bg-white/90">
                   <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="text-base font-semibold">{it.orderCode}</CardTitle>
-                      <Badge variant="outline">{String(it.orderStatus ?? "").toUpperCase()}</Badge>
-                    </div>
+                    <CardTitle className="text-sm text-[#8a684d]">Đơn chờ thanh toán</CardTitle>
                   </CardHeader>
+                  <CardContent className="text-3xl font-semibold text-[#4e2916]">{stats.total}</CardContent>
+                </Card>
 
-                  <CardContent className="space-y-2">
-                    <div className="text-sm text-muted-foreground">
-                      Bàn: <span className="font-mono text-foreground">{it.tableCode ?? "—"}</span>
-                    </div>
+                <Card className="border-[#ecd9bf] bg-white/90">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-[#8a684d]">Bàn đang mở</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-3xl font-semibold text-[#4e2916]">{stats.openTables}</CardContent>
+                </Card>
 
-                    <div className="text-xs text-muted-foreground">
-                      Created: {it.createdAt ? new Date(it.createdAt).toLocaleString("vi-VN") : "—"}
-                    </div>
-
-                    {getTotal(it) > 0 && (
-                      <div className="text-sm">
-                        Tổng: <span className="font-semibold">{formatVnd(getTotal(it))}</span>
-                      </div>
-                    )}
-
-                    <Can perm="cashier.settle_cash" fallback={null}>
-                      <Button
-                        className="mt-2"
-                        disabled={!enabled || settleMutation.isPending}
-                        onClick={() => {
-                          setPayMethod("CASH");
-                          const total = getTotal(it);
-                          setReceived(total || 0);
-                          setPaying(it);
-                        }}
-                      >
-                        {settleMutation.isPending ? "Đang thanh toán..." : "Thanh toán tiền mặt"}
-                      </Button>
-                    </Can>
+                <Card className="border-[#ecd9bf] bg-white/90">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-[#8a684d]">Tổng phải thu</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-2xl font-semibold text-[#b13c3c]">
+                    {stats.totalDue > 0 ? formatVnd(stats.totalDue) : "Chưa có"}
                   </CardContent>
                 </Card>
-              ))}
+
+                <Card className="border-[#ecd9bf] bg-white/90">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-[#8a684d]">Khách ngồi lâu nhất</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-3xl font-semibold text-[#4e2916]">{stats.longestSeatLabel}</CardContent>
+                </Card>
+              </div>
             </div>
-
-            {!listQuery.isLoading && filtered.length === 0 && (
-              <div className="text-sm text-muted-foreground">Không có đơn nào.</div>
-            )}
           </section>
-        </Can>
-      )}
 
-      {paying &&
-        (() => {
-          const total = getTotal(paying);
-          const change = Math.max(0, received - total);
-          const quick = total ? [roundUp(total, 1000), roundUp(total, 5000), roundUp(total, 10000)] : [];
-          const canConfirm = payMethod === "CASH" && (total === 0 || received >= total) && !settleMutation.isPending;
+          <section className="flex flex-col gap-4 rounded-[26px] border border-[#ead8c0] bg-card p-4 xl:flex-row xl:items-end xl:justify-between">
+            <div className="grid flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
+              <div className="space-y-2">
+                <div className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Tìm theo đơn, bàn, món hoặc voucher</div>
+                <Input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Ví dụ: ORD..., A01, bò Mỹ, HOTPOT..."
+                  className="h-11"
+                />
+              </div>
 
-          const pressDigit = (d: number) => setReceived((v) => v * 10 + d);
-          const press00 = () => setReceived((v) => v * 100);
-          const press000 = () => setReceived((v) => v * 1000);
-          const backspace = () => setReceived((v) => Math.floor(v / 10));
-          const clear = () => setReceived(0);
-
-          return (
-            <div className="fixed inset-0 z-[60] bg-black/40 p-4">
-              <div className="mx-auto w-full max-w-5xl rounded-xl bg-background shadow-xl">
-                <div className="flex items-center justify-between border-b p-4">
-                  <div className="text-lg font-semibold">
-                    Thanh toán {paying.tableCode ? `BÀN - ${paying.tableCode}` : ""}{" "}
-                    {total ? `- ${formatVnd(total)}` : ""}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setPaying(null)}
-                    className="rounded-md border px-3 py-1.5 text-sm hover:bg-muted"
-                  >
-                    Đóng
-                  </button>
-                </div>
-
-                <div className="grid gap-4 p-4 md:grid-cols-[260px_1fr]">
-                  <div className="space-y-2">
-                    {[
-                      ["CASH", "Tiền mặt"],
-                      ["SHOPEEPAY", "ShopeePay"],
-                      ["VISA", "VISA"],
-                      ["MASTER", "Master"],
-                      ["JCB", "JCB"],
-                      ["ATM", "ATM"],
-                      ["OTHER", "Khác"],
-                    ].map(([k, label]) => {
-                      const disabled = k !== "CASH";
-                      const active = payMethod === (k as any);
-                      return (
-                        <button
-                          key={k}
-                          type="button"
-                          disabled={disabled}
-                          onClick={() => setPayMethod(k as any)}
-                          className={[
-                            "w-full rounded-lg border px-3 py-3 text-left text-sm font-medium",
-                            active ? "border-primary bg-primary/5" : "hover:bg-muted",
-                            disabled ? "cursor-not-allowed opacity-50" : "",
-                          ].join(" ")}
-                          title={disabled ? "Chưa hỗ trợ method này (hiện chỉ cash)" : ""}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="grid gap-3 md:grid-cols-3">
-                      <div className="rounded-lg border p-3">
-                        <div className="text-xs text-muted-foreground">Đã nhận</div>
-                        <input
-                          className="mt-1 w-full rounded-md border px-3 py-2 text-base"
-                          value={String(received)}
-                          onChange={(e) => {
-                            const digits = e.target.value.replace(/[^\d]/g, "");
-                            setReceived(digits ? Number(digits) : 0);
-                          }}
-                        />
-                        <div className="mt-1 text-xs text-muted-foreground">{formatVnd(received)}</div>
-                      </div>
-
-                      <div className="rounded-lg border p-3">
-                        <div className="text-xs text-muted-foreground">Tổng tiền thanh toán</div>
-                        <div className="mt-2 text-lg font-semibold">{total ? formatVnd(total) : "—"}</div>
-                        {!total && (
-                          <div className="mt-1 text-xs text-muted-foreground">
-                            (API chưa trả tổng tiền, vẫn có thể xác nhận)
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="rounded-lg border p-3">
-                        <div className="text-xs text-muted-foreground">Tiền thừa</div>
-                        <div className="mt-2 text-lg font-semibold">{total ? formatVnd(change) : "—"}</div>
-                      </div>
-                    </div>
-
-                    {quick.length > 0 && (
-                      <div className="grid grid-cols-3 gap-2">
-                        {quick.map((a) => (
-                          <button
-                            key={a}
-                            type="button"
-                            className="rounded-lg border px-3 py-2 text-sm font-semibold hover:bg-muted"
-                            onClick={() => setReceived(a)}
-                          >
-                            {formatVnd(a)}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-4 gap-2">
-                      {[7, 8, 9].map((n) => (
-                        <button
-                          key={n}
-                          type="button"
-                          className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted"
-                          onClick={() => pressDigit(n)}
-                        >
-                          {n}
-                        </button>
-                      ))}
-                      <button
-                        type="button"
-                        className="rounded-lg border py-4 text-sm font-semibold hover:bg-muted"
-                        onClick={backspace}
-                      >
-                        ⌫
-                      </button>
-
-                      {[4, 5, 6].map((n) => (
-                        <button
-                          key={n}
-                          type="button"
-                          className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted"
-                          onClick={() => pressDigit(n)}
-                        >
-                          {n}
-                        </button>
-                      ))}
-                      <button
-                        type="button"
-                        className="rounded-lg border py-4 text-sm font-semibold hover:bg-muted"
-                        onClick={clear}
-                      >
-                        C
-                      </button>
-
-                      {[1, 2, 3].map((n) => (
-                        <button
-                          key={n}
-                          type="button"
-                          className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted"
-                          onClick={() => pressDigit(n)}
-                        >
-                          {n}
-                        </button>
-                      ))}
-                      <div className="rounded-lg border py-4" />
-
-                      <button
-                        type="button"
-                        className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted"
-                        onClick={() => pressDigit(0)}
-                      >
-                        0
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted"
-                        onClick={press00}
-                      >
-                        00
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-lg border py-4 text-lg font-semibold hover:bg-muted"
-                        onClick={press000}
-                      >
-                        000
-                      </button>
-                      <div className="rounded-lg border py-4" />
-                    </div>
-
-                    <button
-                      type="button"
-                      className={[
-                        "mt-2 w-full rounded-lg py-4 text-base font-semibold",
-                        canConfirm
-                          ? "bg-green-600 text-white hover:bg-green-700"
-                          : "cursor-not-allowed bg-muted text-muted-foreground",
-                      ].join(" ")}
-                      disabled={!canConfirm}
-                      onClick={() => {
-                        const ok = window.confirm(`Xác nhận thanh toán cho ${paying.orderCode}?`);
-                        if (!ok) return;
-                        settleMutation.mutate({ orderCode: paying.orderCode }, { onSuccess: () => setPaying(null) });
-                      }}
-                    >
-                      {settleMutation.isPending ? "Đang thanh toán..." : "Xác nhận thanh toán"}
-                    </button>
-
-                    <div className="text-xs text-muted-foreground">
-                      * Hiện chỉ hỗ trợ <b>Tiền mặt</b> (API settle-cash).
-                    </div>
+              <div className="space-y-2 xl:min-w-[240px]">
+                <div className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Tình trạng queue</div>
+                <div className="rounded-[18px] border border-[#ead8c0] bg-[#fff8ed] px-4 py-3 text-sm text-[#6d4928]">
+                  {isFetching ? "Đang làm mới..." : `Đang hiển thị ${filtered.length} / ${stats.total} bill chờ`}
+                  <div className="mt-1 text-xs text-[#8a684d]">
+                    {stats.readyCount} bill đang ở trạng thái sẵn sàng/đã hoàn tất chờ thu ngân kết thúc.
                   </div>
                 </div>
               </div>
             </div>
+          </section>
+
+          {error ? (
+            <Alert variant="destructive">
+              <AlertDescription>
+                {error.message}
+                {error.correlationId ? <span className="mt-1 block text-xs">Mã: {error.correlationId}</span> : null}
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          {!error && mutationErrorMessage ? (
+            <Alert variant="destructive">
+              <AlertDescription>
+                {mutationErrorMessage}
+                {mutationCorrelationId ? <span className="mt-1 block text-xs">Mã: {mutationCorrelationId}</span> : null}
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          <section>
+            {isLoading ? (
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div key={index} className="h-[320px] animate-pulse rounded-[28px] border bg-card" />
+                ))}
+              </div>
+            ) : null}
+
+            {!isLoading && !error && filtered.length === 0 ? (
+              <div className="rounded-[26px] border bg-card p-6 text-sm text-muted-foreground">
+                Không có đơn nào khớp bộ lọc hiện tại.
+              </div>
+            ) : null}
+
+            {!isLoading && !error && filtered.length > 0 ? (
+              <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+                {filtered.map((row) => (
+                  <CashierOrderCard
+                    key={row.orderCode}
+                    row={row}
+                    pending={settleMutation.isPending}
+                    canSettle={canSettle}
+                    onOpen={(entry) => setPayingOrderCode(entry.orderCode)}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </section>
+        </Can>
+      )}
+
+      <CashierPaymentDialog
+        key={activeOrder?.orderCode ?? "cashier-dialog-closed"}
+        order={activeOrder}
+        isPending={settleMutation.isPending}
+        errorMessage={mutationErrorMessage}
+        correlationId={mutationCorrelationId}
+        onClose={() => setPayingOrderCode(null)}
+        onConfirm={(orderCode) => {
+          settleMutation.mutate(
+            { orderCode },
+            {
+              onSuccess: () => {
+                setPayingOrderCode(null);
+              },
+            },
           );
-        })()}
+        }}
+      />
     </div>
   );
 }

@@ -58,8 +58,18 @@ const MAP: Record<string, ErrorMapping> = {
   CART_EMPTY: { status: 409, code: "CART_EMPTY", message: "Cart is empty" },
   OUT_OF_STOCK: { status: 409, code: "OUT_OF_STOCK", message: "Out of stock" },
   SESSION_CLOSED: { status: 409, code: "SESSION_CLOSED", message: "Session is closed" },
+  SESSION_HAS_UNPAID_ORDERS: {
+    status: 409,
+    code: "SESSION_HAS_UNPAID_ORDERS",
+    message: "Không thể đóng phiên vì bàn vẫn còn đơn chưa thanh toán",
+  },
   TABLE_NOT_AVAILABLE: { status: 409, code: "TABLE_NOT_AVAILABLE", message: "Table is not available" },
   TABLE_OUT_OF_SERVICE: { status: 409, code: "TABLE_OUT_OF_SERVICE", message: "Table is out of service" },
+  TABLE_UNPAID_ORDER_EXISTS: {
+    status: 409,
+    code: "TABLE_UNPAID_ORDER_EXISTS",
+    message: "Bàn này vẫn còn đơn chưa thanh toán",
+  },
   NO_TABLE_AVAILABLE: { status: 409, code: "NO_TABLE_AVAILABLE", message: "No table available" },
   RESERVATION_EXPIRED: { status: 409, code: "RESERVATION_EXPIRED", message: "Reservation expired" },
   RESERVATION_NOT_PENDING: { status: 409, code: "RESERVATION_NOT_PENDING", message: "Reservation is not pending" },

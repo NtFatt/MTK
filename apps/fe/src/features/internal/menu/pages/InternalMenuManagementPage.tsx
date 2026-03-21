@@ -154,7 +154,7 @@ export function InternalMenuManagementPage() {
   const branchMismatch = isInternalBranchMismatch(session, branchId);
 
   const [flash, setFlash] = useState<FlashState>(null);
-  const [createdItemId, setCreatedItemId] = useState<string | null>(null);
+  const [createdItem, setCreatedItem] = useState<AdminMenuItem | null>(null);
   const [q, setQ] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
@@ -238,7 +238,7 @@ export function InternalMenuManagementPage() {
         isActive: form.isActive,
       });
 
-      setCreatedItemId(created.id);
+      setCreatedItem(created);
       setFlash({
         kind: "success",
         message: `Đã tạo món ${created.name}. Làm tiếp bước kế bên: cấu hình công thức để hệ thống tính số có thể bán.`,
@@ -247,7 +247,7 @@ export function InternalMenuManagementPage() {
       setEditingItemId(null);
       await itemsQuery.refetch();
     } catch (error) {
-      setCreatedItemId(null);
+      setCreatedItem(null);
       setFlash({ kind: "error", message: extractErrorMessage(error) });
     }
   };
@@ -256,7 +256,7 @@ export function InternalMenuManagementPage() {
     if (!editingItemId) return;
 
     setFlash(null);
-    setCreatedItemId(null);
+    setCreatedItem(null);
 
     const validationError = validateForm(form);
     if (validationError) {
@@ -288,7 +288,7 @@ export function InternalMenuManagementPage() {
 
   const handleToggleActive = async (item: AdminMenuItem) => {
     setFlash(null);
-    setCreatedItemId(null);
+    setCreatedItem(null);
 
     try {
       const updated = await setActiveMutation.mutateAsync({
@@ -309,7 +309,7 @@ export function InternalMenuManagementPage() {
 
   const startEdit = (item: AdminMenuItem) => {
     setFlash(null);
-    setCreatedItemId(null);
+    setCreatedItem(null);
     setEditingItemId(item.id);
     setForm(toFormValues(item));
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -319,7 +319,7 @@ export function InternalMenuManagementPage() {
     setEditingItemId(null);
     setForm(EMPTY_FORM);
     setFlash(null);
-    setCreatedItemId(null);
+    setCreatedItem(null);
   };
 
   return (
@@ -344,14 +344,19 @@ export function InternalMenuManagementPage() {
             <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
               <span>{flash.message}</span>
 
-              {flash.kind === "success" && createdItemId && branchId ? (
+              {flash.kind === "success" && createdItem && branchId ? (
                 <Button
                   type="button"
                   size="sm"
                   variant="secondary"
                   onClick={() =>
                     navigate(
-                      `/i/${branchId}/admin/inventory/recipes?itemId=${encodeURIComponent(createdItemId)}`,
+                      `/i/${branchId}/admin/inventory/recipes?itemId=${encodeURIComponent(createdItem.id)}`,
+                      {
+                        state: {
+                          preselectedItem: createdItem,
+                        },
+                      },
                     )
                   }
                 >
@@ -549,6 +554,11 @@ export function InternalMenuManagementPage() {
                                   if (!branchId) return;
                                   navigate(
                                     `/i/${branchId}/admin/inventory/recipes?itemId=${encodeURIComponent(item.id)}`,
+                                    {
+                                      state: {
+                                        preselectedItem: item,
+                                      },
+                                    },
                                   );
                                 }}
                               >

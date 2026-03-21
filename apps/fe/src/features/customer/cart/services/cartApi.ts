@@ -81,6 +81,37 @@ function mapVoucher(raw: any) {
   };
 }
 
+function normalizeItemOptions(raw: unknown): Record<string, unknown> | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  return raw as Record<string, unknown>;
+}
+
+function mapOpenBill(raw: any) {
+  if (!raw || typeof raw !== "object") return null;
+
+  return {
+    orderId: String(raw.orderId ?? raw.order_id ?? ""),
+    orderCode: String(raw.orderCode ?? raw.order_code ?? ""),
+    status: String(raw.status ?? raw.orderStatus ?? raw.order_status ?? "UNKNOWN"),
+    subtotal: Number(raw.subtotal ?? raw.subtotalAmount ?? raw.subtotal_amount ?? 0),
+    discount: Number(raw.discount ?? raw.discountAmount ?? raw.discount_amount ?? 0),
+    total: Number(raw.total ?? raw.totalAmount ?? raw.total_amount ?? 0),
+    voucherCode:
+      raw.voucherCode != null || raw.voucher_code != null
+        ? String(raw.voucherCode ?? raw.voucher_code ?? "")
+        : null,
+    voucherName:
+      raw.voucherName != null || raw.voucher_name != null
+        ? String(raw.voucherName ?? raw.voucher_name ?? "")
+        : null,
+    voucherDiscountAmount: Number(
+      raw.voucherDiscountAmount ?? raw.voucher_discount_amount ?? raw.discountAmount ?? 0
+    ),
+    createdAt: String(raw.createdAt ?? raw.created_at ?? ""),
+    updatedAt: String(raw.updatedAt ?? raw.updated_at ?? ""),
+  };
+}
+
 // ✅ BE của bạn đang enforce branchId -> bắt buộc truyền branchId
 export async function openCartForSession(
   sessionKey: string,
@@ -133,6 +164,19 @@ export async function getCart(cartKey: string): Promise<Cart> {
         name: it.name ?? it.itemName ?? it.item_name,
         qty: Number.isFinite(qtyNum) ? Math.max(1, Math.trunc(qtyNum)) : 1,
         unitPrice: Number.isFinite(unitPriceNum) ? unitPriceNum : 0,
+        itemOptions: normalizeItemOptions(it.itemOptions ?? it.item_options ?? null),
+        note:
+          typeof it.note === "string"
+            ? it.note
+            : typeof it.itemOptions?.note === "string"
+              ? it.itemOptions.note
+              : typeof it.item_options?.note === "string"
+                ? it.item_options.note
+                : undefined,
+        optionsHash:
+          typeof (it.optionsHash ?? it.options_hash) === "string"
+            ? String(it.optionsHash ?? it.options_hash)
+            : undefined,
       };
     });
   }
@@ -141,6 +185,7 @@ export async function getCart(cartKey: string): Promise<Cart> {
   cart.total = Number(cart.total ?? cart.totalAmount ?? cart.subtotal ?? 0);
   cart.subtotal = Number(cart.subtotal ?? cart.subtotalAmount ?? 0);
   cart.voucher = mapVoucher(cart.voucher ?? cart.appliedVoucher ?? null);
+  cart.openBill = mapOpenBill(cart.openBill ?? cart.open_bill ?? null);
 
   return cart as Cart;
 }

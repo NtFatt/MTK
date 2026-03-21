@@ -10,6 +10,31 @@ export type OrderRealtimeScope = {
   branchId: string | null;
 };
 
+export type UnpaidDineInConflict = {
+  count: number;
+  latestOrderCode: string | null;
+  latestOrderStatus: OrderStatus | null;
+  latestUpdatedAt: string | null;
+};
+
+export type LiveDineInOrderSummary = {
+  orderId: string;
+  orderCode: string;
+  orderStatus: OrderStatus;
+  sessionId: string | null;
+  subtotalAmount: number;
+  discountAmount: number;
+  totalAmount: number;
+  voucherId: string | null;
+  voucherCode: string | null;
+  voucherName: string | null;
+  voucherDiscountType: "PERCENT" | "FIXED_AMOUNT" | null;
+  voucherDiscountValue: number | null;
+  voucherDiscountAmount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export interface IOrderRepository {
   create(input: {
     orderCode: string;
@@ -60,6 +85,12 @@ export interface IOrderRepository {
   getRealtimeScopeByOrderCode(orderCode: string): Promise<OrderRealtimeScope | null>;
 
   getRealtimeScopeByOrderId(orderId: string): Promise<OrderRealtimeScope | null>;
+
+  findLatestLiveDineInOrderBySessionId(sessionId: string): Promise<LiveDineInOrderSummary | null>;
+
+  findUnpaidDineInConflictByTableId(tableId: string): Promise<UnpaidDineInConflict | null>;
+
+  findUnpaidDineInConflictBySessionId(sessionId: string): Promise<UnpaidDineInConflict | null>;
 
   /** Legacy helper (kept for compatibility). Prefer markPaidWithHistory(). */
   setPaidByOrderCode(orderCode: string): Promise<void>;

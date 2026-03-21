@@ -2,6 +2,7 @@ import type { PoolConnection } from "mysql2/promise";
 
 type ExistingConsumptionRow = {
   id: string;
+  orderItemId: string;
   menuItemId: string;
   ingredientId: string;
   qtyConsumed: number;
@@ -86,20 +87,39 @@ function summarizeConsumptions(
 
 async function loadExistingConsumptions(
   conn: PoolConnection,
-  orderId: string,
+  input: {
+    orderId: string;
+    orderItemIds?: string[] | null;
+    triggerStatus?: string | null;
+  },
 ): Promise<ExistingConsumptionRow[]> {
+  const where: string[] = ["order_id = ?"];
+  const params: Array<string> = [input.orderId];
+
+  const orderItemIds = uniqueStrings(input.orderItemIds ?? []);
+  if (orderItemIds.length > 0) {
+    where.push(`order_item_id IN (${orderItemIds.map(() => "?").join(",")})`);
+    params.push(...orderItemIds);
+  }
+
+  if (input.triggerStatus) {
+    where.push("trigger_status = ?");
+    params.push(String(input.triggerStatus));
+  }
+
   const [rows]: any = await conn.query(
     `
-      SELECT id, menu_item_id, ingredient_id, qty_consumed, trigger_status
+      SELECT id, order_item_id, menu_item_id, ingredient_id, qty_consumed, trigger_status
       FROM inventory_consumptions
-      WHERE order_id = ?
+      WHERE ${where.join(" AND ")}
       FOR UPDATE
     `,
-    [orderId],
+    params,
   );
 
   return (rows ?? []).map((row: any) => ({
     id: String(row.id),
+    orderItemId: String(row.order_item_id),
     menuItemId: String(row.menu_item_id),
     ingredientId: String(row.ingredient_id),
     qtyConsumed: toQty(row.qty_consumed),
@@ -110,15 +130,25 @@ async function loadExistingConsumptions(
 async function loadOrderItems(
   conn: PoolConnection,
   orderId: string,
+  orderItemIds?: string[] | null,
 ): Promise<OrderItemRow[]> {
+  const ids = uniqueStrings(orderItemIds ?? []);
+  const where: string[] = ["order_id = ?"];
+  const params: Array<string> = [orderId];
+
+  if (ids.length > 0) {
+    where.push(`order_item_id IN (${ids.map(() => "?").join(",")})`);
+    params.push(...ids);
+  }
+
   const [rows]: any = await conn.query(
     `
       SELECT order_item_id, item_id AS menu_item_id, quantity
       FROM order_items
-      WHERE order_id = ?
+      WHERE ${where.join(" AND ")}
       FOR UPDATE
     `,
-    [orderId],
+    params,
   );
 
   return (rows ?? []).map((row: any) => ({
@@ -301,10 +331,17 @@ export async function consumeOrderInventory(
     orderId: string;
     branchId: string;
     triggerStatus: string;
+    orderItemIds?: string[] | null;
   },
 ): Promise<OrderInventoryMutationResult> {
-  const existingRows = await loadExistingConsumptions(conn, input.orderId);
-  if (existingRows.length > 0) {
+  const requestedOrderItemIds = uniqueStrings(input.orderItemIds ?? []);
+  const existingRows = await loadExistingConsumptions(conn, {
+    orderId: input.orderId,
+    orderItemIds: requestedOrderItemIds,
+    triggerStatus: input.triggerStatus,
+  });
+
+  if (requestedOrderItemIds.length === 0 && existingRows.length > 0) {
     return {
       inventoryChanged: false,
       alreadyApplied: true,
@@ -314,7 +351,27 @@ export async function consumeOrderInventory(
     };
   }
 
-  const orderItems = await loadOrderItems(conn, input.orderId);
+  const consumedOrderItemIds = new Set(existingRows.map((row) => row.orderItemId));
+  const remainingRequestedOrderItemIds =
+    requestedOrderItemIds.length > 0
+      ? requestedOrderItemIds.filter((orderItemId) => !consumedOrderItemIds.has(orderItemId))
+      : [];
+
+  if (requestedOrderItemIds.length > 0 && remainingRequestedOrderItemIds.length === 0) {
+    return {
+      inventoryChanged: false,
+      alreadyApplied: true,
+      triggerStatus: existingRows[0]?.triggerStatus ?? input.triggerStatus,
+      ingredientTotals: summarizeConsumptions(existingRows),
+      affectedMenuItemIds: uniqueStrings(existingRows.map((row) => row.menuItemId)),
+    };
+  }
+
+  const orderItems = await loadOrderItems(
+    conn,
+    input.orderId,
+    requestedOrderItemIds.length > 0 ? remainingRequestedOrderItemIds : undefined,
+  );
   if (orderItems.length === 0) throw new Error("ORDER_ITEMS_EMPTY");
 
   const menuItemIds = uniqueStrings(orderItems.map((row) => row.menuItemId));
@@ -382,7 +439,7 @@ export async function restockCanceledOrderInventory(
 ): Promise<OrderInventoryMutationResult> {
   const [rows]: any = await conn.query(
     `
-      SELECT id, menu_item_id, ingredient_id, qty_consumed
+      SELECT id, order_item_id, menu_item_id, ingredient_id, qty_consumed
       FROM inventory_consumptions
       WHERE order_id = ?
         AND branch_id = ?
@@ -394,6 +451,7 @@ export async function restockCanceledOrderInventory(
 
   const activeRows: ExistingConsumptionRow[] = (rows ?? []).map((row: any) => ({
     id: String(row.id),
+    orderItemId: String(row.order_item_id),
     menuItemId: String(row.menu_item_id),
     ingredientId: String(row.ingredient_id),
     qtyConsumed: toQty(row.qty_consumed),

@@ -51,6 +51,13 @@ export function CustomerVoucherPanel({
   const removeMutation = useRemoveCartVoucherMutation({ cartKey, sessionKey });
 
   const appliedVoucher = cart.voucher ?? null;
+  const inheritedBillVoucher = !appliedVoucher && cart.openBill?.voucherCode
+    ? {
+        code: cart.openBill.voucherCode,
+        name: cart.openBill.voucherName ?? cart.openBill.voucherCode,
+        discountAmount: cart.openBill.voucherDiscountAmount ?? cart.openBill.discount ?? 0,
+      }
+    : null;
 
   const featuredVouchers = useMemo(() => {
     const items = (availableQuery.data?.items ?? []) as CustomerVoucherPreview[];
@@ -65,7 +72,7 @@ export function CustomerVoucherPanel({
           Voucher & mã phiếu ưu đãi
         </div>
         <p className="text-sm text-[#7a5a43]">
-          Nhap ma voucher hoac chon the uu dai dang phu hop voi phieu goi mon hien tai.
+          Nhập mã voucher hoặc chọn thẻ ưu đãi đang phù hợp với phiếu gọi món hiện tại.
         </p>
       </div>
 
@@ -103,6 +110,21 @@ export function CustomerVoucherPanel({
             >
               {removeMutation.isPending ? "Đang bỏ..." : "Bỏ voucher"}
             </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {!appliedVoucher && inheritedBillVoucher ? (
+        <div className="rounded-[24px] border border-[#d7b88e] bg-[#fffaf1] px-4 py-4 text-sm text-[#7a5a43] shadow-[0_18px_30px_-28px_rgba(103,55,26,0.75)]">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline">Bill dang ap dung</Badge>
+            <span className="font-mono text-sm font-semibold text-[#5a301a]">{inheritedBillVoucher.code}</span>
+          </div>
+          <div className="mt-2 text-[#4e2916]">
+            Bill hien tai dang giu uu dai <span className="font-semibold">{inheritedBillVoucher.name}</span>.
+          </div>
+          <div className="mt-1 text-xs text-[#8a694f]">
+            Neu muon thay uu dai cho ca bill, hay ap dung voucher moi truoc khi Gọi thêm món.
           </div>
         </div>
       ) : null}

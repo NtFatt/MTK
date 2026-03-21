@@ -1,6 +1,7 @@
 import type { ITableRepository } from "../../ports/repositories/ITableRepository.js";
 import type { ITableSessionRepository } from "../../ports/repositories/ITableSessionRepository.js";
 import type { ITableReservationRepository } from "../../ports/repositories/ITableReservationRepository.js";
+import type { IOrderRepository } from "../../ports/repositories/IOrderRepository.js";
 import type { IEventBus } from "../../ports/events/IEventBus.js";
 import { NoopEventBus } from "../../ports/events/NoopEventBus.js";
 
@@ -8,6 +9,7 @@ export class OpenTableSession {
   constructor(
     private tableRepo: ITableRepository,
     private sessionRepo: ITableSessionRepository,
+    private orderRepo: IOrderRepository,
     private reservationRepo: ITableReservationRepository,
     private lockAheadMinutes: number = 30,
     private eventBus: IEventBus = new NoopEventBus(),
@@ -41,6 +43,19 @@ export class OpenTableSession {
         session: existing,
         tableStatus: table.status,
       };
+    }
+
+    const unpaidConflict = await this.orderRepo.findUnpaidDineInConflictByTableId(table.id);
+    if (unpaidConflict) {
+      const err: Error & { details?: Record<string, unknown> } = new Error("TABLE_UNPAID_ORDER_EXISTS");
+      err.details = {
+        tableId: table.id,
+        unresolvedCount: unpaidConflict.count,
+        latestOrderCode: unpaidConflict.latestOrderCode,
+        latestOrderStatus: unpaidConflict.latestOrderStatus,
+        latestUpdatedAt: unpaidConflict.latestUpdatedAt,
+      };
+      throw err;
     }
 
     // Lock / reserve policy (avoid opening session when table should be RESERVED soon)

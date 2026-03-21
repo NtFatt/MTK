@@ -12,8 +12,8 @@ export const realtimeConfig = {
   invalidateDebounceMs: Number(import.meta.env.VITE_RT_INVALIDATE_DEBOUNCE_MS ?? 350),
 
   // Join/replay timeouts (best-effort, không crash UX)
-  joinAckTimeoutMs: Number(import.meta.env.VITE_RT_JOIN_ACK_TIMEOUT_MS ?? 350),
-  replayAckTimeoutMs: Number(import.meta.env.VITE_RT_REPLAY_ACK_TIMEOUT_MS ?? 900),
+  joinAckTimeoutMs: Number(import.meta.env.VITE_RT_JOIN_ACK_TIMEOUT_MS ?? 1200),
+  replayAckTimeoutMs: Number(import.meta.env.VITE_RT_REPLAY_ACK_TIMEOUT_MS ?? 2000),
 
   // Room naming defaults (có thể thay bằng env nếu BE dùng naming khác)
   internalBranchRoomPrefix:

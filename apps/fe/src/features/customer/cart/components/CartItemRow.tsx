@@ -2,6 +2,7 @@ import type { CartItem as CartItemType } from "../types";
 import { Button } from "../../../../shared/ui/button";
 import { cn } from "../../../../shared/utils/cn";
 import { useUpdateCartItem, useRemoveCartItem } from "../hooks/useCartMutations";
+import { summarizeItemCustomization } from "../../shared/itemCustomization";
 
 function formatVnd(price: number): string {
   return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(price);
@@ -17,22 +18,23 @@ type CartItemRowProps = {
 export function CartItemRow({ item, cartKey, sessionKey, displayName }: CartItemRowProps) {
   const updateMutation = useUpdateCartItem(sessionKey);
   const removeMutation = useRemoveCartItem(sessionKey);
+  const customization = summarizeItemCustomization(item.itemOptions ?? null);
 
   const price = item.unitPrice ?? 0;
   const lineTotal = price * item.qty;
   const pending = updateMutation.isPending || removeMutation.isPending;
 
   const handleIncrease = () => {
-    updateMutation.mutate({ itemId: item.itemId, qty: item.qty + 1 });
+    updateMutation.mutate({ itemId: item.itemId, qty: item.qty + 1, itemOptions: item.itemOptions });
   };
 
   const handleDecrease = () => {
     if (item.qty <= 1) return;
-    updateMutation.mutate({ itemId: item.itemId, qty: item.qty - 1 });
+    updateMutation.mutate({ itemId: item.itemId, qty: item.qty - 1, itemOptions: item.itemOptions });
   };
 
   const handleRemove = () => {
-    removeMutation.mutate({ cartKey, itemId: item.itemId });
+    removeMutation.mutate({ cartKey, itemId: item.itemId, optionsHash: item.optionsHash });
   };
 
   return (
@@ -43,6 +45,23 @@ export function CartItemRow({ item, cartKey, sessionKey, displayName }: CartItem
         <p className="mt-2 text-sm text-[#7c5d45]">
           {formatVnd(price)} × {item.qty} = <span className="font-semibold text-[#c43c2d]">{formatVnd(lineTotal)}</span>
         </p>
+        {customization.chips.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {customization.chips.map((chip) => (
+              <span
+                key={chip}
+                className="rounded-full border border-[#dfc49f]/75 bg-[#fff8ed] px-3 py-1 text-xs font-medium text-[#6e4424]"
+              >
+                {chip}
+              </span>
+            ))}
+          </div>
+        ) : null}
+        {customization.note ? (
+          <p className="mt-3 rounded-[18px] border border-dashed border-[#e4c8a1]/70 bg-[#fffaf4] px-3 py-2 text-sm text-[#7a5a43]">
+            Ghi chu: <span className="font-medium text-[#5a311b]">{customization.note}</span>
+          </p>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

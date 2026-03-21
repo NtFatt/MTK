@@ -64,6 +64,11 @@ export const routeManifest = {
     path: "/api/v1/admin/ops/tables",
   },
 
+  adminDashboardOverview: {
+    method: "GET",
+    path: "/api/v1/admin/dashboard/overview",
+  },
+
   kitchenQueue: {
     method: "GET",
     path: "/api/v1/admin/kitchen/queue",

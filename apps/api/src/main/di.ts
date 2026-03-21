@@ -37,6 +37,7 @@ import { MySQLOrderQueryRepository } from "../infrastructure/db/mysql/repositori
 import { MySQLInventoryIngredientRepository } from "../infrastructure/db/mysql/repositories/MySQLInventoryIngredientRepository.js";
 import { MySQLMenuRecipeRepository } from "../infrastructure/db/mysql/repositories/MySQLMenuRecipeRepository.js";
 import { MySQLVoucherRepository } from "../infrastructure/db/mysql/repositories/MySQLVoucherRepository.js";
+import { MySQLAdminDashboardRepository } from "../infrastructure/db/mysql/repositories/MySQLAdminDashboardRepository.js";
 // ===== Client auth repositories =====
 import { MySQLClientRepository } from "../infrastructure/db/mysql/repositories/MySQLClientRepository.js";
 import { MySQLOtpRepository } from "../infrastructure/db/mysql/repositories/MySQLOtpRepository.js";
@@ -123,6 +124,7 @@ import { ListBranchVouchers } from "../application/use-cases/admin/voucher/ListB
 import { CreateVoucher } from "../application/use-cases/admin/voucher/CreateVoucher.js";
 import { UpdateVoucher } from "../application/use-cases/admin/voucher/UpdateVoucher.js";
 import { SetVoucherActive } from "../application/use-cases/admin/voucher/SetVoucherActive.js";
+import { GetBranchDashboardOverview } from "../application/use-cases/admin/dashboard/GetBranchDashboardOverview.js";
 // ===== 7 roles: ops/kitchen/cashier list endpoints (branch-scoped) =====
 import { ListBranchTables } from "../application/use-cases/admin/ops/ListBranchTables.js";
 import { ListKitchenQueue } from "../application/use-cases/admin/kitchen/ListKitchenQueue.js";
@@ -149,6 +151,7 @@ import { AdminInventoryController } from "../interface-adapters/http/controllers
 import { AdminOpsController } from "../interface-adapters/http/controllers/AdminOpsController.js";
 import { AdminKitchenController } from "../interface-adapters/http/controllers/AdminKitchenController.js";
 import { AdminCashierController } from "../interface-adapters/http/controllers/AdminCashierController.js";
+import { AdminDashboardController } from "../interface-adapters/http/controllers/AdminDashboardController.js";
 import { ReservationController } from "../interface-adapters/http/controllers/ReservationController.js";
 import { AdminReservationController } from "../interface-adapters/http/controllers/AdminReservationController.js";
 import { AdminMaintenanceController } from "../interface-adapters/http/controllers/AdminMaintenanceController.js";
@@ -175,6 +178,7 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
     ? new RedisTableSessionRepository(sessionRepoBase, redis, env.REDIS_SESSION_TTL_SECONDS)
     : sessionRepoBase;
   const reservationRepo = new MySQLTableReservationRepository();
+  const orderRepo = new MySQLOrderRepository();
 
   const getTables = new GetTables(tableRepo);
   const getTableByDirection = new GetTableByDirection(tableRepo);
@@ -182,6 +186,7 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
   const openTableSession = new OpenTableSession(
     tableRepo,
     sessionRepo,
+    orderRepo,
     reservationRepo,
     env.TABLE_STATUS_LOCK_AHEAD_MINUTES,
     eventBus,
@@ -221,6 +226,7 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
   const closeTableSession = new CloseTableSession(
     tableRepo,
     sessionRepo,
+    orderRepo,
     reservationRepo,
     env.TABLE_STATUS_LOCK_AHEAD_MINUTES,
     eventBus,
@@ -231,7 +237,7 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
   const tableSessionController = new TableSessionController(openTableSession, closeTableSession);
 
   const getOrCreateCart = new GetOrCreateCartForSession(sessionRepo, cartRepo);
-  const getCartDetail = new GetCartDetail(cartRepo, cartItemRepo, voucherRepo);
+  const getCartDetail = new GetCartDetail(cartRepo, cartItemRepo, orderRepo, voucherRepo);
 
   const upsertCartItem = new UpsertCartItem(
     cartRepo,
@@ -276,7 +282,6 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
   const voucherController = new VoucherController(listPublicVouchers);
 
   // ===== Orders =====
-  const orderRepo = new MySQLOrderRepository();
   const orderSnapshotRepo = new MySQLOrderSnapshotRepository();
   const orderCodeGen = new OrderCodeGenerator();
   const checkoutSvc = new MySQLOrderCheckoutService(stockRepo, voucherRepo);
@@ -339,7 +344,13 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
   const vnpayLogRepo = new MySQLVNPayLogRepository();
   const vnpayGateway = new VNPayGateway();
 
-  const applyPaymentSuccess = new ApplyPaymentSuccess(paymentRepo, orderRepo, eventBus);
+  const applyPaymentSuccess = new ApplyPaymentSuccess(
+    paymentRepo,
+    orderRepo,
+    eventBus,
+    sessionRepo,
+    closeTableSession,
+  );
   const createVNPayPayment = new CreateVNPayPayment(orderRepo, paymentRepo, vnpayGateway);
 
   const paymentController = new PaymentController(
@@ -355,6 +366,7 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
 
   // ===== 7 roles: OPS/KITCHEN/CASHIER (internal, branch-scoped for STAFF tokens) =====
   const orderQueryRepo = new MySQLOrderQueryRepository();
+  const adminDashboardRepo = new MySQLAdminDashboardRepository();
 
   const opsTableSummaryRepo = new MySQLOpsTableOrderSummaryRepository();
   const listBranchTables = new ListBranchTables(tableRepo, opsTableSummaryRepo); const adminOpsController = new AdminOpsController(
@@ -378,6 +390,8 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
   const listUnpaidOrders = new ListUnpaidOrders(orderQueryRepo);
   const settleCashPayment = new SettleCashPayment(orderRepo, paymentRepo, applyPaymentSuccess);
   const adminCashierController = new AdminCashierController(listUnpaidOrders, settleCashPayment);
+  const getBranchDashboardOverview = new GetBranchDashboardOverview(adminDashboardRepo);
+  const adminDashboardController = new AdminDashboardController(getBranchDashboardOverview);
 
   // ===== Admin auth =====
   const adminUserRepo = new MySQLAdminUserRepository();
@@ -439,6 +453,7 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
     reservationRepo,
     tableRepo,
     sessionRepo,
+    orderRepo,
     {
       earlyMinutes: env.RESERVATION_CHECKIN_EARLY_MINUTES,
       lateMinutes: env.RESERVATION_CHECKIN_LATE_MINUTES,
@@ -664,6 +679,7 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
     adminOpsController,
     adminKitchenController,
     adminCashierController,
+    adminDashboardController,
     reservationController,
     adminReservationController,
     adminMaintenanceController,

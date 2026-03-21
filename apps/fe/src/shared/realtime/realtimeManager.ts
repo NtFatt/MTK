@@ -213,6 +213,15 @@ export async function joinRoom(room: string) {
 
       if (msg === "FORBIDDEN_JOIN") {
         joinedRooms.delete(room);
+        return;
+      }
+
+      if (joinedRooms.has(room)) {
+        setTimeout(() => {
+          if (joinedRooms.has(room)) {
+            void joinRoom(room).catch(() => {});
+          }
+        }, 1200);
       }
     } finally {
       joining.delete(room);

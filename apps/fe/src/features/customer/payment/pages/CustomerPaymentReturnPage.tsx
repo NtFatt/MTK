@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { confirmVnpayReturn } from "../services/paymentApi";
-import { getLastPaymentOrderCode } from "../storage";
+import { clearLastPaymentOrderCode, getLastPaymentOrderCode } from "../storage";
+import { markCustomerSessionClosedAfterPayment } from "../../../../shared/customer/session/sessionRecovery";
 import { Alert, AlertDescription } from "../../../../shared/ui/alert";
 import { buttonVariants } from "../../../../shared/ui/button";
 import { cn } from "../../../../shared/utils/cn";
@@ -41,8 +42,14 @@ export function CustomerPaymentReturnPage() {
         const message = e instanceof Error ? e.message : "Xác minh thanh toán thất bại.";
         setError(message);
       })
-      .finally(() => setDone(true));
-  }, [location.search]);
+      .finally(() => {
+        if (viewState === "success") {
+          markCustomerSessionClosedAfterPayment();
+          clearLastPaymentOrderCode();
+        }
+        setDone(true);
+      });
+  }, [location.search, viewState]);
 
   if (!done) {
     return (
@@ -69,7 +76,7 @@ export function CustomerPaymentReturnPage() {
           </h1>
           <p className="customer-hotpot-page-subtitle mx-auto">
             {viewState === "success"
-              ? "Khoản thanh toán đã được ghi nhận. Bạn có thể quay lại theo dõi tiến trình phục vụ."
+              ? "Khoản thanh toán đã được ghi nhận. Phiên gọi món hiện tại sẽ kết thúc sau khi bàn được đóng bill."
               : viewState === "cancel"
                 ? "Phiên thanh toán đã được dừng lại. Bạn vẫn có thể quay lại để thanh toán sau."
                 : "Cổng thanh toán chưa xác nhận giao dịch thành công. Bạn có thể thử lại khi sẵn sàng."}
@@ -80,6 +87,17 @@ export function CustomerPaymentReturnPage() {
           <span className="customer-hotpot-status-pill px-4 py-2 text-sm font-semibold" data-tone={getTone(viewState)}>
             {viewState === "success" ? "Đã xác nhận" : viewState === "cancel" ? "Đã dừng" : "Chưa hoàn tất"}
           </span>
+
+          <div className="mt-5 rounded-[22px] border border-[#e0c49d]/70 bg-[#fff8ed] px-5 py-4 text-left">
+            <div className="text-sm font-semibold text-[#5d341b]">Tiếp theo nên làm gì?</div>
+            <p className="mt-2 text-sm leading-6 text-[#7a5a43]">
+              {viewState === "success"
+                ? "Bạn vẫn có thể theo dõi đơn đã thanh toán. Nếu muốn gọi thêm món sau đó, hãy quét lại QR hoặc mở lại bàn để bắt đầu lượt mới."
+                : viewState === "cancel"
+                  ? "Đơn hàng vẫn còn được giữ nguyên. Bạn có thể quay lại trang thanh toán bất cứ lúc nào để thử lại."
+                  : "Hãy kiểm tra lại kết nối, thông tin thẻ hoặc số dư. Sau đó bạn có thể khởi tạo lại giao dịch an toàn từ trang thanh toán."}
+            </p>
+          </div>
 
           {error ? (
             <Alert variant="destructive" className="mt-5 rounded-[22px] border-[#e4bfb4] bg-[#fff4ef] text-left">
@@ -109,6 +127,18 @@ export function CustomerPaymentReturnPage() {
                     )}
                   >
                     Thử lại thanh toán
+                  </Link>
+                ) : null}
+
+                {viewState === "success" ? (
+                  <Link
+                    to="/c/qr?next=%2Fc%2Fmenu"
+                    className={cn(
+                      buttonVariants({ variant: "outline" }),
+                      "rounded-full border-[#d9bd95]/80 bg-[#fff8ec] text-[#6a3b20] hover:bg-[#fff2df]",
+                    )}
+                  >
+                    Mở lại bàn để gọi thêm món
                   </Link>
                 ) : null}
               </>

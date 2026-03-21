@@ -18,7 +18,7 @@ export class OrderController {
     const note = typeof req.body?.note === "string" ? req.body.note : null;
 
     const out = await this.createFromCart.execute(cartKey, note);
-    return res.status(201).json(out);
+    return res.status(out.checkoutMode === "APPENDED" ? 200 : 201).json(out);
   };
 
   getStatus = async (req: Request, res: Response) => {

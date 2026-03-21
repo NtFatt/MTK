@@ -54,6 +54,7 @@ export function InternalSidebar() {
     "reservations.checkin",
   ]);
   const showMaintenance = hasPermission(session, "maintenance.run");
+  const showDashboard = hasPermission(session, "observability.metrics.read");
   const observabilityRoute = `${adminBase}/observability`;
   const showObservability = hasPermission(session, "observability.admin.read");
 
@@ -75,7 +76,7 @@ export function InternalSidebar() {
         </div>
 
         <nav className="flex-1 space-y-1 px-3">
-          <NavItem to={`${adminBase}/dashboard`} label="Dashboard" />
+          {showDashboard && <NavItem to={`${adminBase}/dashboard`} label="Dashboard" />}
           <NavItem to={`${adminBase}/staff`} label="Nhân viên" />
           <NavItem to={`${adminBase}/tables`} label="Tables" />
           <NavItem to={`${adminBase}/kitchen`} label="Kitchen" />

@@ -55,6 +55,13 @@ export class ListBranchTables {
         activeItemsCount: s?.activeItemsCount ?? null,
         activeItemsTop: s?.activeItemsTop ?? null,
         activeItemsPreview: s?.activeItemsPreview ?? null,
+        unpaidOrdersCount: s?.unpaidOrdersCount ?? 0,
+        unpaidOrderCode: s?.unpaidOrderCode ?? null,
+        unpaidOrderStatus: s?.unpaidOrderStatus ?? null,
+        unpaidOrderUpdatedAt: s?.unpaidOrderUpdatedAt ?? null,
+        unpaidItemsCount: s?.unpaidItemsCount ?? null,
+        unpaidItemsTop: s?.unpaidItemsTop ?? null,
+        unpaidItemsPreview: s?.unpaidItemsPreview ?? null,
       };
     });
   }

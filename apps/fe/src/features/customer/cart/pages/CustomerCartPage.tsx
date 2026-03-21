@@ -30,6 +30,15 @@ function formatVnd(price: number): string {
   }).format(price);
 }
 
+const openBillStatusLabel: Record<string, string> = {
+  NEW: "Moi tao",
+  RECEIVED: "Bep da nhan",
+  PREPARING: "Dang chuan bi",
+  READY: "San sang",
+  SERVING: "Dang phuc vu",
+  COMPLETED: "Tam dong bill",
+};
+
 function CartPageContent({ menuNameById }: { menuNameById: Map<string, string> }) {
   const sessionKey = useStore(customerSessionStore, selectSessionKey);
   const cartQuery = useCartQuery(sessionKey);
@@ -112,13 +121,20 @@ function CartPageContent({ menuNameById }: { menuNameById: Map<string, string> }
   const cart = cartQuery.data;
 
   if (!cart || !cart.items?.length) {
+    const openBill = cart?.openBill ?? null;
+    const hasOpenBill = Boolean(openBill?.orderCode);
+
     return (
       <div className="space-y-6">
         <section className="space-y-2">
           <div className="customer-hotpot-kicker">Nồi lẩu tại bàn</div>
-          <h1 className="customer-mythmaker-title customer-hotpot-page-title">Giỏ hàng của bạn</h1>
+          <h1 className="customer-mythmaker-title customer-hotpot-page-title">
+            {hasOpenBill ? "Bill hien tai dang cho Gọi thêm món" : "Gio hang cua ban"}
+          </h1>
           <p className="customer-hotpot-page-subtitle">
-            Chưa có món nào trong nồi. Chọn món từ thực đơn để bếp bắt đầu chuẩn bị cho bàn.
+            {hasOpenBill
+              ? `Bill ${openBill?.orderCode} Vẫn đang mở. Quay lại thực đơn để gọi thêm món vào cùng bill này.`
+              : "Chưa có món nào trong giỏ. Chọn món từ thực đơn để bếp bắt đầu chuẩn bị cho bạn."}
           </p>
         </section>
 
@@ -133,17 +149,17 @@ function CartPageContent({ menuNameById }: { menuNameById: Map<string, string> }
 
   const itemCount = cart.items.reduce((sum, item) => sum + Number(item.qty ?? 1), 0);
   const total = cart.total ?? subtotal;
+  const openBill = cart.openBill ?? null;
+  const hasOpenBill = Boolean(openBill?.orderCode);
 
   return (
     <div className="space-y-6">
       <section className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
           <div className="customer-hotpot-kicker">Nồi lẩu tại bàn</div>
-          <h1 className="customer-mythmaker-title customer-hotpot-page-title">Giỏ hàng của bạn</h1>
-          <p className="customer-hotpot-page-subtitle">
-            Kiểm tra lại món đã chọn trước khi sang bước xác nhận đơn hàng. Bạn vẫn có thể tăng
-            giảm số lượng ngay tại đây.
-          </p>
+          <h1 className="customer-mythmaker-title customer-hotpot-page-title">
+            {hasOpenBill ? "Gọi thêm món" : "Giỏ hàng của bạn"}
+          </h1>
         </div>
 
         <Link
@@ -182,9 +198,13 @@ function CartPageContent({ menuNameById }: { menuNameById: Map<string, string> }
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="customer-hotpot-kicker">Phiếu gọi món</div>
-            <h2 className="customer-mythmaker-title mt-2 text-3xl text-[#4e2916]">Món đã chọn</h2>
+            <h2 className="customer-mythmaker-title mt-2 text-3xl text-[#4e2916]">
+              {hasOpenBill ? "Món sắp thêm" : "Món đã chọn"}
+            </h2>
             <p className="mt-2 text-sm text-[#7a5a43]">
-              Tăng giảm số lượng hoặc quay lại thực đơn để chọn thêm món.
+              {hasOpenBill
+                ? "Tăng giảm số lượng, xem ghi chú bếp của từng món, hoặc quay lại thực đơn để gọi thêm cho cùng bill."
+                : "Tăng giảm số lượng, xem ghi chú bếp của từng món, hoặc quay lại thực đơn để chọn thêm."}
             </p>
           </div>
 
@@ -195,13 +215,39 @@ function CartPageContent({ menuNameById }: { menuNameById: Map<string, string> }
               "rounded-full border-[#d9bd95]/80 bg-[#fff8ec] text-[#6a3b20] hover:bg-[#fff2df]",
             )}
           >
-            Thêm món
+            Gọi thêm món
           </Link>
         </div>
 
+        {hasOpenBill ? (
+          <div className="mt-6 rounded-[24px] border border-[#dfc49f]/75 bg-[#fff8ed] px-5 py-5 text-sm text-[#6d4928]">
+            <div className="text-[11px] uppercase tracking-[0.24em] text-[#9b7452]">Bill dang phuc vu</div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="font-mono text-sm font-semibold text-[#4e2916]">{openBill?.orderCode}</span>
+              <span className="rounded-full border border-[#e5c9a0] bg-white/70 px-3 py-1 text-xs font-medium text-[#8a684d]">
+                {openBillStatusLabel[openBill?.status ?? ""] ?? openBill?.status}
+              </span>
+            </div>
+            <div className="mt-3 grid gap-2 text-xs text-[#7a5b44] sm:grid-cols-3">
+              <span>Tổng hiện tại: {formatVnd(openBill?.total ?? 0)}</span>
+              <span>Tạm tính trước đó: {formatVnd(openBill?.subtotal ?? 0)}</span>
+              {openBill?.discount ? (
+                <span>
+                  {openBill.voucherCode ? `Voucher ${openBill.voucherCode}` : "Giảm giá"}: -{formatVnd(openBill.discount)}
+                </span>
+              ) : (
+                <span>Chưa có giảm giá trên bill</span>
+              )}
+            </div>
+          </div>
+        ) : null}
+
         <div className="mt-6 space-y-4">
-          {cart.items.map((item) => (
-            <div key={String(item.itemId)} className="customer-hotpot-stat rounded-[24px] px-4 py-4">
+          {cart.items.map((item, index) => (
+            <div
+              key={`${String(item.itemId)}:${item.optionsHash ?? "base"}:${index}`}
+              className="customer-hotpot-stat rounded-[24px] px-4 py-4"
+            >
               <CartItemRow
                 item={item}
                 cartKey={cart.cartKey}
@@ -226,6 +272,7 @@ function CartPageContent({ menuNameById }: { menuNameById: Map<string, string> }
             discount={discount}
             total={cart.total}
             voucherCode={cart.voucher?.code ?? null}
+            openBill={openBill}
           />
         </div>
       </section>

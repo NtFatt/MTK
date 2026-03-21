@@ -24,6 +24,7 @@ import { createAdminKitchenRouter } from "./admin-kitchen.route.js";
 import { createAdminCashierRouter } from "./admin-cashier.route.js";
 import { createAdminMenuRouter } from "./admin-menu.route.js";
 import { createAdminVoucherRouter } from "./admin-voucher.route.js";
+import { createAdminDashboardRouter } from "./admin-dashboard.route.js";
 import { createMenuRouter } from "./menu.route.js";
 import { createVoucherRouter } from "./voucher.route.js";
 import { createClientAuthRouter } from "./client-auth.route.js";
@@ -54,6 +55,7 @@ export function registerRoutes(
     adminOpsController,
     adminKitchenController,
     adminCashierController,
+    adminDashboardController,
     paymentController,
     reservationController,
     adminReservationController,
@@ -86,6 +88,7 @@ export function registerRoutes(
   app.use(`${v1}/realtime`, createRealtimeRouter(realtimeSnapshotController));
 
   app.use(`${v1}/admin`, createAdminAuthRouter(adminAuthController, routerDeps));
+  app.use(`${v1}/admin`, createAdminDashboardRouter(adminDashboardController));
   app.use(`${v1}/admin`, createAdminMenuRouter(adminMenuController));
   app.use(`${v1}/admin`, createAdminVoucherRouter(adminVoucherController));
   app.use(`${v1}/admin`, createAdminStaffRouter(adminStaffController));
@@ -123,6 +126,7 @@ export function registerRoutes(
     app.use("/api/realtime", legacyDeprecated, createRealtimeRouter(realtimeSnapshotController));
 
     app.use("/api/admin", legacyDeprecated, createAdminAuthRouter(adminAuthController, routerDeps));
+    app.use("/api/admin", legacyDeprecated, createAdminDashboardRouter(adminDashboardController));
     app.use("/api/admin", legacyDeprecated, createAdminMenuRouter(adminMenuController));
     app.use("/api/admin", legacyDeprecated, createAdminVoucherRouter(adminVoucherController));
     app.use("/api/admin", legacyDeprecated, createAdminStaffRouter(adminStaffController));
