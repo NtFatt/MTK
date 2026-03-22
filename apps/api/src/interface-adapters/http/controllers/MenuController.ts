@@ -45,6 +45,7 @@ items = async (req: Request, res: Response) => {
     categoryId: q.categoryId ? String(q.categoryId) : null,
     q: q.q ?? null,
     isActive: q.includeInactive ? null : true,
+    categoryIsActive: q.includeInactive ? null : true,
     branchId: q.branchId ? String(q.branchId) : null,
     onlyInStock: q.onlyInStock ?? null,
     sort: (q.sort as any) ?? null,

@@ -53,6 +53,10 @@ export function InternalSidebar() {
     "reservations.confirm",
     "reservations.checkin",
   ]);
+  const showOrders = hasPermission(session, "orders.read");
+  const showAttendance = hasPermission(session, "attendance.read");
+  const showPayroll = hasPermission(session, "payroll.read");
+  const showShifts = hasAnyPermission(session, ["shifts.read", "shifts.open", "shifts.close"]);
   const showMaintenance = hasPermission(session, "maintenance.run");
   const showDashboard = hasPermission(session, "observability.metrics.read");
   const observabilityRoute = `${adminBase}/observability`;
@@ -79,8 +83,12 @@ export function InternalSidebar() {
           {showDashboard && <NavItem to={`${adminBase}/dashboard`} label="Dashboard" />}
           <NavItem to={`${adminBase}/staff`} label="Nhân viên" />
           <NavItem to={`${adminBase}/tables`} label="Tables" />
+          {showOrders && <NavItem to={`${adminBase}/orders`} label="Đơn hàng" />}
+          {showAttendance && <NavItem to={`${adminBase}/attendance`} label="Chấm công" />}
+          {showPayroll && <NavItem to={`${adminBase}/payroll`} label="Tính lương" />}
           <NavItem to={`${adminBase}/kitchen`} label="Kitchen" />
           <NavItem to={`${adminBase}/cashier`} label="Cashier" />
+          {showShifts && <NavItem to={`${adminBase}/shifts`} label="Ca làm việc" />}
 
           {canManageMenu && (
             <NavItem to={menuManagementRoute} label="Quản lý món" />

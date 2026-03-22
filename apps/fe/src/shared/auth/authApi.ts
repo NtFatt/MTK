@@ -42,6 +42,15 @@ function defaultPermissionsForRole(role: Role): string[] {
   switch (role) {
     case "ADMIN":
       return [
+        "orders.read",
+        "attendance.read",
+        "attendance.manage",
+        "payroll.read",
+        "payroll.manage",
+        "payroll.bonus.manage",
+        "shifts.read",
+        "shifts.open",
+        "shifts.close",
         "ops.tables.read",
         "ops.sessions.open",
         "ops.sessions.close",
@@ -73,6 +82,14 @@ function defaultPermissionsForRole(role: Role): string[] {
 
     case "BRANCH_MANAGER":
       return [
+        "orders.read",
+        "attendance.read",
+        "attendance.manage",
+        "payroll.read",
+        "payroll.bonus.manage",
+        "shifts.read",
+        "shifts.open",
+        "shifts.close",
         "ops.tables.read",
         "ops.sessions.open",
         "ops.sessions.close",
@@ -95,6 +112,7 @@ function defaultPermissionsForRole(role: Role): string[] {
       ];
     case "STAFF":
       return [
+        "orders.read",
         "ops.tables.read",
         "ops.sessions.open",
         "ops.sessions.close",
@@ -105,9 +123,21 @@ function defaultPermissionsForRole(role: Role): string[] {
         "reservations.checkin",
       ];
     case "KITCHEN":
-      return ["kitchen.queue.read", "orders.status.change"];
+      return [
+        "kitchen.queue.read",
+        "orders.status.change",
+        "shifts.read",
+        "shifts.open",
+        "shifts.close",
+      ];
     case "CASHIER":
-      return ["cashier.unpaid.read", "cashier.settle_cash"];
+      return [
+        "cashier.unpaid.read",
+        "cashier.settle_cash",
+        "shifts.read",
+        "shifts.open",
+        "shifts.close",
+      ];
     default:
       return [];
   }

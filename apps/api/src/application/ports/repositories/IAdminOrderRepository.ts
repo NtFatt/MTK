@@ -51,6 +51,19 @@ export interface IAdminOrderRepository {
     note: string | null;
   }): Promise<void>;
 
+  transitionKitchenItemGroupStatus(input: {
+    orderCode: string;
+    branchId: string;
+    fromKitchenStatus: "NEW" | "RECEIVED" | "PREPARING";
+    toKitchenStatus: "RECEIVED" | "PREPARING" | "READY";
+  }): Promise<{
+    orderCode: string;
+    fromKitchenStatus: "NEW" | "RECEIVED" | "PREPARING";
+    toKitchenStatus: "RECEIVED" | "PREPARING" | "READY";
+    affectedItemCount: number;
+    aggregateOrderStatus: OrderStatus;
+  }>;
+
   transitionToPreparingWithInventoryConsumption(input: {
     orderCode: string;
     branchId: string;

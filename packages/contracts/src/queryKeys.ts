@@ -59,6 +59,76 @@ export const qk = {
     },
   },
 
+  shifts: {
+    current: (params: { branchId?: string | number } = {}) => {
+      const normalized = normalizeBranchId(params);
+      return ["shifts", "current", normalized] as const;
+    },
+    history: (params: { branchId?: string | number; limit?: number } = {}) => {
+      const normalized = normalizeBranchId({
+        ...params,
+        limit: params.limit != null ? Number(params.limit) : undefined,
+      });
+      return ["shifts", "history", normalized] as const;
+    },
+  },
+
+  attendance: {
+    board: (
+      params: {
+        branchId?: string | number;
+        businessDate?: string;
+        shiftCode?: string;
+        role?: string;
+        status?: string;
+        q?: string;
+      } = {},
+    ) => {
+      const normalized = normalizeBranchId(params);
+      return ["attendance", "board", normalized] as const;
+    },
+    staffHistory: (
+      params: {
+        branchId?: string | number;
+        staffId?: string | number;
+        limit?: number;
+      } = {},
+    ) => {
+      const normalized = normalizeBranchId({
+        ...params,
+        staffId: params.staffId != null ? String(params.staffId) : undefined,
+        limit: params.limit != null ? Number(params.limit) : undefined,
+      });
+      return ["attendance", "staffHistory", normalized] as const;
+    },
+  },
+
+  payroll: {
+    summary: (
+      params: {
+        branchId?: string | number;
+        month?: string;
+        q?: string;
+      } = {},
+    ) => {
+      const normalized = normalizeBranchId(params);
+      return ["payroll", "summary", normalized] as const;
+    },
+    staffDetail: (
+      params: {
+        branchId?: string | number;
+        staffId?: string | number;
+        month?: string;
+      } = {},
+    ) => {
+      const normalized = normalizeBranchId({
+        ...params,
+        staffId: params.staffId != null ? String(params.staffId) : undefined,
+      });
+      return ["payroll", "staffDetail", normalized] as const;
+    },
+  },
+
   menu: {
     categories: (params: { branchId?: string | number } = {}) => {
       const normalized = normalizeBranchId(params);
@@ -95,6 +165,22 @@ export const qk = {
   orders: {
     byCode: (orderCode: string) => ["orders", "detail", orderCode] as const,
     status: (orderCode: string) => ["orders", "status", orderCode] as const,
+    list: (
+      params: {
+        branchId?: string | number;
+        statuses?: string[];
+        q?: string;
+        limit?: number;
+      } = {},
+    ) => {
+      const normalized = normalizeBranchId({
+        ...params,
+        statuses: (params.statuses ?? []).map((x) => String(x).trim().toUpperCase()).filter(Boolean),
+        q: params.q != null ? String(params.q).trim() : undefined,
+        limit: params.limit != null ? Number(params.limit) : undefined,
+      });
+      return ["orders", "list", normalized] as const;
+    },
 
     // Internal
     kitchenQueue: (

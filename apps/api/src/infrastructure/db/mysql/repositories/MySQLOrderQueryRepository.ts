@@ -15,6 +15,11 @@ function toIso(v: any): string {
   }
 }
 
+function toNullableIso(v: any): string | null {
+  if (v == null || v === "") return null;
+  return toIso(v);
+}
+
 function toInt(v: any): number {
   const n = Number(v);
   return Number.isFinite(n) ? Math.max(0, Math.trunc(n)) : 0;
@@ -48,6 +53,138 @@ function normalizeStatuses(statuses: OrderStatus[]): OrderStatus[] {
 }
 
 export class MySQLOrderQueryRepository implements IOrderQueryRepository {
+  async listOrders(input: {
+    branchId?: string | null;
+    statuses?: OrderStatus[];
+    q?: string | null;
+    limit: number;
+  }): Promise<OrderListRow[]> {
+    const statuses = normalizeStatuses(input.statuses ?? []);
+    const limit = Math.max(1, Math.min(200, Math.floor(Number(input.limit ?? 100))));
+    const where: string[] = [];
+    const params: any[] = [];
+
+    if (input.branchId) {
+      where.push("rt.branch_id = ?");
+      params.push(String(input.branchId));
+    }
+
+    if (statuses.length > 0) {
+      where.push(`o.order_status IN (${statuses.map(() => "?").join(",")})`);
+      params.push(...statuses);
+    }
+
+    const keyword = String(input.q ?? "").trim();
+    if (keyword) {
+      const like = `%${keyword}%`;
+      where.push(`(
+        o.order_code LIKE ?
+        OR COALESCE(rt.table_code, '') LIKE ?
+        OR COALESCE(o.voucher_code_snapshot, '') LIKE ?
+        OR COALESCE(o.voucher_name_snapshot, '') LIKE ?
+        OR COALESCE(o.note, '') LIKE ?
+        OR EXISTS (
+          SELECT 1
+          FROM order_items oi_search
+          WHERE oi_search.order_id = o.order_id
+            AND oi_search.item_name LIKE ?
+        )
+      )`);
+      params.push(like, like, like, like, like, like);
+    }
+
+    params.push(limit);
+
+    const sql = `
+      SELECT
+        o.order_id,
+        o.order_code,
+        o.order_status,
+        o.created_at,
+        o.updated_at,
+        o.note,
+        o.subtotal_amount,
+        o.discount_amount,
+        o.total_amount,
+        o.voucher_code_snapshot,
+        o.voucher_name_snapshot,
+        rt.branch_id,
+        rt.table_code,
+        s.opened_at AS session_opened_at
+      FROM orders o
+      LEFT JOIN table_sessions s ON s.session_id = o.session_id
+      LEFT JOIN restaurant_tables rt ON rt.table_id = s.table_id
+      ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+      ORDER BY o.updated_at DESC, o.order_id DESC
+      LIMIT ?
+    `;
+
+    const [rows]: any = await pool.query(sql, params);
+    const baseRows: OrderListRow[] = (rows ?? []).map((r: any) => ({
+      orderId: String(r.order_id),
+      orderCode: String(r.order_code),
+      orderStatus: String(r.order_status) as OrderStatus,
+      createdAt: toIso(r.created_at),
+      updatedAt: toIso(r.updated_at),
+      branchId: r.branch_id !== null && r.branch_id !== undefined ? String(r.branch_id) : null,
+      tableCode: r.table_code ? String(r.table_code) : null,
+      sessionOpenedAt: toNullableIso(r.session_opened_at),
+      subtotalAmount: Number(r.subtotal_amount ?? 0),
+      discountAmount: Number(r.discount_amount ?? 0),
+      totalAmount: Number(r.total_amount ?? 0),
+      voucherCode: r.voucher_code_snapshot ? String(r.voucher_code_snapshot) : null,
+      voucherName: r.voucher_name_snapshot ? String(r.voucher_name_snapshot) : null,
+      orderNote: r.note ? String(r.note) : null,
+    }));
+
+    if (baseRows.length === 0) {
+      return [];
+    }
+
+    const orderIds = baseRows
+      .map((row) => String(row.orderId ?? "").trim())
+      .filter(Boolean);
+    const itemPlaceholders = orderIds.map(() => "?").join(",");
+
+    const [itemRows]: any = await pool.query(
+      `SELECT order_id, order_item_id, item_id, item_name, quantity, unit_price, line_total, item_options, pricing_breakdown
+       FROM order_items
+       WHERE order_id IN (${itemPlaceholders})
+       ORDER BY order_id ASC, order_item_id ASC`,
+      orderIds,
+    );
+
+    const itemsByOrderId = new Map<string, KitchenQueueItemRow[]>();
+
+    for (const row of itemRows ?? []) {
+      const orderId = String(row.order_id);
+      const current = itemsByOrderId.get(orderId) ?? [];
+
+      current.push({
+        orderItemId: String(row.order_item_id),
+        itemId: String(row.item_id),
+        itemName: String(row.item_name ?? `#${row.item_id}`),
+        quantity: toInt(row.quantity),
+        itemOptions: normalizeJson(row.item_options),
+        unitPrice: Number(row.unit_price ?? 0),
+        lineTotal: Number(row.line_total ?? 0),
+        pricingBreakdown: normalizeJson(row.pricing_breakdown),
+      });
+
+      itemsByOrderId.set(orderId, current);
+    }
+
+    return baseRows.map((row) => {
+      const items = itemsByOrderId.get(String(row.orderId)) ?? [];
+      return {
+        ...row,
+        items,
+        totalItemCount: items.reduce((sum, item) => sum + item.quantity, 0),
+        uniqueItemCount: items.length,
+      };
+    });
+  }
+
   async listKitchenQueue(input: {
     branchId?: string | null;
     statuses: OrderStatus[];
@@ -59,7 +196,7 @@ export class MySQLOrderQueryRepository implements IOrderQueryRepository {
     // Default queue statuses if none provided
     const effectiveStatuses = statuses.length ? statuses : (["NEW", "RECEIVED", "PREPARING", "READY"] as OrderStatus[]);
 
-    const where: string[] = [];
+    const where: string[] = ["o.order_status NOT IN ('PAID', 'CANCELED')"];
     const params: any[] = [];
 
     if (input.branchId) {
@@ -67,7 +204,12 @@ export class MySQLOrderQueryRepository implements IOrderQueryRepository {
       params.push(String(input.branchId));
     }
 
-    where.push(`o.order_status IN (${effectiveStatuses.map(() => "?").join(",")})`);
+    where.push(`EXISTS (
+      SELECT 1
+      FROM order_items oi_scope
+      WHERE oi_scope.order_id = o.order_id
+        AND oi_scope.kitchen_status IN (${effectiveStatuses.map(() => "?").join(",")})
+    )`);
     params.push(...effectiveStatuses);
 
     params.push(limit);
@@ -104,11 +246,12 @@ export class MySQLOrderQueryRepository implements IOrderQueryRepository {
 
     const itemPlaceholders = orderIds.map(() => "?").join(",");
     const [itemRows]: any = await pool.query(
-      `SELECT order_id, order_item_id, item_id, item_name, quantity, item_options
+      `SELECT order_id, order_item_id, item_id, item_name, quantity, item_options, kitchen_status
        FROM order_items
        WHERE order_id IN (${itemPlaceholders})
+         AND kitchen_status IN (${effectiveStatuses.map(() => "?").join(",")})
        ORDER BY order_id ASC, order_item_id ASC`,
-      orderIds,
+      [...orderIds, ...effectiveStatuses],
     );
 
     const branchIds = Array.from(
@@ -152,9 +295,12 @@ export class MySQLOrderQueryRepository implements IOrderQueryRepository {
       }
     }
 
-    const itemsByOrderId = new Map<string, KitchenQueueItemRow[]>();
+    const itemsByTicketKey = new Map<string, KitchenQueueItemRow[]>();
     const branchIdByOrderId = new Map<string, string | null>(
       baseRows.map((row) => [String(row.orderId), row.branchId ?? null]),
+    );
+    const orderById = new Map<string, OrderListRow>(
+      baseRows.map((row) => [String(row.orderId), row]),
     );
 
     for (const row of itemRows ?? []) {
@@ -162,7 +308,8 @@ export class MySQLOrderQueryRepository implements IOrderQueryRepository {
       const branchId = branchIdByOrderId.get(orderId) ?? null;
       const recipeKey = branchId ? `${branchId}:${String(row.item_id)}` : "";
       const recipe = recipeKey ? recipeMap.get(recipeKey) ?? [] : [];
-      const current = itemsByOrderId.get(orderId) ?? [];
+      const kitchenStatus = String(row.kitchen_status ?? "NEW").trim().toUpperCase() as OrderStatus;
+      const current = itemsByTicketKey.get(`${orderId}:${kitchenStatus}`) ?? [];
 
       current.push({
         orderItemId: String(row.order_item_id),
@@ -170,22 +317,40 @@ export class MySQLOrderQueryRepository implements IOrderQueryRepository {
         itemName: String(row.item_name ?? `#${row.item_id}`),
         quantity: toInt(row.quantity),
         itemOptions: normalizeJson(row.item_options),
+        kitchenStatus,
         recipe,
         recipeConfigured: recipe.length > 0,
       });
 
-      itemsByOrderId.set(orderId, current);
+      itemsByTicketKey.set(`${orderId}:${kitchenStatus}`, current);
     }
 
-    return baseRows.map((row) => {
-      const items = itemsByOrderId.get(String(row.orderId)) ?? [];
-      return {
-        ...row,
+    const groupedRows: OrderListRow[] = [];
+
+    for (const [ticketKey, items] of itemsByTicketKey.entries()) {
+      const parts = ticketKey.split(":");
+      const orderId = parts[0];
+      const kitchenStatus = parts[1];
+      if (!orderId || !kitchenStatus) continue;
+      const order = orderById.get(orderId);
+      if (!order) continue;
+
+      groupedRows.push({
+        ...order,
+        ticketKey: `${order.orderCode}:${kitchenStatus}`,
+        orderStatus: kitchenStatus as OrderStatus,
         items,
         totalItemCount: items.reduce((sum, item) => sum + item.quantity, 0),
         uniqueItemCount: items.length,
         recipeConfigured: items.length > 0 ? items.every((item) => item.recipeConfigured) : false,
-      };
+      });
+    }
+
+    return groupedRows.sort((left, right) => {
+      const updatedDiff =
+        Date.parse(right.updatedAt ?? right.createdAt ?? "") - Date.parse(left.updatedAt ?? left.createdAt ?? "");
+      if (updatedDiff !== 0) return updatedDiff;
+      return String(right.ticketKey ?? "").localeCompare(String(left.ticketKey ?? ""));
     });
   }
 
@@ -238,7 +403,7 @@ export class MySQLOrderQueryRepository implements IOrderQueryRepository {
       updatedAt: toIso(r.updated_at),
       branchId: r.branch_id !== null && r.branch_id !== undefined ? String(r.branch_id) : null,
       tableCode: r.table_code ? String(r.table_code) : null,
-      sessionOpenedAt: toIso(r.session_opened_at),
+      sessionOpenedAt: toNullableIso(r.session_opened_at),
       subtotalAmount: Number(r.subtotal_amount ?? 0),
       discountAmount: Number(r.discount_amount ?? 0),
       totalAmount: Number(r.total_amount ?? 0),

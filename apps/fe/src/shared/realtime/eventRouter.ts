@@ -107,7 +107,7 @@ function tryExtractSessionKey(env: EventEnvelope): string | null {
 }
 
 function tryExtractBranchId(env: EventEnvelope): string | number | null {
-  const roomPrefixes = ["branch:", "kitchen:", "cashier:", "inventory:", "ops:"];
+  const roomPrefixes = ["branch:", "shift:", "kitchen:", "cashier:", "inventory:", "ops:"];
 
   for (const prefix of roomPrefixes) {
     if (env.room.startsWith(prefix)) {
@@ -174,6 +174,20 @@ function enqueueCashierRefresh(branchId?: string | number | null) {
   enqueueInvalidate(["orders", "cashier", "unpaid"], false);
 }
 
+function enqueueShiftRefresh(branchId?: string | number | null) {
+  if (branchId != null) {
+    enqueueInvalidate(["shifts", "current", { branchId }], false);
+    enqueueInvalidate(["shifts", "history", { branchId }], false);
+    return;
+  }
+  enqueueInvalidate(["shifts", "current"], false);
+  enqueueInvalidate(["shifts", "history"], false);
+}
+
+function enqueueOrderCenterRefresh() {
+  enqueueInvalidate(["orders", "list"], false);
+}
+
 const ORDER_EVENTS = new Set([
   "order.created",
   "order.updated",
@@ -213,6 +227,12 @@ const INVENTORY_EVENTS = new Set([
   "inventory.released",
 ]);
 
+const SHIFT_EVENTS = new Set([
+  "shift.opened",
+  "shift.closed",
+  "shift.updated",
+]);
+
 export function routeRealtimeEvent(env: EventEnvelope) {
   if (!queryClient || !debouncer) return;
 
@@ -240,6 +260,7 @@ export function routeRealtimeEvent(env: EventEnvelope) {
       const b = String(branchId);
       enqueueInvalidate(["ops", "tables", "list"], false);
       enqueueInvalidate(["orders", "kitchen", "queue"], false);
+      enqueueOrderCenterRefresh();
       enqueueCashierRefresh(branchId);
       enqueueInvalidate(["inventory", "stock"], false);
       enqueueInvalidate(["inventory", "holds"], false);
@@ -284,6 +305,7 @@ export function routeRealtimeEvent(env: EventEnvelope) {
       const b = String(branchId);
 
       enqueueInvalidate(["orders", "kitchen", "queue"], false);
+      enqueueOrderCenterRefresh();
       enqueueCashierRefresh(branchId);
       enqueueInvalidate(["ops", "tables", "list"], false);
       enqueueDashboardRefresh(branchId);
@@ -309,8 +331,21 @@ export function routeRealtimeEvent(env: EventEnvelope) {
     }
 
     if (branchId != null) {
+      enqueueOrderCenterRefresh();
       enqueueCashierRefresh(branchId);
       enqueueDashboardRefresh(branchId);
+    }
+    return;
+  }
+
+  // 3b) Shifts
+  if (SHIFT_EVENTS.has(type)) {
+    if (branchId != null) {
+      enqueueShiftRefresh(branchId);
+      enqueueCashierRefresh(branchId);
+      enqueueDashboardRefresh(branchId);
+    } else {
+      enqueueShiftRefresh(null);
     }
     return;
   }

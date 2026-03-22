@@ -1,0 +1,57 @@
+CREATE TABLE IF NOT EXISTS shift_runs (
+  shift_run_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  branch_id BIGINT UNSIGNED NOT NULL,
+  business_date DATE NOT NULL,
+  shift_code VARCHAR(20) NOT NULL,
+  shift_name VARCHAR(80) NOT NULL,
+  start_time TIME NOT NULL,
+  end_time TIME NOT NULL,
+  crosses_midnight TINYINT(1) NOT NULL DEFAULT 0,
+  status VARCHAR(30) NOT NULL DEFAULT 'OPEN',
+  opened_by_user_id VARCHAR(64) NOT NULL,
+  opened_by_name VARCHAR(120) NOT NULL,
+  closed_by_user_id VARCHAR(64) DEFAULT NULL,
+  closed_by_name VARCHAR(120) DEFAULT NULL,
+  opened_at DATETIME NOT NULL,
+  closed_at DATETIME DEFAULT NULL,
+  opening_float BIGINT NOT NULL DEFAULT 0,
+  expected_cash BIGINT NOT NULL DEFAULT 0,
+  counted_cash BIGINT DEFAULT NULL,
+  variance BIGINT DEFAULT NULL,
+  opening_note VARCHAR(500) DEFAULT NULL,
+  close_note VARCHAR(500) DEFAULT NULL,
+  version INT NOT NULL DEFAULT 1,
+  open_branch_guard BIGINT GENERATED ALWAYS AS (
+    CASE WHEN status = 'OPEN' THEN branch_id ELSE NULL END
+  ) STORED,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (shift_run_id),
+  UNIQUE KEY uq_shift_branch_date_code (branch_id, business_date, shift_code),
+  UNIQUE KEY uq_shift_open_branch (open_branch_guard),
+  KEY idx_shift_branch_opened (branch_id, opened_at),
+  CONSTRAINT fk_shift_branch FOREIGN KEY (branch_id) REFERENCES branches(branch_id),
+  CONSTRAINT ck_shift_code CHECK (shift_code IN ('MORNING', 'EVENING')),
+  CONSTRAINT ck_shift_status CHECK (status IN ('OPEN', 'CLOSING_REVIEW', 'CLOSED', 'FORCE_CLOSED', 'CANCELLED')),
+  CONSTRAINT ck_shift_opening_float CHECK (opening_float >= 0),
+  CONSTRAINT ck_shift_expected_cash CHECK (expected_cash >= 0),
+  CONSTRAINT ck_shift_counted_cash CHECK (counted_cash IS NULL OR counted_cash >= 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS shift_cash_breakdowns (
+  shift_cash_breakdown_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  shift_run_id BIGINT UNSIGNED NOT NULL,
+  type VARCHAR(20) NOT NULL,
+  denomination INT NOT NULL,
+  quantity INT NOT NULL,
+  amount BIGINT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (shift_cash_breakdown_id),
+  KEY idx_shift_cash_breakdowns_shift_type (shift_run_id, type),
+  CONSTRAINT fk_shift_cash_breakdown_run
+    FOREIGN KEY (shift_run_id) REFERENCES shift_runs(shift_run_id) ON DELETE CASCADE,
+  CONSTRAINT ck_shift_cash_breakdown_type CHECK (type IN ('OPENING', 'COUNTED')),
+  CONSTRAINT ck_shift_cash_breakdown_denom CHECK (denomination > 0),
+  CONSTRAINT ck_shift_cash_breakdown_qty CHECK (quantity >= 0),
+  CONSTRAINT ck_shift_cash_breakdown_amount CHECK (amount >= 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

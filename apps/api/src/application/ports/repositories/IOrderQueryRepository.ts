@@ -13,6 +13,7 @@ export type OrderListItemRow = {
   itemName: string;
   quantity: number;
   itemOptions: any | null;
+  kitchenStatus?: string;
   recipe?: KitchenQueueIngredientRow[];
   recipeConfigured?: boolean;
   unitPrice?: number;
@@ -23,6 +24,7 @@ export type OrderListItemRow = {
 export type KitchenQueueItemRow = OrderListItemRow;
 
 export type OrderListRow = {
+  ticketKey?: string;
   orderId?: string;
   orderCode: string;
   orderStatus: OrderStatus;
@@ -44,6 +46,16 @@ export type OrderListRow = {
 };
 
 export interface IOrderQueryRepository {
+  /**
+   * Internal order center: latest orders across statuses with item and pricing detail.
+   */
+  listOrders(input: {
+    branchId?: string | null;
+    statuses?: OrderStatus[];
+    q?: string | null;
+    limit: number;
+  }): Promise<OrderListRow[]>;
+
   /**
    * Kitchen queue (operational view).
    */

@@ -59,6 +59,21 @@ function assertValidTransition(fromStatus: OrderStatus, toStatus: OrderStatus) {
   if (!next.includes(toStatus)) throw new Error("INVALID_TRANSITION");
 }
 
+function assertValidKitchenTicketTransition(
+  fromStatus: "NEW" | "RECEIVED" | "PREPARING",
+  toStatus: OrderStatus,
+) {
+  const allowed: Record<"NEW" | "RECEIVED" | "PREPARING", OrderStatus> = {
+    NEW: "RECEIVED",
+    RECEIVED: "PREPARING",
+    PREPARING: "READY",
+  };
+
+  if (allowed[fromStatus] !== toStatus) {
+    throw new Error("INVALID_KITCHEN_TRANSITION");
+  }
+}
+
 export class ChangeOrderStatus {
   constructor(
     private readonly repo: IAdminOrderRepository,
@@ -72,6 +87,7 @@ export class ChangeOrderStatus {
     orderCode: string;
     toStatus: OrderStatus;
     note: string | null;
+    kitchenStatusScope?: "NEW" | "RECEIVED" | "PREPARING" | null;
     actor: ActorInput;
   }) {
     let scope: any = null;
@@ -86,6 +102,57 @@ export class ChangeOrderStatus {
     }
 
     assertAllowed(input.actor, input.toStatus);
+
+    if (input.kitchenStatusScope) {
+      if (!scope?.branchId) throw new Error("FORBIDDEN");
+
+      assertValidKitchenTicketTransition(input.kitchenStatusScope, input.toStatus);
+
+      const changedByType: "ADMIN" | "STAFF" =
+        input.actor.actorType === "STAFF" ? "STAFF" : "ADMIN";
+
+      const ticketResult = await this.repo.transitionKitchenItemGroupStatus({
+        orderCode: input.orderCode,
+        branchId: String(scope.branchId),
+        fromKitchenStatus: input.kitchenStatusScope,
+        toKitchenStatus: input.toStatus as "RECEIVED" | "PREPARING" | "READY",
+      });
+
+      await this.repo.insertStatusHistory({
+        orderCode: input.orderCode,
+        fromStatus: input.kitchenStatusScope,
+        toStatus: input.toStatus,
+        changedByType,
+        changedById: input.actor.userId,
+        note:
+          input.note ??
+          `KITCHEN_ITEM_GROUP ${input.kitchenStatusScope} -> ${input.toStatus} items=${ticketResult.affectedItemCount}`,
+      });
+
+      await this.eventBus.publish({
+        type: "order.status_changed",
+        at: new Date().toISOString(),
+        scope: {
+          orderId: scope.orderId,
+          sessionId: scope.sessionId,
+          tableId: scope.tableId,
+          branchId: scope.branchId,
+        },
+        payload: {
+          orderCode: input.orderCode,
+          fromStatus: input.kitchenStatusScope,
+          toStatus: input.toStatus,
+          aggregateOrderStatus: ticketResult.aggregateOrderStatus,
+          affectedItemCount: ticketResult.affectedItemCount,
+          kitchenStatusScope: input.kitchenStatusScope,
+          changedByType,
+          changedById: input.actor.userId,
+          note: input.note,
+        },
+      });
+
+      return { changed: true, fromStatus: input.kitchenStatusScope, toStatus: input.toStatus };
+    }
 
     const current =
       input.actor.actorType === "STAFF"

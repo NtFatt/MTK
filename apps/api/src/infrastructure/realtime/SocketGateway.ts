@@ -60,6 +60,7 @@ function isRoomAllowed(roomRaw: string): boolean {
   if (room.startsWith("session:")) return true;
   if (room.startsWith("order:")) return true;
   if (room.startsWith("branch:")) return true;
+  if (room.startsWith("shift:")) return true;
   if (room.startsWith("ops:")) return true;
   if (room.startsWith("inventory:")) return true;
   if (room.startsWith("kitchen:")) return true;
@@ -183,6 +184,23 @@ async function authorizeJoinRoom(input: {
     }
 
     return { ok: true };
+  }
+
+  // ops: internal-only (STAFF / BRANCH_MANAGER) scoped by branch
+  if (room.startsWith("shift:")) {
+    const branchId = room.slice("shift:".length);
+    if (!branchId) return { ok: false, code: "ROOM_INVALID" };
+    if (!internal) return { ok: false, code: "INTERNAL_REQUIRED" };
+    if (isAdmin) return { ok: true };
+
+    if (isStaff) {
+      if (!internal.branchId || String(internal.branchId) !== String(branchId)) return { ok: false, code: "BRANCH_FORBIDDEN" };
+      const role = String(internal.role ?? "").toUpperCase();
+      if (role === "CASHIER" || role === "BRANCH_MANAGER") return { ok: true };
+      return { ok: false, code: "ROLE_FORBIDDEN" };
+    }
+
+    return { ok: false, code: "FORBIDDEN" };
   }
 
   // ops: internal-only (STAFF / BRANCH_MANAGER) scoped by branch
@@ -421,10 +439,15 @@ function roomsForEvent(evt: DomainEvent): string[] {
   if (payload?.reservationCode) out.push(`reservation:${String(payload.reservationCode)}`);
   if (!payload?.reservationCode && scope?.reservationId) out.push(`reservation:${String(scope.reservationId)}`);
 
-  if (scope?.branchId) {
-    const branchId = String(scope.branchId);
+    if (scope?.branchId) {
+      const branchId = String(scope.branchId);
 
-    if (eventType.startsWith("inventory.")) {
+      if (eventType.startsWith("shift.")) {
+        out.push(`shift:${branchId}`);
+        out.push(`cashier:${branchId}`);
+      }
+
+      if (eventType.startsWith("inventory.")) {
       out.push(`branch:${branchId}`);
       out.push(`inventory:${branchId}`);
     }
@@ -544,6 +567,7 @@ export function attachSocketGateway(io: Server, eventBus: IEventBus, deps: Socke
         allowed: [
           "admin",
           "branch:<branchId>",
+          "shift:<branchId>",
           "ops:<branchId>",
           "inventory:<branchId>",
           "kitchen:<branchId>",

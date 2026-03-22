@@ -1,5 +1,6 @@
 import type { IOrderRepository, OrderStatusHistoryActor } from "../../../ports/repositories/IOrderRepository.js";
 import type { IPaymentRepository } from "../../../ports/repositories/IPaymentRepository.js";
+import type { IShiftRepository } from "../../../ports/repositories/IShiftRepository.js";
 import type { ApplyPaymentSuccess } from "../../payment/ApplyPaymentSuccess.js";
 
 type InternalActor = {
@@ -14,6 +15,7 @@ export class SettleCashPayment {
   constructor(
     private readonly orderRepo: IOrderRepository,
     private readonly paymentRepo: IPaymentRepository,
+    private readonly shiftRepo: IShiftRepository,
     private readonly applyPaymentSuccess: ApplyPaymentSuccess,
   ) {}
 
@@ -41,6 +43,10 @@ export class SettleCashPayment {
       return { orderCode, changed: false, alreadyPaid: true };
     }
     if (status.orderStatus === "CANCELED") throw new Error("ORDER_NOT_PAYABLE");
+    if (!scope?.branchId) throw new Error("ORDER_NOT_FOUND");
+
+    const activeShift = await this.shiftRepo.getCurrent(String(scope.branchId));
+    if (!activeShift) throw new Error("SHIFT_NOT_OPEN");
 
     const provider = "CASH";
     const { txnRef } = await this.paymentRepo.createInitPayment(orderCode, {

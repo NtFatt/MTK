@@ -83,6 +83,26 @@ const InternalCashierPage = lazy(async () => ({
     .InternalCashierPage,
 }));
 
+const InternalShiftCenterPage = lazy(async () => ({
+  default: (await import("../features/internal/shifts/pages/InternalShiftCenterPage"))
+    .InternalShiftCenterPage,
+}));
+
+const InternalAttendancePage = lazy(async () => ({
+  default: (await import("../features/internal/attendance/pages/InternalAttendancePage"))
+    .InternalAttendancePage,
+}));
+
+const InternalPayrollPage = lazy(async () => ({
+  default: (await import("../features/internal/payroll/pages/InternalPayrollPage"))
+    .InternalPayrollPage,
+}));
+
+const InternalOrdersPage = lazy(async () => ({
+  default: (await import("../features/internal/orders/pages/InternalOrdersPage"))
+    .InternalOrdersPage,
+}));
+
 const InternalAdminPage = lazy(async () => ({
   default: (await import("../features/internal/admin/pages/InternalAdminPage"))
     .InternalAdminPage,
@@ -255,8 +275,12 @@ export const router = createBrowserRouter([
       { index: true, element: <Navigate to="dashboard" replace /> },
       { path: "dashboard", element: withSuspense(<InternalDashboardPage />) },
       { path: "tables", element: withSuspense(<InternalTablesPage />) },
+      { path: "orders", element: withSuspense(<InternalOrdersPage />) },
+      { path: "payroll", element: withSuspense(<InternalPayrollPage />) },
       { path: "kitchen", element: withSuspense(<InternalKitchenPage />) },
       { path: "cashier", element: withSuspense(<InternalCashierPage />) },
+      { path: "shifts", element: withSuspense(<InternalShiftCenterPage />) },
+      { path: "attendance", element: withSuspense(<InternalAttendancePage />) },
       { path: "staff", element: withSuspense(<InternalAdminPage />) },
       { path: "menu", element: withSuspense(<InternalMenuManagementPage />) },
       { path: "vouchers", element: withSuspense(<InternalVoucherManagementPage />) },
@@ -297,6 +321,16 @@ export const router = createBrowserRouter([
         handle: { title: "Tables" },
       },
       {
+        path: "orders",
+        element: withSuspense(<InternalOrdersPage />),
+        handle: { title: "Orders" },
+      },
+      {
+        path: "payroll",
+        element: withSuspense(<InternalPayrollPage />),
+        handle: { title: "Payroll" },
+      },
+      {
         path: "kitchen",
         element: withSuspense(<InternalKitchenPage />),
         handle: { title: "Kitchen" },
@@ -305,6 +339,16 @@ export const router = createBrowserRouter([
         path: "cashier",
         element: withSuspense(<InternalCashierPage />),
         handle: { title: "Cashier" },
+      },
+      {
+        path: "shifts",
+        element: withSuspense(<InternalShiftCenterPage />),
+        handle: { title: "Ca làm việc" },
+      },
+      {
+        path: "attendance",
+        element: withSuspense(<InternalAttendancePage />),
+        handle: { title: "Chấm công" },
       },
       {
         path: "reservations",

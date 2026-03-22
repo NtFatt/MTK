@@ -10,6 +10,7 @@ export type AdminOrderStatus =
 export type AdminChangeOrderStatusBody = {
   toStatus: AdminOrderStatus;
   note?: string | null;
+  kitchenStatusScope?: "NEW" | "RECEIVED" | "PREPARING" | null;
 };
 
 export type AdminChangeOrderStatusResult = {
@@ -46,6 +47,7 @@ export async function changeAdminOrderStatus(
       body: JSON.stringify({
         toStatus: body.toStatus,
         note: body.note ?? null,
+        kitchenStatusScope: body.kitchenStatusScope ?? null,
       }),
       idempotencyKey,
     }

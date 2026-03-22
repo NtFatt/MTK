@@ -21,6 +21,7 @@ import { MySQLTableReservationRepository } from "../infrastructure/db/mysql/repo
 import { MySQLCartRepository } from "../infrastructure/db/mysql/repositories/MySQLCartRepository.js";
 import { MySQLCartItemRepository } from "../infrastructure/db/mysql/repositories/MySQLCartItemRepository.js";
 import { MySQLMenuItemRepository } from "../infrastructure/db/mysql/repositories/MySQLMenuItemRepository.js";
+import { MySQLMenuCategoryRepository } from "../infrastructure/db/mysql/repositories/MySQLMenuCategoryRepository.js";
 import { MySQLMenuCatalogRepository } from "../infrastructure/db/mysql/repositories/MySQLMenuCatalogRepository.js";
 import { MySQLOrderRepository } from "../infrastructure/db/mysql/repositories/MySQLOrderRepository.js";
 import { MySQLOrderSnapshotRepository } from "../infrastructure/db/mysql/repositories/MySQLOrderSnapshotRepository.js";
@@ -38,6 +39,9 @@ import { MySQLInventoryIngredientRepository } from "../infrastructure/db/mysql/r
 import { MySQLMenuRecipeRepository } from "../infrastructure/db/mysql/repositories/MySQLMenuRecipeRepository.js";
 import { MySQLVoucherRepository } from "../infrastructure/db/mysql/repositories/MySQLVoucherRepository.js";
 import { MySQLAdminDashboardRepository } from "../infrastructure/db/mysql/repositories/MySQLAdminDashboardRepository.js";
+import { MySQLShiftRepository } from "../infrastructure/db/mysql/repositories/MySQLShiftRepository.js";
+import { MySQLAttendanceRepository } from "../infrastructure/db/mysql/repositories/MySQLAttendanceRepository.js";
+import { MySQLPayrollRepository } from "../infrastructure/db/mysql/repositories/MySQLPayrollRepository.js";
 // ===== Client auth repositories =====
 import { MySQLClientRepository } from "../infrastructure/db/mysql/repositories/MySQLClientRepository.js";
 import { MySQLOtpRepository } from "../infrastructure/db/mysql/repositories/MySQLOtpRepository.js";
@@ -65,6 +69,7 @@ import { CreateOrderFromCart } from "../application/use-cases/order/CreateOrderF
 import { ListPublicVouchers } from "../application/use-cases/voucher/ListPublicVouchers.js";
 
 import { ChangeOrderStatus } from "../application/use-cases/admin/ChangeOrderStatus.js";
+import { ListOrders } from "../application/use-cases/admin/order/ListOrders.js";
 
 import { VNPayGateway } from "../infrastructure/payment/vnpay/VNPayGateway.js";
 import { CreateVNPayPayment } from "../application/use-cases/payment/CreateVNPayPayment.js";
@@ -94,6 +99,10 @@ import { SetDevStock } from "../application/use-cases/maintenance/SetDevStock.js
 import { CreateMenuItem } from "../application/use-cases/admin/menu/CreateMenuItem.js";
 import { UpdateMenuItem } from "../application/use-cases/admin/menu/UpdateMenuItem.js";
 import { SetMenuItemActive } from "../application/use-cases/admin/menu/SetMenuItemActive.js";
+import { ListAdminMenuCategories } from "../application/use-cases/admin/menu/ListAdminMenuCategories.js";
+import { CreateMenuCategory } from "../application/use-cases/admin/menu/CreateMenuCategory.js";
+import { UpdateMenuCategory } from "../application/use-cases/admin/menu/UpdateMenuCategory.js";
+import { DeleteMenuCategory } from "../application/use-cases/admin/menu/DeleteMenuCategory.js";
 import { AdminMenuController } from "../interface-adapters/http/controllers/AdminMenuController.js";
 import { ListAdminRealtimeAuditEvents } from "../application/use-cases/admin/realtime/ListAdminRealtimeAuditEvents.js";
 import { ReplayAdminRealtimeAuditEvents } from "../application/use-cases/admin/realtime/ReplayAdminRealtimeAuditEvents.js";
@@ -125,6 +134,21 @@ import { CreateVoucher } from "../application/use-cases/admin/voucher/CreateVouc
 import { UpdateVoucher } from "../application/use-cases/admin/voucher/UpdateVoucher.js";
 import { SetVoucherActive } from "../application/use-cases/admin/voucher/SetVoucherActive.js";
 import { GetBranchDashboardOverview } from "../application/use-cases/admin/dashboard/GetBranchDashboardOverview.js";
+import { GetCurrentShift } from "../application/use-cases/admin/shifts/GetCurrentShift.js";
+import { ListShiftHistory } from "../application/use-cases/admin/shifts/ListShiftHistory.js";
+import { OpenShift } from "../application/use-cases/admin/shifts/OpenShift.js";
+import { CloseShift } from "../application/use-cases/admin/shifts/CloseShift.js";
+import { ListAttendanceBoard } from "../application/use-cases/admin/attendance/ListAttendanceBoard.js";
+import { ListStaffAttendanceHistory } from "../application/use-cases/admin/attendance/ListStaffAttendanceHistory.js";
+import { ManualAttendanceCheckIn } from "../application/use-cases/admin/attendance/ManualAttendanceCheckIn.js";
+import { ManualAttendanceCheckOut } from "../application/use-cases/admin/attendance/ManualAttendanceCheckOut.js";
+import { MarkAttendanceAbsent } from "../application/use-cases/admin/attendance/MarkAttendanceAbsent.js";
+import { ListPayrollSummary } from "../application/use-cases/admin/payroll/ListPayrollSummary.js";
+import { GetPayrollStaffDetail } from "../application/use-cases/admin/payroll/GetPayrollStaffDetail.js";
+import { UpsertPayrollProfile } from "../application/use-cases/admin/payroll/UpsertPayrollProfile.js";
+import { CreatePayrollBonus } from "../application/use-cases/admin/payroll/CreatePayrollBonus.js";
+import { UpdatePayrollBonus } from "../application/use-cases/admin/payroll/UpdatePayrollBonus.js";
+import { VoidPayrollBonus } from "../application/use-cases/admin/payroll/VoidPayrollBonus.js";
 // ===== 7 roles: ops/kitchen/cashier list endpoints (branch-scoped) =====
 import { ListBranchTables } from "../application/use-cases/admin/ops/ListBranchTables.js";
 import { ListKitchenQueue } from "../application/use-cases/admin/kitchen/ListKitchenQueue.js";
@@ -152,6 +176,9 @@ import { AdminOpsController } from "../interface-adapters/http/controllers/Admin
 import { AdminKitchenController } from "../interface-adapters/http/controllers/AdminKitchenController.js";
 import { AdminCashierController } from "../interface-adapters/http/controllers/AdminCashierController.js";
 import { AdminDashboardController } from "../interface-adapters/http/controllers/AdminDashboardController.js";
+import { AdminShiftController } from "../interface-adapters/http/controllers/AdminShiftController.js";
+import { AdminAttendanceController } from "../interface-adapters/http/controllers/AdminAttendanceController.js";
+import { AdminPayrollController } from "../interface-adapters/http/controllers/AdminPayrollController.js";
 import { ReservationController } from "../interface-adapters/http/controllers/ReservationController.js";
 import { AdminReservationController } from "../interface-adapters/http/controllers/AdminReservationController.js";
 import { AdminMaintenanceController } from "../interface-adapters/http/controllers/AdminMaintenanceController.js";
@@ -220,6 +247,7 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
   const cartRepo = new MySQLCartRepository();
   const cartItemRepo = new MySQLCartItemRepository();
   const menuItemRepo = new MySQLMenuItemRepository();
+  const menuCategoryRepo = new MySQLMenuCategoryRepository();
   const voucherRepo = new MySQLVoucherRepository();
 
   // CloseTableSession cần cartRepo/stockHold => khởi tạo ở đây (CHỈ 1 LẦN)
@@ -337,8 +365,6 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
         : null,
     },
   );
-  const adminOrderController = new AdminOrderController(changeOrderStatus);
-
   // ===== Payments =====
   const paymentRepo = new MySQLPaymentRepository();
   const vnpayLogRepo = new MySQLVNPayLogRepository();
@@ -366,7 +392,14 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
 
   // ===== 7 roles: OPS/KITCHEN/CASHIER (internal, branch-scoped for STAFF tokens) =====
   const orderQueryRepo = new MySQLOrderQueryRepository();
+  const listOrders = new ListOrders(orderQueryRepo);
+  const adminOrderController = new AdminOrderController(listOrders, changeOrderStatus);
   const adminDashboardRepo = new MySQLAdminDashboardRepository();
+  const shiftRepo = new MySQLShiftRepository();
+  const attendanceRepo = new MySQLAttendanceRepository();
+  const payrollRepo = new MySQLPayrollRepository();
+  const auditRepo = new MySQLAuditLogRepository();
+  const staffUserRepo = new MySQLStaffUserRepository();
 
   const opsTableSummaryRepo = new MySQLOpsTableOrderSummaryRepository();
   const listBranchTables = new ListBranchTables(tableRepo, opsTableSummaryRepo); const adminOpsController = new AdminOpsController(
@@ -388,15 +421,52 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
   const adminKitchenController = new AdminKitchenController(listKitchenQueue);
 
   const listUnpaidOrders = new ListUnpaidOrders(orderQueryRepo);
-  const settleCashPayment = new SettleCashPayment(orderRepo, paymentRepo, applyPaymentSuccess);
+  const settleCashPayment = new SettleCashPayment(orderRepo, paymentRepo, shiftRepo, applyPaymentSuccess);
   const adminCashierController = new AdminCashierController(listUnpaidOrders, settleCashPayment);
   const getBranchDashboardOverview = new GetBranchDashboardOverview(adminDashboardRepo);
   const adminDashboardController = new AdminDashboardController(getBranchDashboardOverview);
+  const getCurrentShift = new GetCurrentShift(shiftRepo);
+  const listShiftHistory = new ListShiftHistory(shiftRepo);
+  const openShift = new OpenShift(shiftRepo, eventBus);
+  const closeShift = new CloseShift(shiftRepo, eventBus);
+  const adminShiftController = new AdminShiftController(
+    getCurrentShift,
+    listShiftHistory,
+    openShift,
+    closeShift,
+    auditRepo,
+  );
+  const listAttendanceBoard = new ListAttendanceBoard(attendanceRepo, staffUserRepo);
+  const listStaffAttendanceHistory = new ListStaffAttendanceHistory(attendanceRepo, staffUserRepo);
+  const manualAttendanceCheckIn = new ManualAttendanceCheckIn(attendanceRepo, staffUserRepo);
+  const manualAttendanceCheckOut = new ManualAttendanceCheckOut(attendanceRepo);
+  const markAttendanceAbsent = new MarkAttendanceAbsent(attendanceRepo, staffUserRepo);
+  const adminAttendanceController = new AdminAttendanceController(
+    listAttendanceBoard,
+    listStaffAttendanceHistory,
+    manualAttendanceCheckIn,
+    manualAttendanceCheckOut,
+    markAttendanceAbsent,
+    auditRepo,
+  );
+  const listPayrollSummary = new ListPayrollSummary(payrollRepo);
+  const getPayrollStaffDetail = new GetPayrollStaffDetail(payrollRepo);
+  const upsertPayrollProfile = new UpsertPayrollProfile(payrollRepo, staffUserRepo);
+  const createPayrollBonus = new CreatePayrollBonus(payrollRepo, staffUserRepo);
+  const updatePayrollBonus = new UpdatePayrollBonus(payrollRepo);
+  const voidPayrollBonus = new VoidPayrollBonus(payrollRepo);
+  const adminPayrollController = new AdminPayrollController(
+    listPayrollSummary,
+    getPayrollStaffDetail,
+    upsertPayrollProfile,
+    createPayrollBonus,
+    updatePayrollBonus,
+    voidPayrollBonus,
+    auditRepo,
+  );
 
   // ===== Admin auth =====
   const adminUserRepo = new MySQLAdminUserRepository();
-  const staffUserRepo = new MySQLStaffUserRepository();
-  const auditRepo = new MySQLAuditLogRepository();
   const adminLogin = new AdminLogin(adminUserRepo, staffUserRepo);
   const adminAuthController = new AdminAuthController(adminLogin, auditRepo);
 
@@ -604,13 +674,21 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
   const createMenuItem = new CreateMenuItem(menuItemRepo);
   const updateMenuItem = new UpdateMenuItem(menuItemRepo);
   const setMenuItemActive = new SetMenuItemActive(menuItemRepo);
+  const listAdminMenuCategories = new ListAdminMenuCategories(menuCategoryRepo);
+  const createMenuCategory = new CreateMenuCategory(menuCategoryRepo);
+  const updateMenuCategory = new UpdateMenuCategory(menuCategoryRepo);
+  const deleteMenuCategory = new DeleteMenuCategory(menuCategoryRepo);
 
   const adminMenuController = new AdminMenuController(
-    getMenuCategories,
+    listAdminMenuCategories,
     listMenuItems,
     createMenuItem,
     updateMenuItem,
     setMenuItemActive,
+    createMenuCategory,
+    updateMenuCategory,
+    deleteMenuCategory,
+    auditRepo,
   );
 
   // ===== Client OTP auth =====
@@ -680,6 +758,9 @@ export function buildControllers(deps?: { eventBus?: IEventBus; redis?: RedisCli
     adminKitchenController,
     adminCashierController,
     adminDashboardController,
+    adminShiftController,
+    adminAttendanceController,
+    adminPayrollController,
     reservationController,
     adminReservationController,
     adminMaintenanceController,

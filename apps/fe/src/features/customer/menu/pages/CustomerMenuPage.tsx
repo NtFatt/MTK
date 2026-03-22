@@ -491,7 +491,6 @@ export function CustomerMenuPage() {
                     items={pagedItems}
                     pageIndex={pageIndex}
                     totalPages={totalPages}
-                    totalItems={filteredItems.length}
                     pageSize={MENU_PAGE_SIZE}
                     pageTurnDirection={pageTurnDirection}
                     onPrevPage={handlePrevPage}

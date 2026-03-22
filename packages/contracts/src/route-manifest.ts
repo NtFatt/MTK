@@ -14,6 +14,21 @@ export const routeManifest = {
     path: "/api/v1/admin/menu/categories",
   },
 
+  adminMenuCategoryCreate: {
+    method: "POST",
+    path: "/api/v1/admin/menu/categories",
+  },
+
+  adminMenuCategoryUpdate: {
+    method: "PUT",
+    path: "/api/v1/admin/menu/categories/:categoryId",
+  },
+
+  adminMenuCategoryDelete: {
+    method: "DELETE",
+    path: "/api/v1/admin/menu/categories/:categoryId",
+  },
+
   adminMenuItems: {
     method: "GET",
     path: "/api/v1/admin/menu/items",
@@ -69,9 +84,89 @@ export const routeManifest = {
     path: "/api/v1/admin/dashboard/overview",
   },
 
+  adminCurrentShift: {
+    method: "GET",
+    path: "/api/v1/admin/shifts/current",
+  },
+
+  adminShiftHistory: {
+    method: "GET",
+    path: "/api/v1/admin/shifts/history",
+  },
+
+  adminShiftOpen: {
+    method: "POST",
+    path: "/api/v1/admin/shifts/:branchId/open",
+  },
+
+  adminShiftClose: {
+    method: "POST",
+    path: "/api/v1/admin/shifts/:shiftRunId/close",
+  },
+
+  adminAttendanceBoard: {
+    method: "GET",
+    path: "/api/v1/admin/attendance",
+  },
+
+  adminAttendanceStaffHistory: {
+    method: "GET",
+    path: "/api/v1/admin/attendance/staff/:staffId/history",
+  },
+
+  adminAttendanceCheckIn: {
+    method: "POST",
+    path: "/api/v1/admin/attendance/:staffId/check-in",
+  },
+
+  adminAttendanceCheckOut: {
+    method: "POST",
+    path: "/api/v1/admin/attendance/:attendanceId/check-out",
+  },
+
+  adminAttendanceMarkAbsent: {
+    method: "POST",
+    path: "/api/v1/admin/attendance/:staffId/mark-absent",
+  },
+
+  adminPayrollSummary: {
+    method: "GET",
+    path: "/api/v1/admin/payroll/summary",
+  },
+
+  adminPayrollStaffDetail: {
+    method: "GET",
+    path: "/api/v1/admin/payroll/staff/:staffId",
+  },
+
+  adminPayrollProfileUpsert: {
+    method: "PUT",
+    path: "/api/v1/admin/payroll/profiles/:staffId",
+  },
+
+  adminPayrollBonusCreate: {
+    method: "POST",
+    path: "/api/v1/admin/payroll/staff/:staffId/bonuses",
+  },
+
+  adminPayrollBonusUpdate: {
+    method: "PATCH",
+    path: "/api/v1/admin/payroll/bonuses/:payrollBonusId",
+  },
+
+  adminPayrollBonusVoid: {
+    method: "POST",
+    path: "/api/v1/admin/payroll/bonuses/:payrollBonusId/void",
+  },
+
   kitchenQueue: {
     method: "GET",
     path: "/api/v1/admin/kitchen/queue",
+  },
+
+  adminOrders: {
+    method: "GET",
+    path: "/api/v1/admin/orders",
   },
 
   cashierUnpaid: {

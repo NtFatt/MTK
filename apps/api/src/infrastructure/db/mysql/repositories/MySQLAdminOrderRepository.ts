@@ -7,6 +7,30 @@ import {
 } from "../services/orderInventoryMutations.js";
 import { MySQLVoucherRepository } from "./MySQLVoucherRepository.js";
 
+function kitchenStatusRank(status: string): number {
+  const normalized = String(status ?? "").trim().toUpperCase();
+  if (normalized === "READY") return 4;
+  if (normalized === "PREPARING") return 3;
+  if (normalized === "RECEIVED") return 2;
+  if (normalized === "NEW") return 1;
+  return 0;
+}
+
+function toAggregateOrderStatus(statuses: string[]): OrderStatus {
+  let best = "NEW";
+  let bestRank = 0;
+
+  for (const status of statuses) {
+    const rank = kitchenStatusRank(status);
+    if (rank > bestRank) {
+      bestRank = rank;
+      best = String(status).trim().toUpperCase();
+    }
+  }
+
+  return (best || "NEW") as OrderStatus;
+}
+
 export class MySQLAdminOrderRepository implements IAdminOrderRepository {
   private readonly voucherRepo = new MySQLVoucherRepository();
 
@@ -182,6 +206,124 @@ export class MySQLAdminOrderRepository implements IAdminOrderRepository {
        VALUES (?, ?, ?, ?, ?, ?)`,
       [orderId, input.fromStatus, input.toStatus, input.changedByType, input.changedById, input.note],
     );
+  }
+
+  async transitionKitchenItemGroupStatus(input: {
+    orderCode: string;
+    branchId: string;
+    fromKitchenStatus: "NEW" | "RECEIVED" | "PREPARING";
+    toKitchenStatus: "RECEIVED" | "PREPARING" | "READY";
+  }) {
+    const conn: any = await pool.getConnection();
+
+    try {
+      await conn.beginTransaction();
+
+      const [orderRows]: any = await conn.query(
+        `
+          SELECT order_id, order_status
+          FROM orders
+          WHERE order_code = ? AND branch_id = ?
+          FOR UPDATE
+        `,
+        [input.orderCode, input.branchId],
+      );
+
+      const order = orderRows?.[0];
+      if (!order) throw new Error("ORDER_NOT_FOUND");
+
+      const currentOrderStatus = String(order.order_status ?? "").trim().toUpperCase();
+      if (currentOrderStatus === "PAID" || currentOrderStatus === "CANCELED" || currentOrderStatus === "COMPLETED") {
+        throw new Error("INVALID_TRANSITION");
+      }
+
+      const [groupRows]: any = await conn.query(
+        `
+          SELECT order_item_id
+          FROM order_items
+          WHERE order_id = ?
+            AND kitchen_status = ?
+          FOR UPDATE
+        `,
+        [String(order.order_id), input.fromKitchenStatus],
+      );
+
+      const affectedItemCount = Array.isArray(groupRows) ? groupRows.length : 0;
+      if (affectedItemCount === 0) {
+        throw new Error("KITCHEN_TICKET_NOT_FOUND");
+      }
+
+      const fields: string[] = ["kitchen_status = ?"];
+      const params: any[] = [input.toKitchenStatus];
+
+      if (input.toKitchenStatus === "RECEIVED") {
+        fields.push("kitchen_received_at = NOW()");
+      }
+      if (input.toKitchenStatus === "PREPARING") {
+        fields.push("kitchen_preparing_at = NOW()");
+      }
+      if (input.toKitchenStatus === "READY") {
+        fields.push("kitchen_ready_at = NOW()");
+      }
+
+      await conn.query(
+        `
+          UPDATE order_items
+          SET ${fields.join(", ")}
+          WHERE order_id = ?
+            AND kitchen_status = ?
+        `,
+        [...params, String(order.order_id), input.fromKitchenStatus],
+      );
+
+      const [statusRows]: any = await conn.query(
+        `
+          SELECT DISTINCT kitchen_status
+          FROM order_items
+          WHERE order_id = ?
+            AND kitchen_status IN ('NEW', 'RECEIVED', 'PREPARING', 'READY')
+        `,
+        [String(order.order_id)],
+      );
+
+      const aggregateOrderStatus = toAggregateOrderStatus(
+        (statusRows ?? []).map((row: any) => String(row.kitchen_status ?? "")),
+      );
+
+      const orderFields: string[] = ["order_status = ?", "updated_at = CURRENT_TIMESTAMP"];
+      const orderParams: any[] = [aggregateOrderStatus];
+
+      if (input.toKitchenStatus === "RECEIVED") {
+        orderFields.push("accepted_at = NOW()");
+      }
+      if (input.toKitchenStatus === "PREPARING") {
+        orderFields.push("prepared_at = NOW()");
+      }
+
+      await conn.query(
+        `
+          UPDATE orders
+          SET ${orderFields.join(", ")}
+          WHERE order_id = ?
+        `,
+        [...orderParams, String(order.order_id)],
+      );
+
+      await conn.commit();
+
+      return {
+        orderCode: input.orderCode,
+        fromKitchenStatus: input.fromKitchenStatus,
+        toKitchenStatus: input.toKitchenStatus,
+        affectedItemCount,
+        aggregateOrderStatus,
+      };
+    } catch (e) {
+      await conn.rollback();
+      throw e;
+    } finally {
+      conn.release();
+    }
   }
 
   async transitionToPreparingWithInventoryConsumption(input: {

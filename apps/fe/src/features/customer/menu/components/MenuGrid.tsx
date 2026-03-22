@@ -6,7 +6,6 @@ type MenuGridProps = {
   items: MenuItem[];
   pageIndex: number;
   totalPages: number;
-  totalItems: number;
   pageSize: number;
   pageTurnDirection: "forward" | "backward" | "idle";
   onPrevPage: () => void;
@@ -17,7 +16,6 @@ export function MenuGrid({
   items,
   pageIndex,
   totalPages,
-  totalItems,
   pageSize,
   pageTurnDirection,
   onPrevPage,
@@ -26,8 +24,6 @@ export function MenuGrid({
   const leftItems = items.slice(0, Math.ceil(pageSize / 2));
   const rightItems = items.slice(Math.ceil(pageSize / 2));
   const currentPageLabel = `${pageIndex + 1}/${totalPages}`;
-  const currentStart = totalItems === 0 ? 0 : pageIndex * pageSize + 1;
-  const currentEnd = totalItems === 0 ? 0 : Math.min(totalItems, currentStart + items.length - 1);
 
   return (
     <div className="space-y-5">
@@ -36,12 +32,6 @@ export function MenuGrid({
           <div>
             <div className="text-[11px] uppercase tracking-[0.28em] text-[#8f6f5f]">
               Quyển menu của quán
-            </div>
-            <div className="customer-mythmaker-title mt-2 text-3xl text-[#57121a]">
-              Lật từng nhịp như đang xem menu giấy
-            </div>
-            <div className="mt-2 text-sm text-[#7a5a43]">
-              Lần lật này hiển thị {currentStart}-{currentEnd} trong tổng {totalItems} món, để bạn xem thong thả hơn thay vì bị dồn vào một khối.
             </div>
           </div>
 

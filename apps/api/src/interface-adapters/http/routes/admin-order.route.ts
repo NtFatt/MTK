@@ -17,6 +17,12 @@ export function createAdminOrderRouter(
 
   router.use(requireInternal);
 
+  router.get(
+    "/orders",
+    requirePermission("orders.read"),
+    asyncHandler(controller.listOrders),
+  );
+
   // Canonical (spec)
   router.post(
     "/orders/:orderCode/status",

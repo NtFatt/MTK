@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { useStore } from "zustand";
 
 import { authStore } from "../../../../../shared/auth/authStore";
 import { Can } from "../../../../../shared/auth/guards";
 import {
+  hasAnyPermission,
   hasPermission,
   isAdminSession,
   resolveInternalBranch,
@@ -164,6 +165,29 @@ export function InternalTablesPage() {
     String(userBranch) !== String(urlBranchId);
 
   const canReadTables = hasPermission(session, "ops.tables.read");
+  const cashierFallbackPath =
+    effectiveBranchId && hasPermission(session, "cashier.unpaid.read")
+      ? `/i/${effectiveBranchId}/cashier`
+      : null;
+  const kitchenFallbackPath =
+    effectiveBranchId && hasPermission(session, "kitchen.queue.read")
+      ? `/i/${effectiveBranchId}/kitchen`
+      : null;
+  const shiftFallbackPath =
+    effectiveBranchId && hasAnyPermission(session, ["shifts.read", "shifts.open", "shifts.close"])
+      ? `/i/${effectiveBranchId}/shifts`
+      : null;
+  const reservationFallbackPath =
+    effectiveBranchId &&
+    hasAnyPermission(session, ["reservations.confirm", "reservations.checkin"])
+      ? `/i/${effectiveBranchId}/reservations`
+      : null;
+  const fallbackPath =
+    cashierFallbackPath ??
+    kitchenFallbackPath ??
+    shiftFallbackPath ??
+    reservationFallbackPath ??
+    null;
 
   const enabled = !!session && !!effectiveBranchId && !isBranchMismatch && canReadTables;
   const nav = useNavigate();
@@ -380,6 +404,10 @@ export function InternalTablesPage() {
 
     return totals;
   }, [data, live]);
+
+  if (!isBranchMismatch && !canReadTables && fallbackPath) {
+    return <Navigate to={fallbackPath} replace />;
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">

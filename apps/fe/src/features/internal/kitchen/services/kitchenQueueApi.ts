@@ -1,6 +1,7 @@
 import { apiFetchAuthed } from "../../../../shared/http/authedFetch";
 
 export type KitchenQueueRow = {
+  ticketKey?: string;
   orderId?: string;
   orderCode: string;
   orderStatus: string;
@@ -28,6 +29,7 @@ export type KitchenQueueOrderItem = {
   itemName: string;
   quantity: number;
   itemOptions: Record<string, unknown> | null;
+  kitchenStatus?: string;
   recipe: KitchenQueueRecipeLine[];
   recipeConfigured: boolean;
 };
@@ -81,6 +83,12 @@ function normalizeRows(raw: unknown): KitchenQueueRow[] {
     const orderStatus = typeof r.orderStatus === "string" ? r.orderStatus : String(r.orderStatus ?? "");
 
     return {
+      ticketKey:
+        typeof r.ticketKey === "string"
+          ? r.ticketKey
+          : typeof r.ticket_key === "string"
+            ? r.ticket_key
+            : undefined,
       orderId:
         typeof r.orderId === "string"
           ? r.orderId
@@ -131,6 +139,12 @@ function normalizeRows(raw: unknown): KitchenQueueRow[] {
                 itemName,
                 quantity: Number(item?.quantity ?? 0),
                 itemOptions: normalizeJson(item?.itemOptions ?? item?.item_options ?? null),
+                kitchenStatus:
+                  typeof item?.kitchenStatus === "string"
+                    ? item.kitchenStatus
+                    : typeof item?.kitchen_status === "string"
+                      ? item.kitchen_status
+                      : undefined,
                 recipeConfigured: Boolean(item?.recipeConfigured ?? item?.recipe_configured ?? false),
                 recipe: Array.isArray(item?.recipe)
                   ? item.recipe

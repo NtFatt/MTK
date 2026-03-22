@@ -6,6 +6,8 @@ export type AdminMenuCategory = {
     code?: string;
     sortOrder?: number;
     isActive?: boolean;
+    itemCount?: number;
+    activeItemCount?: number;
 };
 
 export type AdminMenuItem = {
@@ -60,6 +62,23 @@ export type SetMenuItemActiveInput = {
     isActive: boolean;
 };
 
+export type CreateMenuCategoryInput = {
+    name: string;
+    sortOrder?: number;
+    isActive?: boolean;
+};
+
+export type UpdateMenuCategoryInput = {
+    categoryId: string;
+    name?: string;
+    sortOrder?: number;
+    isActive?: boolean;
+};
+
+export type DeleteMenuCategoryInput = {
+    categoryId: string;
+};
+
 function asArray<T>(value: unknown): T[] {
     if (Array.isArray(value)) return value as T[];
 
@@ -94,6 +113,18 @@ function normalizeCategory(row: any): AdminMenuCategory {
                 ? Boolean(row.isActive)
                 : row?.is_active != null
                     ? Boolean(Number(row.is_active))
+                    : undefined,
+        itemCount:
+            row?.itemCount != null
+                ? Number(row.itemCount)
+                : row?.item_count != null
+                    ? Number(row.item_count)
+                    : undefined,
+        activeItemCount:
+            row?.activeItemCount != null
+                ? Number(row.activeItemCount)
+                : row?.active_item_count != null
+                    ? Number(row.active_item_count)
                     : undefined,
     };
 }
@@ -218,6 +249,48 @@ export async function createMenuItem(input: CreateMenuItemInput): Promise<AdminM
     });
 
     return normalizeItem(res);
+}
+
+export async function createMenuCategory(
+    input: CreateMenuCategoryInput,
+): Promise<AdminMenuCategory> {
+    const res = await apiFetchAuthed<unknown>("/admin/menu/categories", {
+        method: "POST",
+        body: JSON.stringify({
+            name: input.name,
+            sortOrder: input.sortOrder ?? 0,
+            isActive: input.isActive ?? true,
+        }),
+    });
+
+    return normalizeCategory(res);
+}
+
+export async function updateMenuCategory(
+    input: UpdateMenuCategoryInput,
+): Promise<AdminMenuCategory> {
+    const { categoryId, ...patch } = input;
+
+    const res = await apiFetchAuthed<unknown>(
+        `/admin/menu/categories/${encodeURIComponent(categoryId)}`,
+        {
+            method: "PUT",
+            body: JSON.stringify(patch),
+        },
+    );
+
+    return normalizeCategory(res);
+}
+
+export async function deleteMenuCategory(
+    input: DeleteMenuCategoryInput,
+): Promise<void> {
+    await apiFetchAuthed<unknown>(
+        `/admin/menu/categories/${encodeURIComponent(input.categoryId)}`,
+        {
+            method: "DELETE",
+        },
+    );
 }
 
 export async function updateMenuItem(input: UpdateMenuItemInput): Promise<AdminMenuItem> {

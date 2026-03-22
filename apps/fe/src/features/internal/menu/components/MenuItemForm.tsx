@@ -71,6 +71,7 @@ export function MenuItemForm({
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name}
+                    {category.isActive === false ? " (đã ẩn)" : ""}
                   </option>
                 ))}
               </select>

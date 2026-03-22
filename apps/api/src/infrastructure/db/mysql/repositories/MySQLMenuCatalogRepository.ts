@@ -54,7 +54,10 @@ export class MySQLMenuCatalogRepository implements IMenuCatalogRepository {
   async listItems(query: MenuItemListQuery): Promise<{ items: MenuItem[]; total: number }> {
     const categoryId = query.categoryId ? String(query.categoryId) : null;
     const q = query.q ? String(query.q).trim() : null;
-    const isActive = query.isActive === undefined ? true : query.isActive; const branchId = query.branchId ? String(query.branchId) : null;
+    const isActive = query.isActive === undefined ? true : query.isActive;
+    const categoryIsActive =
+      query.categoryIsActive === undefined ? true : query.categoryIsActive;
+    const branchId = query.branchId ? String(query.branchId) : null;
     const onlyInStock = query.onlyInStock === true;
 
     const hasLimit = query.limit !== null && query.limit !== undefined;
@@ -71,6 +74,10 @@ export class MySQLMenuCatalogRepository implements IMenuCatalogRepository {
     if (isActive !== null && isActive !== undefined) {
       filters.push("mi.is_active = ?");
       params.push(isActive ? 1 : 0);
+    }
+    if (categoryIsActive !== null && categoryIsActive !== undefined) {
+      filters.push("c.is_active = ?");
+      params.push(categoryIsActive ? 1 : 0);
     }
     if (q) {
       filters.push(
@@ -98,9 +105,12 @@ export class MySQLMenuCatalogRepository implements IMenuCatalogRepository {
     const whereSql = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
     const orderSql = buildSort(query.sort);
 
+    const categoryJoinSql = "JOIN menu_categories c ON c.category_id = mi.category_id";
+
     const [countRows]: any = await pool.query(
       `SELECT COUNT(*) AS total
      FROM menu_items mi
+     ${categoryJoinSql}
      ${joinStockSql}
      ${whereSql}`,
       [...joinParams, ...params]
@@ -116,11 +126,11 @@ export class MySQLMenuCatalogRepository implements IMenuCatalogRepository {
       mi.price,
       mi.image_url,
       mi.is_active,
-      ${branchId ? "COALESCE(mis.quantity, 0)" : "mi.stock_qty"} AS stock_qty,
+     ${branchId ? "COALESCE(mis.quantity, 0)" : "mi.stock_qty"} AS stock_qty,
       (cs.combo_id IS NOT NULL) AS is_combo,
       (mp.item_id IS NOT NULL) AS is_meat
      FROM menu_items mi
-     JOIN menu_categories c ON c.category_id = mi.category_id
+     ${categoryJoinSql}
      ${joinStockSql}
      LEFT JOIN combo_sets cs ON cs.combo_item_id = mi.item_id
      LEFT JOIN meat_profiles mp ON mp.item_id = mi.item_id

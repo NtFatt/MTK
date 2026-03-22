@@ -47,6 +47,30 @@ export function InternalShellNav({ rightSlot }: { rightSlot?: React.ReactNode })
       show: hasPermission(session, "cashier.unpaid.read"),
     },
     {
+      key: "attendance",
+      to: `/i/${bid}/attendance`,
+      label: "Chấm công",
+      show: hasPermission(session, "attendance.read"),
+    },
+    {
+      key: "payroll",
+      to: `/i/${bid}/payroll`,
+      label: "Tính lương",
+      show: hasPermission(session, "payroll.read"),
+    },
+    {
+      key: "shifts",
+      to: `/i/${bid}/shifts`,
+      label: "Ca làm việc",
+      show: hasAnyPermission(session, ["shifts.read", "shifts.open", "shifts.close"]),
+    },
+    {
+      key: "orders",
+      to: `/i/${bid}/orders`,
+      label: "Orders",
+      show: hasPermission(session, "orders.read"),
+    },
+    {
       key: "kitchen",
       to: `/i/${bid}/kitchen`,
       label: "Kitchen",

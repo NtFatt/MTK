@@ -11,7 +11,16 @@ export type InternalRole = "ADMIN" | "BRANCH_MANAGER" | "STAFF" | "KITCHEN" | "C
 
 // Core permissions (Spec v6.2 - Demo 10/10 - table 3)
 export type Permission =
+  | "orders.read"
   | "orders.status.change"
+  | "attendance.read"
+  | "attendance.manage"
+  | "payroll.read"
+  | "payroll.manage"
+  | "payroll.bonus.manage"
+  | "shifts.read"
+  | "shifts.open"
+  | "shifts.close"
   | "reservations.confirm"
   | "reservations.checkin"
   | "ops.tables.read"
@@ -40,7 +49,16 @@ export type Permission =
 export const ROLE_PERMISSIONS: Record<InternalRole, ReadonlySet<Permission>> = {
   // ADMIN = full access (core + extensions)
   ADMIN: new Set([
+    "orders.read",
     "orders.status.change",
+    "attendance.read",
+    "attendance.manage",
+    "payroll.read",
+    "payroll.manage",
+    "payroll.bonus.manage",
+    "shifts.read",
+    "shifts.open",
+    "shifts.close",
     "reservations.confirm",
     "reservations.checkin",
     "ops.tables.read",
@@ -70,7 +88,15 @@ export const ROLE_PERMISSIONS: Record<InternalRole, ReadonlySet<Permission>> = {
 
   // BRANCH_MANAGER = operations + cashier + inventory holds + metrics + reservations
   BRANCH_MANAGER: new Set([
+    "orders.read",
     "orders.status.change",
+    "attendance.read",
+    "attendance.manage",
+    "payroll.read",
+    "payroll.bonus.manage",
+    "shifts.read",
+    "shifts.open",
+    "shifts.close",
     "reservations.confirm",
     "reservations.checkin",
     "ops.tables.read",
@@ -97,6 +123,7 @@ export const ROLE_PERMISSIONS: Record<InternalRole, ReadonlySet<Permission>> = {
 
   // STAFF (service) = ops + reservations
   STAFF: new Set([
+    "orders.read",
     "reservations.confirm",
     "reservations.checkin",
     "ops.tables.read",
@@ -107,11 +134,23 @@ export const ROLE_PERMISSIONS: Record<InternalRole, ReadonlySet<Permission>> = {
     "ops.orders.create",
   ]),
 
-  // KITCHEN = kitchen queue + change status
-  KITCHEN: new Set(["orders.status.change", "kitchen.queue.read"]),
+  // KITCHEN = kitchen queue + change status + shift visibility for branch coordination
+  KITCHEN: new Set([
+    "orders.status.change",
+    "kitchen.queue.read",
+    "shifts.read",
+    "shifts.open",
+    "shifts.close",
+  ]),
 
   // CASHIER = unpaid + settle
-  CASHIER: new Set(["cashier.unpaid.read", "cashier.settle_cash"]),
+  CASHIER: new Set([
+    "cashier.unpaid.read",
+    "cashier.settle_cash",
+    "shifts.read",
+    "shifts.open",
+    "shifts.close",
+  ]),
 };
 
 export function hasPermission(role: string, permission: Permission): boolean {

@@ -2,8 +2,8 @@ import { qk } from "@hadilao/contracts";
 import { useAppQuery } from "../../../../shared/http/useAppQuery";
 import { fetchCashierQueue, type CashierOrderRow } from "../services/cashierQueueApi";
 
-const STALE_MS = 2000;
-const REFRESH_MS = 1500;
+const STALE_MS = 2500;
+const REFRESH_MS = 10000;
 
 export function useCashierQueueQuery(input: {
   branchId: string | number | undefined;

@@ -10,6 +10,17 @@ export function createAdminMenuRouter(ctrl: AdminMenuController) {
   r.use(requireInternal);
 
   r.get("/menu/categories", requirePermission("menu.manage"), asyncHandler(ctrl.categories));
+  r.post("/menu/categories", requirePermission("menu.manage"), asyncHandler(ctrl.createCategory));
+  r.put(
+    "/menu/categories/:categoryId",
+    requirePermission("menu.manage"),
+    asyncHandler(ctrl.updateCategory),
+  );
+  r.delete(
+    "/menu/categories/:categoryId",
+    requirePermission("menu.manage"),
+    asyncHandler(ctrl.deleteCategory),
+  );
   r.get("/menu/items", requirePermission("menu.manage"), asyncHandler(ctrl.items));
   r.post("/menu/items", requirePermission("menu.manage"), asyncHandler(ctrl.createItem));
   r.put("/menu/items/:itemId", requirePermission("menu.manage"), asyncHandler(ctrl.updateItem));

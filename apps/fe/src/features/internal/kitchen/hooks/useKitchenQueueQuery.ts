@@ -2,8 +2,8 @@ import { useAppQuery } from "../../../../shared/http/useAppQuery";
 import { qk } from "@hadilao/contracts";
 import { fetchKitchenQueue, type KitchenQueueRow } from "../services/kitchenQueueApi";
 
-const STALE_MS = 2000;
-const REFRESH_MS = 1500;
+const STALE_MS = 3000;
+const REFRESH_MS = 5000;
 
 export function useKitchenQueueQuery(input: {
   branchId: string | number | undefined;

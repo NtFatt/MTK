@@ -9,6 +9,8 @@ export type MenuItemListQuery = {
   categoryId?: string | null;
   q?: string | null;
   isActive?: boolean | null;
+  /** Optional: filter by category active state (public menu should usually use true). */
+  categoryIsActive?: boolean | null;
   /** Optional: return stock quantity for a specific branch (SoT: menu_item_stock). */
   branchId?: string | null;
   /** Optional: filter to items that are currently in stock (uses branchId when provided). */

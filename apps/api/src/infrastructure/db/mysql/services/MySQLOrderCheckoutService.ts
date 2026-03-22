@@ -68,8 +68,11 @@ function isLiveDineInStatus(status: OrderStatus): boolean {
 }
 
 function resolveStatusForAppend(currentStatus: OrderStatus): OrderStatus {
-  if (currentStatus === "READY" || currentStatus === "SERVING" || currentStatus === "COMPLETED") {
-    return "RECEIVED";
+  // Order-level status should not blindly regress when a dine-in bill gets appended.
+  // Newly appended items are tracked separately at kitchen item level, but if the old bill
+  // was already marked SERVING/COMPLETED we should reopen it to a live pre-cash status.
+  if (currentStatus === "SERVING" || currentStatus === "COMPLETED") {
+    return "READY";
   }
   return currentStatus;
 }
@@ -188,8 +191,20 @@ async function insertOrderItems(
     const lineTotal = roundMoney(unitPrice * quantity);
 
     const [result]: any = await conn.query(
-      `INSERT INTO order_items (order_id, item_id, item_name, unit_price, quantity, item_options, line_total)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO order_items (
+         order_id,
+         item_id,
+         item_name,
+         unit_price,
+         quantity,
+         item_options,
+         line_total,
+         kitchen_status,
+         kitchen_received_at,
+         kitchen_preparing_at,
+         kitchen_ready_at
+       )
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'NEW', NULL, NULL, NULL)`,
       [
         orderId,
         String(item.itemId),
