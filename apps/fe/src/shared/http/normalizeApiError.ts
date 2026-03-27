@@ -7,6 +7,20 @@ function mapAppErrorMessage(code?: string) {
       return "Username đã tồn tại. Vui lòng chọn username khác.";
     case "TABLE_UNPAID_ORDER_EXISTS":
       return "Bàn này vẫn còn đơn chưa thanh toán.";
+    case "TABLE_BRANCH_REQUIRED":
+      return "Thiếu chi nhánh đích để thao tác cấu hình bàn.";
+    case "TABLE_CODE_REQUIRED":
+      return "Hãy nhập mã bàn hợp lệ.";
+    case "TABLE_CODE_ALREADY_EXISTS":
+      return "Mã bàn này đã tồn tại trong chi nhánh.";
+    case "TABLE_INVALID_SEATS":
+      return "Sức chứa của bàn phải là số nguyên dương.";
+    case "TABLE_HAS_OPEN_SESSION":
+      return "Bàn đang còn phiên phục vụ mở nên chưa thể xóa.";
+    case "TABLE_HAS_UNPAID_ORDERS":
+      return "Bàn vẫn còn đơn chưa thanh toán nên chưa thể xóa.";
+    case "TABLE_IN_USE":
+      return "Bàn đang được sử dụng hoặc đã được giữ chỗ nên chưa thể xóa.";
     case "SESSION_HAS_UNPAID_ORDERS":
       return "Không thể đóng phiên vì bàn vẫn còn đơn chưa thanh toán.";
     case "SHIFT_NOT_OPEN":

@@ -68,6 +68,11 @@ const InternalTablesPage = lazy(async () => ({
     .InternalTablesPage,
 }));
 
+const InternalTableSetupPage = lazy(async () => ({
+  default: (await import("../features/internal/ops/tables/pages/InternalTableSetupPage"))
+    .InternalTableSetupPage,
+}));
+
 const InternalPosMenuPage = lazy(async () => ({
   default: (await import("../features/internal/pos/pages/InternalPosMenuPage"))
     .InternalPosMenuPage,
@@ -319,6 +324,11 @@ export const router = createBrowserRouter([
         path: "tables",
         element: withSuspense(<InternalTablesPage />),
         handle: { title: "Tables" },
+      },
+      {
+        path: "admin/tables-setup",
+        element: withSuspense(<InternalTableSetupPage />),
+        handle: { title: "Cấu hình Sơ đồ Bàn" },
       },
       {
         path: "orders",

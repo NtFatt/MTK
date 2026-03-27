@@ -1,230 +1,265 @@
+import {
+  Schemas,
+  type OpsTableRow,
+  type OpsTableTopItem,
+} from "@hadilao/contracts";
 import { apiFetchAuthed } from "../../../../../shared/http/authedFetch";
 
 export type OpsTableDto = {
-  id?: string | number;
-  code?: string;
-  status?: string;
-  seats?: number;
+  id: string;
+  branchId?: string;
+  code: string;
+  status: OpsTableRow["tableStatus"];
+  seats: number;
   area?: string | null;
+  directionId?: string | null;
   sessionKey?: string | null;
   cartKey?: string | null;
-  activeOrdersCount?: number;
+  activeOrdersCount: number;
   activeOrderCode?: string | null;
   activeOrderStatus?: string | null;
   activeOrderUpdatedAt?: string | null;
   activeItemsCount?: number | null;
   activeItemsPreview?: string | null;
-  activeItemsTop?: Array<{ name: string; qty: number }> | null;
-  unpaidOrdersCount?: number;
+  activeItemsTop?: OpsTableTopItem[] | null;
+  unpaidOrdersCount: number;
   unpaidOrderCode?: string | null;
   unpaidOrderStatus?: string | null;
   unpaidOrderUpdatedAt?: string | null;
   unpaidItemsCount?: number | null;
   unpaidItemsPreview?: string | null;
-  unpaidItemsTop?: Array<{ name: string; qty: number }> | null;
+  unpaidItemsTop?: OpsTableTopItem[] | null;
 };
-
 
 export type FetchOpsTablesParams = {
   branchId?: string | number;
 };
 
-function normalizeOne(x: unknown): OpsTableDto | null {
-  if (!x || typeof x !== "object") return null;
-  const o = x as Record<string, unknown>;
-  const table = (o.table && typeof o.table === "object") ? (o.table as Record<string, unknown>) : null;
+type RawRecord = Record<string, unknown>;
 
-  const id =
-    (typeof o.id === "string" || typeof o.id === "number") ? o.id :
-      (typeof o.tableId === "string" || typeof o.tableId === "number") ? o.tableId :
-        (table && (typeof table.id === "string" || typeof table.id === "number")) ? table.id :
-          (table && (typeof table.tableId === "string" || typeof table.tableId === "number")) ? table.tableId :
-            undefined;
+function asRecord(value: unknown): RawRecord | null {
+  return value != null && typeof value === "object" ? (value as RawRecord) : null;
+}
 
-  const code =
-    // Ưu tiên tableCode / table_code (đúng nghĩa “mã bàn”)
-    typeof o.tableCode === "string" ? o.tableCode :
-      typeof (o as any).table_code === "string" ? (o as any).table_code :
-        table && typeof table.tableCode === "string" ? table.tableCode :
-          table && typeof (table as any).table_code === "string" ? (table as any).table_code :
-            // Fallback cuối cùng mới dùng code (đề phòng BE chỉ trả code)
-            table && typeof table.code === "string" ? table.code :
-              typeof o.code === "string" ? o.code :
-                undefined;
+function pickFirst<T>(...values: Array<T | undefined>): T | undefined {
+  for (const value of values) {
+    if (value !== undefined) return value;
+  }
+  return undefined;
+}
 
-  const status =
-    typeof o.status === "string" ? o.status :
-      typeof o.tableStatus === "string" ? o.tableStatus :
-        table && typeof table.status === "string" ? table.status :
-          table && typeof table.tableStatus === "string" ? table.tableStatus :
-            undefined;
+function asStringId(value: unknown): string | undefined {
+  if (typeof value === "string" && value.trim()) return value.trim();
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return undefined;
+}
 
-  const seats =
-    typeof o.seats === "number" ? o.seats :
-      table && typeof table.seats === "number" ? table.seats :
-        undefined;
+function asStringOrNull(value: unknown): string | null | undefined {
+  if (value === null) return null;
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return undefined;
+}
 
-  const area =
-    typeof o.area === "string" ? o.area :
-      typeof o.areaName === "string" ? o.areaName :
-        table && typeof table.area === "string" ? table.area :
-          table && typeof table.areaName === "string" ? table.areaName :
-            o.area === null ? null :
-              undefined;
+function asNonNegativeInt(value: unknown): number | undefined {
+  const num = typeof value === "string" ? Number(value) : value;
+  return typeof num === "number" && Number.isInteger(num) && num >= 0 ? num : undefined;
+}
 
-  const sessionKey =
-    typeof o.sessionKey === "string" ? o.sessionKey :
-      typeof (o as any).session_key === "string" ? (o as any).session_key :
-        table && typeof table.sessionKey === "string" ? table.sessionKey :
-          table && typeof (table as any).session_key === "string" ? (table as any).session_key :
-            o.sessionKey === null ? null :
-              undefined;
+function normalizeTopItems(value: unknown): OpsTableTopItem[] | null | undefined {
+  if (value === null) return null;
+  if (!Array.isArray(value)) return undefined;
 
-  const cartKey =
-    typeof o.cartKey === "string" ? o.cartKey :
-      typeof (o as any).cart_key === "string" ? (o as any).cart_key :
-        table && typeof table.cartKey === "string" ? table.cartKey :
-          table && typeof (table as any).cart_key === "string" ? (table as any).cart_key :
-            o.cartKey === null ? null :
-              undefined;
+  return value
+    .map((entry) => {
+      const record = asRecord(entry);
+      const name = record ? asStringId(record.name) : undefined;
+      const qty = record ? asNonNegativeInt(record.qty) : undefined;
+      return name && qty !== undefined ? { name, qty } : null;
+    })
+    .filter((entry): entry is OpsTableTopItem => entry != null);
+}
 
-  const activeOrdersCount =
-    typeof (o as any).activeOrdersCount === "number" ? (o as any).activeOrdersCount :
-      table && typeof (table as any).activeOrdersCount === "number" ? (table as any).activeOrdersCount :
-        0;
+function toContractRowCandidate(input: unknown): unknown {
+  const record = asRecord(input);
+  if (!record) return null;
 
-  const activeOrderCode =
-    typeof (o as any).activeOrderCode === "string" ? (o as any).activeOrderCode :
-      table && typeof (table as any).activeOrderCode === "string" ? (table as any).activeOrderCode :
-        (o as any).activeOrderCode === null ? null :
-          table && (table as any).activeOrderCode === null ? null :
-            undefined;
-
-  const activeOrderStatus =
-    typeof (o as any).activeOrderStatus === "string" ? (o as any).activeOrderStatus :
-      table && typeof (table as any).activeOrderStatus === "string" ? (table as any).activeOrderStatus :
-        (o as any).activeOrderStatus === null ? null :
-          table && (table as any).activeOrderStatus === null ? null :
-            undefined;
-
-  const activeOrderUpdatedAt =
-    typeof (o as any).activeOrderUpdatedAt === "string" ? (o as any).activeOrderUpdatedAt :
-      table && typeof (table as any).activeOrderUpdatedAt === "string" ? (table as any).activeOrderUpdatedAt :
-        (o as any).activeOrderUpdatedAt === null ? null :
-          table && (table as any).activeOrderUpdatedAt === null ? null :
-            undefined;
-
-  const activeItemsCount =
-    typeof (o as any).activeItemsCount === "number" ? (o as any).activeItemsCount :
-      table && typeof (table as any).activeItemsCount === "number" ? (table as any).activeItemsCount :
-        (o as any).activeItemsCount === null ? null :
-          table && (table as any).activeItemsCount === null ? null :
-            undefined;
-
-  const activeItemsPreview =
-    typeof (o as any).activeItemsPreview === "string" ? (o as any).activeItemsPreview :
-      table && typeof (table as any).activeItemsPreview === "string" ? (table as any).activeItemsPreview :
-        (o as any).activeItemsPreview === null ? null :
-          table && (table as any).activeItemsPreview === null ? null :
-            undefined;
-
-  const activeItemsTopRaw =
-    Array.isArray((o as any).activeItemsTop) ? (o as any).activeItemsTop :
-      (table && Array.isArray((table as any).activeItemsTop) ? (table as any).activeItemsTop : null);
-
-  const activeItemsTop =
-    activeItemsTopRaw
-      ? activeItemsTopRaw
-        .map((it: any) => {
-          const name = typeof it?.name === "string" ? it.name : null;
-          const qty = typeof it?.qty === "number" ? it.qty : null;
-          return name && qty != null ? { name, qty } : null;
-        })
-        .filter(Boolean)
-      : ((o as any).activeItemsTop === null || (table as any)?.activeItemsTop === null ? null : undefined);
-
-  const unpaidOrdersCount =
-    typeof (o as any).unpaidOrdersCount === "number" ? (o as any).unpaidOrdersCount :
-      table && typeof (table as any).unpaidOrdersCount === "number" ? (table as any).unpaidOrdersCount :
-        0;
-
-  const unpaidOrderCode =
-    typeof (o as any).unpaidOrderCode === "string" ? (o as any).unpaidOrderCode :
-      table && typeof (table as any).unpaidOrderCode === "string" ? (table as any).unpaidOrderCode :
-        (o as any).unpaidOrderCode === null ? null :
-          table && (table as any).unpaidOrderCode === null ? null :
-            undefined;
-
-  const unpaidOrderStatus =
-    typeof (o as any).unpaidOrderStatus === "string" ? (o as any).unpaidOrderStatus :
-      table && typeof (table as any).unpaidOrderStatus === "string" ? (table as any).unpaidOrderStatus :
-        (o as any).unpaidOrderStatus === null ? null :
-          table && (table as any).unpaidOrderStatus === null ? null :
-            undefined;
-
-  const unpaidOrderUpdatedAt =
-    typeof (o as any).unpaidOrderUpdatedAt === "string" ? (o as any).unpaidOrderUpdatedAt :
-      table && typeof (table as any).unpaidOrderUpdatedAt === "string" ? (table as any).unpaidOrderUpdatedAt :
-        (o as any).unpaidOrderUpdatedAt === null ? null :
-          table && (table as any).unpaidOrderUpdatedAt === null ? null :
-            undefined;
-
-  const unpaidItemsCount =
-    typeof (o as any).unpaidItemsCount === "number" ? (o as any).unpaidItemsCount :
-      table && typeof (table as any).unpaidItemsCount === "number" ? (table as any).unpaidItemsCount :
-        (o as any).unpaidItemsCount === null ? null :
-          table && (table as any).unpaidItemsCount === null ? null :
-            undefined;
-
-  const unpaidItemsPreview =
-    typeof (o as any).unpaidItemsPreview === "string" ? (o as any).unpaidItemsPreview :
-      table && typeof (table as any).unpaidItemsPreview === "string" ? (table as any).unpaidItemsPreview :
-        (o as any).unpaidItemsPreview === null ? null :
-          table && (table as any).unpaidItemsPreview === null ? null :
-            undefined;
-
-  const unpaidItemsTopRaw =
-    Array.isArray((o as any).unpaidItemsTop) ? (o as any).unpaidItemsTop :
-      (table && Array.isArray((table as any).unpaidItemsTop) ? (table as any).unpaidItemsTop : null);
-
-  const unpaidItemsTop =
-    unpaidItemsTopRaw
-      ? unpaidItemsTopRaw
-        .map((it: any) => {
-          const name = typeof it?.name === "string" ? it.name : null;
-          const qty = typeof it?.qty === "number" ? it.qty : null;
-          return name && qty != null ? { name, qty } : null;
-        })
-        .filter(Boolean)
-      : ((o as any).unpaidItemsTop === null || (table as any)?.unpaidItemsTop === null ? null : undefined);
+  const nestedTable = asRecord(record.table);
 
   return {
-    id, code, status, seats, area, sessionKey, cartKey,
-    activeOrdersCount,
-    activeOrderCode,
-    activeOrderStatus,
-    activeOrderUpdatedAt,
-    activeItemsCount,
-    activeItemsPreview,
-    activeItemsTop,
-    unpaidOrdersCount,
-    unpaidOrderCode,
-    unpaidOrderStatus,
-    unpaidOrderUpdatedAt,
-    unpaidItemsCount,
-    unpaidItemsPreview,
-    unpaidItemsTop,
+    tableId: pickFirst(
+      asStringId(record.tableId),
+      asStringId(record.id),
+      asStringId(nestedTable?.tableId),
+      asStringId(nestedTable?.id),
+    ),
+    branchId: pickFirst(
+      asStringId(record.branchId),
+      asStringId(record.branch_id),
+      asStringId(nestedTable?.branchId),
+      asStringId(nestedTable?.branch_id),
+    ),
+    code: pickFirst(
+      asStringId(record.code),
+      asStringId(record.tableCode),
+      asStringId(record.table_code),
+      asStringId(nestedTable?.code),
+      asStringId(nestedTable?.tableCode),
+      asStringId(nestedTable?.table_code),
+    ),
+    areaName: pickFirst(
+      asStringOrNull(record.areaName),
+      asStringOrNull(record.area),
+      asStringOrNull(record.area_name),
+      asStringOrNull(nestedTable?.areaName),
+      asStringOrNull(nestedTable?.area),
+      asStringOrNull(nestedTable?.area_name),
+    ),
+    seats: pickFirst(
+      asNonNegativeInt(record.seats),
+      asNonNegativeInt(nestedTable?.seats),
+    ),
+    tableStatus: pickFirst(
+      asStringId(record.tableStatus),
+      asStringId(record.status),
+      asStringId(nestedTable?.tableStatus),
+      asStringId(nestedTable?.status),
+    ),
+    directionId: pickFirst(
+      asStringOrNull(record.directionId),
+      asStringOrNull(record.direction_id),
+      asStringOrNull(nestedTable?.directionId),
+      asStringOrNull(nestedTable?.direction_id),
+    ),
+    sessionKey: pickFirst(
+      asStringOrNull(record.sessionKey),
+      asStringOrNull(record.session_key),
+      asStringOrNull(record.activeSessionKey),
+      asStringOrNull(record.active_session_key),
+      asStringOrNull(record.currentSessionKey),
+      asStringOrNull(nestedTable?.sessionKey),
+      asStringOrNull(nestedTable?.session_key),
+    ),
+    cartKey: pickFirst(
+      asStringOrNull(record.cartKey),
+      asStringOrNull(record.cart_key),
+      asStringOrNull(record.activeCartKey),
+      asStringOrNull(record.active_cart_key),
+      asStringOrNull(nestedTable?.cartKey),
+      asStringOrNull(nestedTable?.cart_key),
+    ),
+    activeOrdersCount: pickFirst(
+      asNonNegativeInt(record.activeOrdersCount),
+      asNonNegativeInt(nestedTable?.activeOrdersCount),
+      0,
+    ),
+    activeOrderCode: pickFirst(
+      asStringOrNull(record.activeOrderCode),
+      asStringOrNull(nestedTable?.activeOrderCode),
+    ),
+    activeOrderStatus: pickFirst(
+      asStringOrNull(record.activeOrderStatus),
+      asStringOrNull(nestedTable?.activeOrderStatus),
+    ),
+    activeOrderUpdatedAt: pickFirst(
+      asStringOrNull(record.activeOrderUpdatedAt),
+      asStringOrNull(nestedTable?.activeOrderUpdatedAt),
+    ),
+    activeItemsCount: pickFirst(
+      asNonNegativeInt(record.activeItemsCount),
+      asNonNegativeInt(nestedTable?.activeItemsCount),
+      record.activeItemsCount === null || nestedTable?.activeItemsCount === null ? null : undefined,
+    ),
+    activeItemsPreview: pickFirst(
+      asStringOrNull(record.activeItemsPreview),
+      asStringOrNull(nestedTable?.activeItemsPreview),
+    ),
+    activeItemsTop: pickFirst(
+      normalizeTopItems(record.activeItemsTop),
+      normalizeTopItems(nestedTable?.activeItemsTop),
+      record.activeItemsTop === null || nestedTable?.activeItemsTop === null ? null : undefined,
+    ),
+    unpaidOrdersCount: pickFirst(
+      asNonNegativeInt(record.unpaidOrdersCount),
+      asNonNegativeInt(nestedTable?.unpaidOrdersCount),
+      0,
+    ),
+    unpaidOrderCode: pickFirst(
+      asStringOrNull(record.unpaidOrderCode),
+      asStringOrNull(nestedTable?.unpaidOrderCode),
+    ),
+    unpaidOrderStatus: pickFirst(
+      asStringOrNull(record.unpaidOrderStatus),
+      asStringOrNull(nestedTable?.unpaidOrderStatus),
+    ),
+    unpaidOrderUpdatedAt: pickFirst(
+      asStringOrNull(record.unpaidOrderUpdatedAt),
+      asStringOrNull(nestedTable?.unpaidOrderUpdatedAt),
+    ),
+    unpaidItemsCount: pickFirst(
+      asNonNegativeInt(record.unpaidItemsCount),
+      asNonNegativeInt(nestedTable?.unpaidItemsCount),
+      record.unpaidItemsCount === null || nestedTable?.unpaidItemsCount === null ? null : undefined,
+    ),
+    unpaidItemsPreview: pickFirst(
+      asStringOrNull(record.unpaidItemsPreview),
+      asStringOrNull(nestedTable?.unpaidItemsPreview),
+    ),
+    unpaidItemsTop: pickFirst(
+      normalizeTopItems(record.unpaidItemsTop),
+      normalizeTopItems(nestedTable?.unpaidItemsTop),
+      record.unpaidItemsTop === null || nestedTable?.unpaidItemsTop === null ? null : undefined,
+    ),
   };
 }
 
-function normalizeList(raw: unknown): OpsTableDto[] {
-  if (Array.isArray(raw)) return raw.map(normalizeOne).filter((x): x is OpsTableDto => x != null);
-  if (raw && typeof raw === "object") {
-    const o = raw as Record<string, unknown>;
-    const items = (Array.isArray(o.items) && o.items) || (Array.isArray(o.data) && o.data) || null;
-    if (items) return items.map(normalizeOne).filter((x): x is OpsTableDto => x != null);
-  }
+function toOpsTableDto(row: OpsTableRow): OpsTableDto {
+  return {
+    id: row.tableId,
+    branchId: row.branchId,
+    code: row.code,
+    status: row.tableStatus,
+    seats: row.seats,
+    area: row.areaName ?? null,
+    directionId: row.directionId ?? null,
+    sessionKey: row.sessionKey ?? null,
+    cartKey: row.cartKey ?? null,
+    activeOrdersCount: row.activeOrdersCount ?? 0,
+    activeOrderCode: row.activeOrderCode ?? null,
+    activeOrderStatus: row.activeOrderStatus ?? null,
+    activeOrderUpdatedAt: row.activeOrderUpdatedAt ?? null,
+    activeItemsCount: row.activeItemsCount ?? null,
+    activeItemsPreview: row.activeItemsPreview ?? null,
+    activeItemsTop: row.activeItemsTop ?? null,
+    unpaidOrdersCount: row.unpaidOrdersCount ?? 0,
+    unpaidOrderCode: row.unpaidOrderCode ?? null,
+    unpaidOrderStatus: row.unpaidOrderStatus ?? null,
+    unpaidOrderUpdatedAt: row.unpaidOrderUpdatedAt ?? null,
+    unpaidItemsCount: row.unpaidItemsCount ?? null,
+    unpaidItemsPreview: row.unpaidItemsPreview ?? null,
+    unpaidItemsTop: row.unpaidItemsTop ?? null,
+  };
+}
+
+function extractListItems(raw: unknown): unknown[] {
+  if (Array.isArray(raw)) return raw;
+  const record = asRecord(raw);
+  if (!record) return [];
+  if (Array.isArray(record.items)) return record.items;
+  if (Array.isArray(record.data)) return record.data;
   return [];
+}
+
+function normalizeOpsTablesResponse(raw: unknown): OpsTableDto[] {
+  const direct = Schemas.zOpsTableListResponse.safeParse(raw);
+  if (direct.success) {
+    return direct.data.items.map(toOpsTableDto);
+  }
+
+  return extractListItems(raw)
+    .map((entry) => Schemas.zOpsTableRow.safeParse(toContractRowCandidate(entry)))
+    .filter((entry): entry is { success: true; data: OpsTableRow } => entry.success)
+    .map((entry) => toOpsTableDto(entry.data));
 }
 
 export async function fetchOpsTables(params: FetchOpsTablesParams = {}): Promise<OpsTableDto[]> {
@@ -233,5 +268,5 @@ export async function fetchOpsTables(params: FetchOpsTablesParams = {}): Promise
   const qs = search.toString();
   const path = `/admin/ops/tables${qs ? `?${qs}` : ""}`;
   const res = await apiFetchAuthed<unknown>(path);
-  return normalizeList(res);
+  return normalizeOpsTablesResponse(res);
 }

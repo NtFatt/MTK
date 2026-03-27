@@ -19,6 +19,7 @@ import { createAdminRealtimeRouter } from "./admin-realtime.route.js";
 import { createAdminObservabilityRouter } from "./admin-observability.route.js";
 import { createAdminStaffRouter } from "./admin-staff.route.js";
 import { createAdminInventoryRouter } from "./admin-inventory.route.js";
+import { buildAdminTableRouter } from "./admin-table.route.js";
 import { createAdminOpsRouter } from "./admin-ops.route.js";
 import { createAdminKitchenRouter } from "./admin-kitchen.route.js";
 import { createAdminCashierRouter } from "./admin-cashier.route.js";
@@ -55,6 +56,7 @@ export function registerRoutes(
     adminAuthController,
     adminStaffController,
     adminInventoryController,
+    adminTableController,
     adminOpsController,
     adminKitchenController,
     adminCashierController,
@@ -102,6 +104,7 @@ export function registerRoutes(
   app.use(`${v1}/admin`, createAdminVoucherRouter(adminVoucherController));
   app.use(`${v1}/admin`, createAdminStaffRouter(adminStaffController));
   app.use(`${v1}/admin`, createAdminInventoryRouter(adminInventoryController));
+  app.use(`${v1}/admin/tables`, buildAdminTableRouter({ adminTableController }));
   app.use(`${v1}/admin`, createAdminOpsRouter(adminOpsController, routerDeps));
   app.use(`${v1}/admin`, createAdminKitchenRouter(adminKitchenController));
   app.use(`${v1}/admin`, createAdminCashierRouter(adminCashierController, routerDeps));
@@ -143,6 +146,7 @@ export function registerRoutes(
     app.use("/api/admin", legacyDeprecated, createAdminVoucherRouter(adminVoucherController));
     app.use("/api/admin", legacyDeprecated, createAdminStaffRouter(adminStaffController));
     app.use("/api/admin", legacyDeprecated, createAdminInventoryRouter(adminInventoryController));
+    app.use("/api/admin/tables", legacyDeprecated, buildAdminTableRouter({ adminTableController }));
     app.use("/api/admin", legacyDeprecated, createAdminOpsRouter(adminOpsController, routerDeps));
     app.use("/api/admin", legacyDeprecated, createAdminKitchenRouter(adminKitchenController));
     app.use("/api/admin", legacyDeprecated, createAdminCashierRouter(adminCashierController, routerDeps));

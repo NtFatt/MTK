@@ -3,13 +3,12 @@
  * Kept separate so guards.tsx can satisfy react-refresh/only-export-components.
  */
 import { authStore } from "./authStore";
+import { hasAnyPermission, hasPermission } from "./permissions";
 
 export function can(permission: string): boolean {
-  const permissions = authStore.getState().session?.permissions ?? [];
-  return permissions.includes(permission);
+  return hasPermission(authStore.getState().session, permission);
 }
 
 export function hasAny(permissions: string[]): boolean {
-  const userPerms = authStore.getState().session?.permissions ?? [];
-  return permissions.some((p) => userPerms.includes(p));
+  return hasAnyPermission(authStore.getState().session, permissions);
 }

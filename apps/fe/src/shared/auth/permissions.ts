@@ -1,61 +1,5 @@
-import type { AuthSession, Role } from "./types";
-
-const ROLE_PERMISSION_FALLBACKS: Partial<Record<Role, readonly string[]>> = {
-  STAFF: [
-    "orders.read",
-    "ops.tables.read",
-    "ops.sessions.open",
-    "ops.sessions.close",
-    "ops.carts.get",
-    "ops.carts.items.upsert",
-    "ops.orders.create",
-    "reservations.confirm",
-    "reservations.checkin",
-  ],
-  KITCHEN: [
-    "kitchen.queue.read",
-    "orders.status.change",
-    "shifts.read",
-    "shifts.open",
-    "shifts.close",
-  ],
-  CASHIER: [
-    "cashier.unpaid.read",
-    "cashier.settle_cash",
-    "shifts.read",
-    "shifts.open",
-    "shifts.close",
-  ],
-  BRANCH_MANAGER: [
-    "orders.read",
-    "orders.status.change",
-    "attendance.read",
-    "attendance.manage",
-    "payroll.read",
-    "payroll.bonus.manage",
-    "shifts.read",
-    "shifts.open",
-    "shifts.close",
-    "reservations.confirm",
-    "reservations.checkin",
-    "ops.tables.read",
-    "ops.sessions.open",
-    "ops.sessions.close",
-    "ops.carts.get",
-    "ops.carts.items.upsert",
-    "ops.orders.create",
-    "kitchen.queue.read",
-    "cashier.unpaid.read",
-    "cashier.settle_cash",
-    "inventory.holds.read",
-    "observability.metrics.read",
-    "staff.read",
-    "inventory.read",
-    "inventory.adjust",
-    "menu.manage",
-    "promotions.manage",
-  ],
-};
+import { hasInternalPermission, isInternalRole } from "@hadilao/contracts";
+import type { AuthSession } from "./types";
 
 export function isAdminSession(session: AuthSession | null | undefined) {
   return session?.role === "ADMIN";
@@ -66,9 +10,8 @@ export function hasPermission(
   permission: string,
 ) {
   if (!session) return false;
-  if (isAdminSession(session)) return true;
   if (session.permissions.includes(permission)) return true;
-  return ROLE_PERMISSION_FALLBACKS[session.role]?.includes(permission) ?? false;
+  return isInternalRole(session.role) ? hasInternalPermission(session.role, permission) : false;
 }
 
 export function hasAnyPermission(

@@ -13,6 +13,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@hadilao/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@opentelemetry/api':
         specifier: ^1.9.0
         version: 1.9.0

@@ -1,5 +1,5 @@
 // Backward-compatible shim.
-// New SSOT is at src/domain/rbac/permissions.ts
+// Runtime source of truth for the API lives at src/domain/rbac/permissions.ts.
 
 export {
   type Permission as InternalPermission,

@@ -457,7 +457,8 @@ function roomsForEvent(evt: DomainEvent): string[] {
       eventType.startsWith("table.session.") ||
       eventType.startsWith("reservation.") ||
       eventType.startsWith("order.") ||
-      eventType.startsWith("payment.")
+      eventType.startsWith("payment.") ||
+      eventType.startsWith("attendance.")
     ) {
       out.push(`ops:${branchId}`);
     }

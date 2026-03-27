@@ -7,6 +7,7 @@
  * - Internal login:POST /api/v1/admin/login
  */
 import { apiFetch } from "../../lib/apiFetch";
+import { getInternalRolePermissions, isInternalRole } from "@hadilao/contracts";
 import { authStore } from "./authStore";
 import type { AuthSession, Role } from "./types";
 
@@ -39,108 +40,7 @@ function roleFromString(s: unknown): Role {
   return roles.includes(r as Role) ? (r as Role) : "PUBLIC";
 }
 function defaultPermissionsForRole(role: Role): string[] {
-  switch (role) {
-    case "ADMIN":
-      return [
-        "orders.read",
-        "attendance.read",
-        "attendance.manage",
-        "payroll.read",
-        "payroll.manage",
-        "payroll.bonus.manage",
-        "shifts.read",
-        "shifts.open",
-        "shifts.close",
-        "ops.tables.read",
-        "ops.sessions.open",
-        "ops.sessions.close",
-        "ops.carts.get",
-        "ops.carts.items.upsert",
-        "ops.orders.create",
-        "kitchen.queue.read",
-        "cashier.unpaid.read",
-        "cashier.settle_cash",
-        "orders.status.change",
-        "reservations.confirm",
-        "reservations.checkin",
-        "staff.read",
-        "staff.manage",
-
-
-
-        "inventory.read",
-        "inventory.adjust",
-        "inventory.holds.read",
-        "menu.manage",
-        "promotions.manage",
-        "payments.mock_success",
-        "maintenance.run",
-        "observability.metrics.read",
-        "observability.admin.read",
-        "realtime.admin",
-      ];
-
-    case "BRANCH_MANAGER":
-      return [
-        "orders.read",
-        "attendance.read",
-        "attendance.manage",
-        "payroll.read",
-        "payroll.bonus.manage",
-        "shifts.read",
-        "shifts.open",
-        "shifts.close",
-        "ops.tables.read",
-        "ops.sessions.open",
-        "ops.sessions.close",
-        "ops.carts.get",
-        "ops.carts.items.upsert",
-        "ops.orders.create",
-        "kitchen.queue.read",
-        "cashier.unpaid.read",
-        "cashier.settle_cash",
-        "orders.status.change",
-        "reservations.confirm",
-        "reservations.checkin",
-        "staff.read",
-        "inventory.read",
-        "inventory.adjust",
-        "inventory.holds.read",
-        "menu.manage",
-        "promotions.manage",
-        "observability.metrics.read",
-      ];
-    case "STAFF":
-      return [
-        "orders.read",
-        "ops.tables.read",
-        "ops.sessions.open",
-        "ops.sessions.close",
-        "ops.carts.get",
-        "ops.carts.items.upsert",
-        "ops.orders.create",
-        "reservations.confirm",
-        "reservations.checkin",
-      ];
-    case "KITCHEN":
-      return [
-        "kitchen.queue.read",
-        "orders.status.change",
-        "shifts.read",
-        "shifts.open",
-        "shifts.close",
-      ];
-    case "CASHIER":
-      return [
-        "cashier.unpaid.read",
-        "cashier.settle_cash",
-        "shifts.read",
-        "shifts.open",
-        "shifts.close",
-      ];
-    default:
-      return [];
-  }
+  return isInternalRole(role) ? [...getInternalRolePermissions(role)] : [];
 }
 function normalizeBranchId(b: unknown): string | undefined {
   if (b == null) return undefined;

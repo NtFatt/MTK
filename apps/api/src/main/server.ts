@@ -48,6 +48,15 @@ function padLine(s: string, width = 61) {
   return s.length >= width ? s.slice(0, width) : s.padEnd(width, " ");
 }
 
+async function safeDisconnect(client: RedisClient | null) {
+  if (!client) return;
+  try {
+    await disconnectRedis(client);
+  } catch {
+    // ignore disconnect errors during startup failure/shutdown
+  }
+}
+
 function printStartupBanner(opts: {
   httpUrl: string;
   redisUrl?: string;
@@ -153,6 +162,38 @@ async function main() {
   // ===== Express app =====
   const app = createApp(redisPub ? { eventBus, redis: redisPub } : { eventBus });
   const server = http.createServer(app);
+
+  const handleStartupFailure = async (error: NodeJS.ErrnoException) => {
+    if (error.code === "EADDRINUSE") {
+      log.error("server_port_in_use", {
+        port: env.PORT,
+        message: `Port ${env.PORT} is already in use. Stop the existing process or start the API with PORT=<new-port>.`,
+      });
+    } else if (error.code === "EACCES") {
+      log.error("server_port_access_denied", {
+        port: env.PORT,
+        message: `Port ${env.PORT} requires elevated permissions or is blocked by the OS.`,
+      });
+    } else {
+      log.error("server_start_failed", {
+        port: env.PORT,
+        err: toErr(error),
+      });
+    }
+
+    await Promise.allSettled([
+      safeDisconnect(redisIoSub),
+      safeDisconnect(redisIoPub),
+      safeDisconnect(redisSub),
+      safeDisconnect(redisPub),
+    ]);
+
+    process.exit(1);
+  };
+
+  server.once("error", (error) => {
+    void handleStartupFailure(error as NodeJS.ErrnoException);
+  });
 
   // ===== Socket.IO =====
   let io: SocketIOServer | null = null;

@@ -30,6 +30,7 @@ import {
   normalizeOpsCartItems,
   extractCartCreatedAt,
 } from "../services/opsCartsApi";
+import type { OpsTableDto } from "../services/opsTablesApi";
 
 function formatElapsed(iso?: string) {
   if (!iso) return null;
@@ -67,13 +68,11 @@ function getOpsActionError(error: unknown): { message: string; correlationId?: s
   };
 }
 
-function resolveTableSignals(table: any, liveInfo: LiveInfo | undefined) {
+function resolveTableSignals(table: OpsTableDto, liveInfo: LiveInfo | undefined) {
   const status = String(table?.status ?? "").trim().toUpperCase();
   const hasSession = Boolean(
     liveInfo?.sessionKey ??
-      table?.sessionKey ??
-      table?.activeSessionKey ??
-      table?.currentSessionKey,
+      table?.sessionKey,
   );
   const activeOrdersCount = Number(table?.activeOrdersCount ?? 0);
   const unpaidOrdersCount = Number(table?.unpaidOrdersCount ?? 0);
@@ -263,27 +262,33 @@ export function InternalTablesPage() {
         cartKey = extractCartKey(c);
       }
 
-      if (!cartKey) {
-        return { tableId: String(t.tableId), sessionKey, cartKey: "", startedAt: undefined, items: [] as any[] };
-      }
+        if (!cartKey) {
+          return { tableId: String(t.tableId), sessionKey, cartKey: "", startedAt: undefined, items: [] };
+        }
 
       const cartDetail = await getOpsCart(cartKey);
       const items = normalizeOpsCartItems(cartDetail);
       const startedAt = extractCartCreatedAt(cartDetail);
 
-     const menuRes = await apiFetch<any>(
-  `/menu/items?branchId=${encodeURIComponent(String(effectiveBranchId))}&limit=500`
-);
+      const menuRes = await apiFetch<unknown>(
+        `/menu/items?branchId=${encodeURIComponent(String(effectiveBranchId))}&limit=500`,
+      );
 
-      const menuItems: any[] = Array.isArray(menuRes?.items)
-        ? menuRes.items
+      const menuItems = Array.isArray((menuRes as { items?: unknown[] } | null)?.items)
+        ? ((menuRes as { items: unknown[] }).items ?? [])
         : Array.isArray(menuRes)
           ? menuRes
           : [];
 
       const nameById = new Map(
         menuItems
-          .map((x) => [String(x?.id ?? x?.itemId ?? "").trim(), String(x?.name ?? "").trim()] as const)
+          .map((x) => {
+            const record = x && typeof x === "object" ? (x as Record<string, unknown>) : null;
+            return [
+              String(record?.id ?? record?.itemId ?? "").trim(),
+              String(record?.name ?? "").trim(),
+            ] as const;
+          })
           .filter(([id, name]) => id && name)
       );
 
@@ -329,7 +334,7 @@ export function InternalTablesPage() {
     },
   });
 
-  async function selectTableAndGoMenu(t: any, directionId?: string) {
+  async function selectTableAndGoMenu(t: OpsTableDto, directionId?: string) {
     if (!t?.id) return;
     setActionError(null);
     try {
@@ -576,15 +581,14 @@ export function InternalTablesPage() {
 
               const tableIdStr = String(t.id ?? "");
               const liveInfo = tableIdStr && live[tableIdStr] ? live[tableIdStr] : {};
-              const directionId = (t as any).directionId as string | undefined;
+              const directionId = t.directionId ?? undefined;
               const signals = resolveTableSignals(t, liveInfo);
 
-              const sessionKeyFromRow =
-                (t as any).sessionKey ?? (t as any).activeSessionKey ?? (t as any).currentSessionKey ?? null;
+              const sessionKeyFromRow = t.sessionKey ?? null;
 
-              const cartKeyFromRow = (t as any).cartKey ?? (t as any).activeCartKey ?? null;
+              const cartKeyFromRow = t.cartKey ?? null;
               const isBlockedByUnpaid = signals.hasBlockingUnpaid && !signals.hasSession;
-              const unpaidSummary = (t as any).unpaidItemsPreview ?? (t as any).activeItemsPreview ?? null;
+              const unpaidSummary = t.unpaidItemsPreview ?? t.activeItemsPreview ?? null;
               const statusLabel = signals.hasBlockingUnpaid ? "CHỜ THANH TOÁN" : status;
               const statusVariant = signals.hasBlockingUnpaid ? "destructive" : status === "AVAILABLE" ? "secondary" : "default";
 
@@ -596,11 +600,11 @@ export function InternalTablesPage() {
                       {signals.hasBlockingUnpaid ? (
                         <div className="flex flex-wrap gap-2">
                           <Badge variant="destructive">Chưa thanh toán</Badge>
-                          {(t as any).unpaidOrderCode ? (
-                            <Badge variant="outline">{String((t as any).unpaidOrderCode)}</Badge>
+                          {t.unpaidOrderCode ? (
+                            <Badge variant="outline">{String(t.unpaidOrderCode)}</Badge>
                           ) : null}
-                          {(t as any).unpaidOrderStatus ? (
-                            <Badge variant="outline">{String((t as any).unpaidOrderStatus)}</Badge>
+                          {t.unpaidOrderStatus ? (
+                            <Badge variant="outline">{String(t.unpaidOrderStatus)}</Badge>
                           ) : null}
                         </div>
                       ) : null}
@@ -640,7 +644,7 @@ export function InternalTablesPage() {
                     {signals.hasBlockingUnpaid ? (
                       <div className="mt-3 rounded-lg border border-amber-300/70 bg-amber-50 px-3 py-2 text-xs text-amber-900">
                         Bàn đang bị khóa cho tới khi thanh toán xong.
-                        {(t as any).unpaidOrderCode ? ` Đơn gần nhất: ${String((t as any).unpaidOrderCode)}.` : ""}
+                        {t.unpaidOrderCode ? ` Đơn gần nhất: ${String(t.unpaidOrderCode)}.` : ""}
                       </div>
                     ) : null}
 
@@ -661,8 +665,8 @@ export function InternalTablesPage() {
                       ) : signals.hasBlockingUnpaid && unpaidSummary ? (
                         <div className="mt-1 text-xs opacity-80">
                           {String(unpaidSummary)}
-                          {(t as any).unpaidOrderStatus ? (
-                            <span className="ml-2 opacity-70">({String((t as any).unpaidOrderStatus)})</span>
+                          {t.unpaidOrderStatus ? (
+                            <span className="ml-2 opacity-70">({String(t.unpaidOrderStatus)})</span>
                           ) : null}
                         </div>
                       ) : signals.hasBlockingUnpaid ? (

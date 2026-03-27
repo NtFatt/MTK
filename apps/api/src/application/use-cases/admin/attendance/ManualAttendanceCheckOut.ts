@@ -1,4 +1,5 @@
 import type { IAttendanceRepository } from "../../../ports/repositories/IAttendanceRepository.js";
+import type { IEventBus } from "../../../ports/events/IEventBus.js";
 
 type InternalActor = {
   actorType: "ADMIN" | "STAFF";
@@ -9,7 +10,10 @@ type InternalActor = {
 };
 
 export class ManualAttendanceCheckOut {
-  constructor(private readonly attendanceRepo: IAttendanceRepository) {}
+  constructor(
+    private readonly attendanceRepo: IAttendanceRepository,
+    private readonly eventBus: IEventBus,
+  ) {}
 
   async execute(input: {
     actor: InternalActor;
@@ -24,7 +28,7 @@ export class ManualAttendanceCheckOut {
       actorRole === "BRANCH_MANAGER" ? String(input.actor.branchId ?? "") : String(input.branchId);
     if (!scopedBranchId) throw new Error("FORBIDDEN");
 
-    return this.attendanceRepo.manualCheckOut({
+    const record = await this.attendanceRepo.manualCheckOut({
       branchId: scopedBranchId,
       attendanceId: input.attendanceId,
       performedAt: input.performedAt,
@@ -36,5 +40,23 @@ export class ManualAttendanceCheckOut {
         actorName: input.actor.username,
       },
     });
+
+    await this.eventBus.publish({
+      type: "attendance.changed",
+      at: input.performedAt,
+      scope: {
+        branchId: record.branchId,
+      },
+      payload: {
+        attendanceId: record.attendanceId,
+        staffId: record.staffId,
+        businessDate: record.businessDate,
+        shiftCode: record.shiftCode,
+        status: record.status,
+      },
+    });
+
+    return record;
   }
 }
+

@@ -79,6 +79,21 @@ export const routeManifest = {
     path: "/api/v1/admin/ops/tables",
   },
 
+  adminTableCreate: {
+    method: "POST",
+    path: "/api/v1/admin/tables",
+  },
+
+  adminTableUpdate: {
+    method: "PUT",
+    path: "/api/v1/admin/tables/:tableId",
+  },
+
+  adminTableDelete: {
+    method: "DELETE",
+    path: "/api/v1/admin/tables/:tableId",
+  },
+
   adminDashboardOverview: {
     method: "GET",
     path: "/api/v1/admin/dashboard/overview",

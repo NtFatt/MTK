@@ -1,5 +1,6 @@
 import type { IAttendanceRepository } from "../../../ports/repositories/IAttendanceRepository.js";
 import type { IStaffUserRepository } from "../../../ports/repositories/IStaffUserRepository.js";
+import type { IEventBus } from "../../../ports/events/IEventBus.js";
 import type { ShiftCode } from "../../../../domain/shifts/templates.js";
 
 type InternalActor = {
@@ -14,6 +15,7 @@ export class ManualAttendanceCheckIn {
   constructor(
     private readonly attendanceRepo: IAttendanceRepository,
     private readonly staffRepo: IStaffUserRepository,
+    private readonly eventBus: IEventBus,
   ) {}
 
   async execute(input: {
@@ -35,7 +37,7 @@ export class ManualAttendanceCheckIn {
     if (String(staff.branchId ?? "") !== scopedBranchId) throw new Error("FORBIDDEN");
     if (staff.status !== "ACTIVE") throw new Error("STAFF_NOT_ACTIVE");
 
-    return this.attendanceRepo.manualCheckIn({
+    const record = await this.attendanceRepo.manualCheckIn({
       branchId: scopedBranchId,
       staffId: input.staffId,
       businessDate: input.businessDate,
@@ -48,5 +50,23 @@ export class ManualAttendanceCheckIn {
         actorName: input.actor.username,
       },
     });
+
+    await this.eventBus.publish({
+      type: "attendance.changed",
+      at: input.performedAt,
+      scope: {
+        branchId: record.branchId,
+      },
+      payload: {
+        attendanceId: record.attendanceId,
+        staffId: record.staffId,
+        businessDate: record.businessDate,
+        shiftCode: record.shiftCode,
+        status: record.status,
+      },
+    });
+
+    return record;
   }
 }
+

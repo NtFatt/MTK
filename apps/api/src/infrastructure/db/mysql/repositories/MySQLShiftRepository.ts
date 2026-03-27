@@ -20,7 +20,11 @@ function toDateOnly(value: unknown): string {
   if (value == null) return "";
   if (typeof value === "string") return value.slice(0, 10);
   const date = new Date(value as any);
-  return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
+  if (Number.isNaN(date.getTime())) return "";
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 function toMoney(value: unknown): number {
@@ -264,7 +268,7 @@ export class MySQLShiftRepository implements IShiftRepository {
       }
 
       const [existingRows]: any = await conn.query(
-        `SELECT shift_run_id
+        `SELECT shift_run_id, status
          FROM shift_runs
          WHERE branch_id = ?
            AND business_date = ?
@@ -273,7 +277,17 @@ export class MySQLShiftRepository implements IShiftRepository {
          FOR UPDATE`,
         [input.branchId, input.businessDate, input.shiftCode],
       );
-      if (existingRows?.length) throw new Error("SHIFT_ALREADY_EXISTS");
+      if (existingRows?.length) {
+        const existingStatus = String(existingRows[0].status ?? "").toUpperCase();
+        const terminalStatuses = new Set(["CLOSED", "FORCE_CLOSED", "CANCELLED"]);
+        if (!terminalStatuses.has(existingStatus)) {
+          throw new Error("SHIFT_ALREADY_EXISTS");
+        }
+        // Previous shift is in a terminal state → remove it to allow re-opening
+        const oldId = existingRows[0].shift_run_id;
+        await conn.query(`DELETE FROM shift_cash_breakdowns WHERE shift_run_id = ?`, [oldId]);
+        await conn.query(`DELETE FROM shift_runs WHERE shift_run_id = ?`, [oldId]);
+      }
 
       const [result]: any = await conn.query(
         `INSERT INTO shift_runs (

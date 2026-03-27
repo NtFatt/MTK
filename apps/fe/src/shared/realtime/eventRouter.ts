@@ -233,6 +233,10 @@ const SHIFT_EVENTS = new Set([
   "shift.updated",
 ]);
 
+const ATTENDANCE_EVENTS = new Set([
+  "attendance.changed",
+]);
+
 export function routeRealtimeEvent(env: EventEnvelope) {
   if (!queryClient || !debouncer) return;
 
@@ -346,6 +350,17 @@ export function routeRealtimeEvent(env: EventEnvelope) {
       enqueueDashboardRefresh(branchId);
     } else {
       enqueueShiftRefresh(null);
+    }
+    return;
+  }
+
+  // 3c) Attendance
+  if (ATTENDANCE_EVENTS.has(type)) {
+    if (branchId != null) {
+      const b = String(branchId);
+      enqueueInvalidate(["attendance", "board", { branchId: b }], false);
+      enqueueInvalidate(["attendance", "staffHistory", { branchId: b }], false);
+      enqueueDashboardRefresh(branchId);
     }
     return;
   }

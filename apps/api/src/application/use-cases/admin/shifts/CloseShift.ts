@@ -58,6 +58,11 @@ export class CloseShift {
         shiftCode: closed.shiftCode,
         businessDate: closed.businessDate,
         variance: closed.variance,
+        closedBy: {
+          userId: input.actor.userId,
+          username: input.actor.username,
+          actorType: input.actor.actorType,
+        },
       },
     });
 

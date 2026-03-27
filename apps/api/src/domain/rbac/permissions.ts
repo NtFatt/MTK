@@ -1,15 +1,15 @@
 /**
- * RBAC Single Source of Truth (M1)
+ * Runtime-safe RBAC mirror for the API.
  *
- * Rules:
- * - Permission names: domain.resource.action (no admin.* prefix)
- * - Route-level guard via requirePermission(permission)
- * - Use-case-level checks are defense-in-depth only
+ * Note:
+ * - FE/contracts use packages/contracts/src/rbac.ts
+ * - API keeps a local mirror because tsx dev runtime currently does not
+ *   reliably resolve the contracts subpath exports in watch mode.
+ * - Keep this file aligned with packages/contracts/src/rbac.ts.
  */
 
 export type InternalRole = "ADMIN" | "BRANCH_MANAGER" | "STAFF" | "KITCHEN" | "CASHIER";
 
-// Core permissions (Spec v6.2 - Demo 10/10 - table 3)
 export type Permission =
   | "orders.read"
   | "orders.status.change"
@@ -24,6 +24,7 @@ export type Permission =
   | "reservations.confirm"
   | "reservations.checkin"
   | "ops.tables.read"
+  | "ops.tables.manage"
   | "ops.sessions.open"
   | "ops.sessions.close"
   | "ops.carts.get"
@@ -36,7 +37,6 @@ export type Permission =
   | "inventory.holds.read"
   | "maintenance.run"
   | "observability.metrics.read"
-  // Extended (non-core but present in current codebase)
   | "staff.read"
   | "staff.manage"
   | "inventory.read"
@@ -46,9 +46,8 @@ export type Permission =
   | "realtime.admin"
   | "observability.admin.read";
 
-export const ROLE_PERMISSIONS: Record<InternalRole, ReadonlySet<Permission>> = {
-  // ADMIN = full access (core + extensions)
-  ADMIN: new Set([
+export const ROLE_PERMISSIONS: Record<InternalRole, readonly Permission[]> = {
+  ADMIN: [
     "orders.read",
     "orders.status.change",
     "attendance.read",
@@ -62,6 +61,7 @@ export const ROLE_PERMISSIONS: Record<InternalRole, ReadonlySet<Permission>> = {
     "reservations.confirm",
     "reservations.checkin",
     "ops.tables.read",
+    "ops.tables.manage",
     "ops.sessions.open",
     "ops.sessions.close",
     "ops.carts.get",
@@ -74,8 +74,6 @@ export const ROLE_PERMISSIONS: Record<InternalRole, ReadonlySet<Permission>> = {
     "inventory.holds.read",
     "maintenance.run",
     "observability.metrics.read",
-
-    // extensions
     "staff.read",
     "staff.manage",
     "inventory.read",
@@ -84,10 +82,8 @@ export const ROLE_PERMISSIONS: Record<InternalRole, ReadonlySet<Permission>> = {
     "promotions.manage",
     "realtime.admin",
     "observability.admin.read",
-  ]),
-
-  // BRANCH_MANAGER = operations + cashier + inventory holds + metrics + reservations
-  BRANCH_MANAGER: new Set([
+  ],
+  BRANCH_MANAGER: [
     "orders.read",
     "orders.status.change",
     "attendance.read",
@@ -100,6 +96,7 @@ export const ROLE_PERMISSIONS: Record<InternalRole, ReadonlySet<Permission>> = {
     "reservations.confirm",
     "reservations.checkin",
     "ops.tables.read",
+    "ops.tables.manage",
     "ops.sessions.open",
     "ops.sessions.close",
     "ops.carts.get",
@@ -110,19 +107,13 @@ export const ROLE_PERMISSIONS: Record<InternalRole, ReadonlySet<Permission>> = {
     "cashier.settle_cash",
     "inventory.holds.read",
     "observability.metrics.read",
-
-    // extensions
     "staff.read",
     "inventory.read",
-    // Demo 10/10: Branch manager can adjust branch stock (branch-scoped in use-case)
     "inventory.adjust",
-    // Demo 10/10: Branch manager can invalidate menu cache version.
     "menu.manage",
     "promotions.manage",
-  ]),
-
-  // STAFF (service) = ops + reservations
-  STAFF: new Set([
+  ],
+  STAFF: [
     "orders.read",
     "reservations.confirm",
     "reservations.checkin",
@@ -132,29 +123,33 @@ export const ROLE_PERMISSIONS: Record<InternalRole, ReadonlySet<Permission>> = {
     "ops.carts.get",
     "ops.carts.items.upsert",
     "ops.orders.create",
-  ]),
-
-  // KITCHEN = kitchen queue + change status + shift visibility for branch coordination
-  KITCHEN: new Set([
+  ],
+  KITCHEN: [
     "orders.status.change",
     "kitchen.queue.read",
     "shifts.read",
     "shifts.open",
     "shifts.close",
-  ]),
-
-  // CASHIER = unpaid + settle
-  CASHIER: new Set([
+  ],
+  CASHIER: [
     "cashier.unpaid.read",
     "cashier.settle_cash",
     "shifts.read",
     "shifts.open",
     "shifts.close",
-  ]),
+  ],
+};
+
+const ROLE_PERMISSION_SETS: Record<InternalRole, ReadonlySet<Permission>> = {
+  ADMIN: new Set(ROLE_PERMISSIONS.ADMIN),
+  BRANCH_MANAGER: new Set(ROLE_PERMISSIONS.BRANCH_MANAGER),
+  STAFF: new Set(ROLE_PERMISSIONS.STAFF),
+  KITCHEN: new Set(ROLE_PERMISSIONS.KITCHEN),
+  CASHIER: new Set(ROLE_PERMISSIONS.CASHIER),
 };
 
 export function hasPermission(role: string, permission: Permission): boolean {
-  const r = String(role ?? "").toUpperCase() as InternalRole;
-  const set = ROLE_PERMISSIONS[r];
-  return Boolean(set && set.has(permission));
+  const normalizedRole = String(role ?? "").trim().toUpperCase() as InternalRole;
+  const permissions = ROLE_PERMISSION_SETS[normalizedRole];
+  return Boolean(permissions?.has(permission));
 }

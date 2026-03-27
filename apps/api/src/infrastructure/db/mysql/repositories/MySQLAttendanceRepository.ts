@@ -17,9 +17,14 @@ function toIso(value: unknown): string | null {
 }
 
 function toDateOnly(value: unknown): string {
+  if (value == null) return "";
   if (typeof value === "string") return value.slice(0, 10);
-  const iso = toIso(value);
-  return iso ? iso.slice(0, 10) : "";
+  const date = new Date(value as any);
+  if (Number.isNaN(date.getTime())) return "";
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 function toInt(value: unknown): number {
@@ -635,5 +640,176 @@ export class MySQLAttendanceRepository implements IAttendanceRepository {
     } finally {
       conn.release();
     }
+  }
+
+  async autoCheckInFromShift(input: {
+    branchId: string;
+    staffId: string;
+    businessDate: string;
+    shiftCode: ShiftCode;
+    performedAt: string;
+    actor: AttendanceActorRef;
+  }): Promise<AttendanceRecordView | null> {
+    const performedAt = parsePerformedAt(input.performedAt);
+    const shift = buildScheduledRange(input.businessDate, input.shiftCode);
+    const lateMinutes = computeLateMinutes(performedAt, shift.scheduledStart);
+    const conn = await pool.getConnection();
+
+    try {
+      await conn.beginTransaction();
+
+      const [sameShiftRows]: any = await conn.query(
+        `SELECT *
+         FROM attendance_records
+         WHERE branch_id = ?
+           AND staff_id = ?
+           AND business_date = ?
+           AND shift_code = ?
+         LIMIT 1
+         FOR UPDATE`,
+        [input.branchId, input.staffId, input.businessDate, input.shiftCode],
+      );
+      const sameShift = sameShiftRows?.[0];
+
+      let attendanceId = "";
+      if (sameShift) {
+        // Already checked-in → skip silently
+        if (sameShift.check_in_at != null) {
+          await conn.commit();
+          return null;
+        }
+
+        const corrected =
+          String(sameShift.status ?? "").toUpperCase() === "ABSENT" || Boolean(sameShift.is_corrected);
+        const status = corrected ? "CORRECTED" : lateMinutes > 0 ? "LATE" : "PRESENT";
+
+        await conn.query(
+          `UPDATE attendance_records
+           SET shift_name = ?,
+               scheduled_start_at = ?,
+               scheduled_end_at = ?,
+               check_in_at = ?,
+               check_out_at = NULL,
+               status = ?,
+               source = 'AUTO_FROM_SHIFT',
+               note = ?,
+               late_minutes = ?,
+               early_leave_minutes = 0,
+               worked_minutes = NULL,
+               is_corrected = ?,
+               last_corrected_at = ?,
+               last_corrected_by_type = ?,
+               last_corrected_by_id = ?,
+               version = version + 1
+           WHERE attendance_id = ?`,
+          [
+            shift.shiftName,
+            shift.scheduledStart,
+            shift.scheduledEnd,
+            performedAt,
+            status,
+            sameShift.note != null
+              ? `${String(sameShift.note).trim()}\nAUTO CHECK-IN: Tự động từ mở ca`.trim()
+              : "AUTO CHECK-IN: Tự động từ mở ca",
+            lateMinutes,
+            corrected ? 1 : 0,
+            corrected ? new Date() : null,
+            corrected ? input.actor.actorType : null,
+            corrected ? input.actor.actorId : null,
+            sameShift.attendance_id,
+          ],
+        );
+        attendanceId = String(sameShift.attendance_id);
+      } else {
+        const [result]: any = await conn.query(
+          `INSERT INTO attendance_records (
+             branch_id,
+             staff_id,
+             business_date,
+             shift_code,
+             shift_name,
+             scheduled_start_at,
+             scheduled_end_at,
+             check_in_at,
+             status,
+             source,
+             note,
+             late_minutes,
+             early_leave_minutes,
+             worked_minutes,
+             is_corrected
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AUTO_FROM_SHIFT', ?, ?, 0, NULL, 0)`,
+          [
+            input.branchId,
+            input.staffId,
+            input.businessDate,
+            input.shiftCode,
+            shift.shiftName,
+            shift.scheduledStart,
+            shift.scheduledEnd,
+            performedAt,
+            lateMinutes > 0 ? "LATE" : "PRESENT",
+            "AUTO CHECK-IN: Tự động từ mở ca",
+            lateMinutes,
+          ],
+        );
+        attendanceId = String(result?.insertId ?? "");
+      }
+
+      await conn.commit();
+      const fresh = await this.getById({ branchId: input.branchId, attendanceId });
+      if (!fresh) throw new Error("ATTENDANCE_NOT_FOUND");
+      return fresh;
+    } catch (error: any) {
+      await conn.rollback();
+      // Duplicate entry = already exists, skip silently
+      if (error?.code === "ER_DUP_ENTRY") return null;
+      throw error;
+    } finally {
+      conn.release();
+    }
+  }
+
+  async autoCheckOutOpenRecords(input: {
+    branchId: string;
+    businessDate: string;
+    shiftCode: ShiftCode;
+    performedAt: string;
+    actor: AttendanceActorRef;
+  }): Promise<number> {
+    const performedAt = parsePerformedAt(input.performedAt);
+    const shift = buildScheduledRange(input.businessDate, input.shiftCode);
+    const earlyLeaveMinutes = computeEarlyLeaveMinutes(performedAt, shift.scheduledEnd);
+
+    const [result]: any = await pool.query(
+      `UPDATE attendance_records
+       SET check_out_at = ?,
+           status = CASE
+             WHEN status = 'CORRECTED' OR is_corrected = 1 THEN 'CORRECTED'
+             WHEN ? > 0 THEN 'EARLY_LEAVE'
+             WHEN late_minutes > 0 THEN 'LATE'
+             ELSE 'PRESENT'
+           END,
+           early_leave_minutes = ?,
+           worked_minutes = GREATEST(0, TIMESTAMPDIFF(MINUTE, check_in_at, ?)),
+           note = CONCAT(COALESCE(CONCAT(note, '\n'), ''), 'AUTO CHECK-OUT: Tự động từ đóng ca'),
+           version = version + 1
+       WHERE branch_id = ?
+         AND business_date = ?
+         AND shift_code = ?
+         AND check_in_at IS NOT NULL
+         AND check_out_at IS NULL`,
+      [
+        performedAt,
+        earlyLeaveMinutes,
+        earlyLeaveMinutes,
+        performedAt,
+        input.branchId,
+        input.businessDate,
+        input.shiftCode,
+      ],
+    );
+
+    return result?.affectedRows ?? 0;
   }
 }

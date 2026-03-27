@@ -116,4 +116,21 @@ export interface IAttendanceRepository {
     note: string;
     actor: AttendanceActorRef;
   }): Promise<AttendanceRecordView>;
+
+  autoCheckInFromShift(input: {
+    branchId: string;
+    staffId: string;
+    businessDate: string;
+    shiftCode: ShiftCode;
+    performedAt: string;
+    actor: AttendanceActorRef;
+  }): Promise<AttendanceRecordView | null>;
+
+  autoCheckOutOpenRecords(input: {
+    branchId: string;
+    businessDate: string;
+    shiftCode: ShiftCode;
+    performedAt: string;
+    actor: AttendanceActorRef;
+  }): Promise<number>;
 }

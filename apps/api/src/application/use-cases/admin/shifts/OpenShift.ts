@@ -60,6 +60,11 @@ export class OpenShift {
         branchId,
         shiftCode: created.shiftCode,
         businessDate: created.businessDate,
+        openedBy: {
+          userId: input.actor.userId,
+          username: input.actor.username,
+          actorType: input.actor.actorType,
+        },
       },
     });
 

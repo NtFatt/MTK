@@ -1,3 +1,5 @@
+import type { InternalPermission } from "./rbac";
+
 export const routePermissions = {
   "/api/v1/admin/menu/categories": ["menu.manage"],
 
@@ -59,6 +61,10 @@ export const routePermissions = {
 
   "/api/v1/admin/payments/mock-success/:orderCode": ["payments.mock_success"],
 
+  "/api/v1/admin/tables": ["ops.tables.manage"],
+
+  "/api/v1/admin/tables/:tableId": ["ops.tables.manage"],
+
   "/api/v1/admin/inventory/stock": ["inventory.read"],
 
   "/api/v1/admin/inventory/stock/adjust": ["inventory.adjust"],
@@ -70,4 +76,4 @@ export const routePermissions = {
   "/api/v1/admin/observability/slow-queries": ["observability.admin.read"],
 
   "/api/v1/admin/realtime/audit": ["realtime.admin"],
-} as const;
+} as const satisfies Record<string, readonly InternalPermission[]>;

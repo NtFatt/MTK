@@ -13,6 +13,7 @@ import { cn } from "../../../../shared/utils/cn";
 import { useAttendanceBoardQuery } from "../hooks/useAttendanceBoardQuery";
 import { useAttendanceMutations } from "../hooks/useAttendanceMutations";
 import { useStaffAttendanceHistoryQuery } from "../hooks/useStaffAttendanceHistoryQuery";
+import { useRealtimeRoom } from "../../../../shared/realtime/useRealtimeRoom";
 import type {
   AttendanceBoardRow,
   AttendanceRole,
@@ -261,6 +262,8 @@ export function InternalAttendancePage() {
     q: search,
     enabled: canRead,
   });
+
+  useRealtimeRoom(`ops:${resolvedBranchId}`, canRead && Boolean(resolvedBranchId));
 
   const items = useMemo(() => boardQuery.data?.items ?? [], [boardQuery.data?.items]);
 

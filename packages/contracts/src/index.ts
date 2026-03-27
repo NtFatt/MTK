@@ -12,8 +12,10 @@ export * from "./queryKeys";
 export * from "./errors/errorCodes";
 export * from "./errors/apiError";
 
+export * from "./schemas";
 export * as Schemas from "./schemas";
 
+export * from "./rbac";
 export * from "./route-manifest";
 export * from "./route-permissions";
 export * from "./realtime-protocol";

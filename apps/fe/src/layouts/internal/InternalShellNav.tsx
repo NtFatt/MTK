@@ -35,6 +35,12 @@ export function InternalShellNav({ rightSlot }: { rightSlot?: React.ReactNode })
 
   const items = [
     {
+      key: "tables-setup",
+      to: `/i/${bid}/admin/tables-setup`,
+      label: "Setup Bàn",
+      show: hasPermission(session, "ops.tables.manage"),
+    },
+    {
       key: "tables",
       to: `/i/${bid}/tables`,
       label: "Tables",

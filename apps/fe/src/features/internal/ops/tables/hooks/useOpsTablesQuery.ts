@@ -9,7 +9,7 @@ type OpsTablesQK = ReturnType<typeof qk.ops.tables.list>;
 export function useOpsTablesQuery(branchId: string | number, enabled: boolean) {
   return useAppQuery<OpsTableDto[], OpsTableDto[], OpsTablesQK>({
     queryKey: qk.ops.tables.list({ branchId }),
-    queryFn: () => fetchOpsTables({ branchId: branchId! }),
+    queryFn: () => fetchOpsTables({ branchId }),
     enabled: enabled && branchId != null && String(branchId).length > 0,
     staleTime: STALE_MS,
     // Socket realtime should be the primary driver; keep a light safety-net only.

@@ -66,3 +66,88 @@ export const zCashierUnpaidItem = z
     createdAt: zIsoDateTime.optional(),
   })
   .partial();
+
+const zStringId = z.preprocess(
+  (value) => (value == null ? value : String(value)),
+  z.string().min(1),
+);
+
+const zOptionalStringId = z.preprocess(
+  (value) => (value == null ? undefined : String(value)),
+  z.string().min(1).optional(),
+);
+
+const zPositiveInt = z.preprocess(
+  (value) => (typeof value === "string" ? Number(value) : value),
+  z.number().int().positive(),
+);
+
+const zOptionalNonNegativeInt = z.preprocess(
+  (value) => (value == null || value === "" ? undefined : typeof value === "string" ? Number(value) : value),
+  z.number().int().nonnegative().optional(),
+);
+
+export const zTableStatus = z.enum([
+  "AVAILABLE",
+  "OCCUPIED",
+  "RESERVED",
+  "OUT_OF_SERVICE",
+]);
+
+export const zOpsTableTopItem = z.object({
+  name: z.string(),
+  qty: z.number().int().nonnegative(),
+});
+
+export const zOpsTableRow = z.object({
+  tableId: zStringId,
+  branchId: zOptionalStringId,
+  code: z.string().min(1),
+  areaName: z.string().nullable().optional(),
+  seats: zPositiveInt,
+  tableStatus: zTableStatus,
+  directionId: z.string().nullable().optional(),
+  sessionKey: z.string().nullable().optional(),
+  cartKey: z.string().nullable().optional(),
+  activeOrdersCount: zOptionalNonNegativeInt.default(0),
+  activeOrderCode: z.string().nullable().optional(),
+  activeOrderStatus: z.string().nullable().optional(),
+  activeOrderUpdatedAt: zIsoDateTime.nullable().optional(),
+  activeItemsCount: zOptionalNonNegativeInt.nullable().optional(),
+  activeItemsPreview: z.string().nullable().optional(),
+  activeItemsTop: z.array(zOpsTableTopItem).nullable().optional(),
+  unpaidOrdersCount: zOptionalNonNegativeInt.default(0),
+  unpaidOrderCode: z.string().nullable().optional(),
+  unpaidOrderStatus: z.string().nullable().optional(),
+  unpaidOrderUpdatedAt: zIsoDateTime.nullable().optional(),
+  unpaidItemsCount: zOptionalNonNegativeInt.nullable().optional(),
+  unpaidItemsPreview: z.string().nullable().optional(),
+  unpaidItemsTop: z.array(zOpsTableTopItem).nullable().optional(),
+});
+
+export const zOpsTableListResponse = z.object({
+  items: z.array(zOpsTableRow),
+});
+
+export const zAdminTableMutationPayload = z.object({
+  branchId: zStringId,
+  code: z.string().trim().min(1),
+  seats: zPositiveInt,
+  areaName: z.string().trim().nullable().optional(),
+});
+
+export const zAdminTableRecord = z.object({
+  id: zStringId,
+  branchId: zOptionalStringId,
+  code: z.string().min(1),
+  status: zTableStatus,
+  directionId: z.string().min(1),
+  seats: zPositiveInt,
+  areaName: z.string().nullable().optional(),
+});
+
+export type OpsTableTopItem = z.infer<typeof zOpsTableTopItem>;
+export type OpsTableRow = z.infer<typeof zOpsTableRow>;
+export type OpsTableListResponse = z.infer<typeof zOpsTableListResponse>;
+export type AdminTableMutationPayload = z.infer<typeof zAdminTableMutationPayload>;
+export type AdminTableRecord = z.infer<typeof zAdminTableRecord>;
