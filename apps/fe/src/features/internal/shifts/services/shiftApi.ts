@@ -71,6 +71,11 @@ export type ShiftRunView = {
 export type ShiftCurrentPayload = {
   current: ShiftRunView | null;
   templates: ShiftTemplate[];
+  actorSchedule: {
+    businessDate: string;
+    isPrivileged: boolean;
+    assignedShiftCodes: ShiftCode[];
+  } | null;
 };
 
 export type OpenShiftPayload = {
@@ -178,14 +183,30 @@ function normalizeTemplate(raw: any): ShiftTemplate {
   };
 }
 
-export async function fetchCurrentShift(branchId: string): Promise<ShiftCurrentPayload> {
+export async function fetchCurrentShift(
+  branchId: string,
+  businessDate?: string | null,
+): Promise<ShiftCurrentPayload> {
   const query = new URLSearchParams();
   query.set("branchId", branchId);
+  if (businessDate && businessDate.trim()) query.set("businessDate", businessDate.trim());
 
   const raw = await apiFetchAuthed<any>(`/admin/shifts/current?${query.toString()}`);
   return {
     current: raw?.current ? normalizeShift(raw.current) : null,
     templates: Array.isArray(raw?.templates) ? raw.templates.map(normalizeTemplate) : [],
+    actorSchedule:
+      raw?.actorSchedule && typeof raw.actorSchedule === "object"
+        ? {
+            businessDate: String(raw.actorSchedule.businessDate ?? ""),
+            isPrivileged: Boolean(raw.actorSchedule.isPrivileged),
+            assignedShiftCodes: Array.isArray(raw.actorSchedule.assignedShiftCodes)
+              ? raw.actorSchedule.assignedShiftCodes
+                  .map((code: unknown) => String(code ?? "").toUpperCase())
+                  .filter((code: string) => code === "MORNING" || code === "EVENING") as ShiftCode[]
+              : [],
+          }
+        : null,
   };
 }
 

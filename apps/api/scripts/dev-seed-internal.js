@@ -22,7 +22,7 @@ async function main() {
     port: Number(process.env.MYSQL_PORT ?? 3306),
     user: process.env.MYSQL_USER ?? "root",
     password: process.env.MYSQL_PASSWORD ?? "",
-    database: process.env.MYSQL_DATABASE ?? "hadilao_online",
+    database: process.env.MYSQL_DATABASE ?? "tiem_lau_tren_duong_hanh_phuc",
   };
 
   const conn = await mysql.createConnection({ ...cfg });

@@ -67,7 +67,7 @@ function printStartupBanner(opts: {
   const lines: string[] = [];
 
   lines.push("╭─────────────────────────────────────────────────────────────╮");
-  lines.push(`│ ${padLine(`Hadilao API (${env.NODE_ENV})`, 59)} │`);
+  lines.push(`│ ${padLine(`Tiệm lẩu trên Đường Hạnh Phúc API (${env.NODE_ENV})`, 59)} │`);
   lines.push("├─────────────────────────────────────────────────────────────┤");
   lines.push(`│ ${padLine(`HTTP      : ${opts.httpUrl}`, 59)} │`);
   lines.push(
@@ -84,7 +84,7 @@ function printStartupBanner(opts: {
   );
   lines.push(
     `│ ${padLine(
-      `DB        : mysql ${env.MYSQL_HOST}:${env.MYSQL_PORT}/${env.MYSQL_DATABASE}`,
+      `DB        : mysql ${env.MYSQL_HOST}:${env.MYSQL_PORT} (schema configured)`,
       59,
     )} │`,
   );
@@ -156,7 +156,7 @@ async function main() {
   if (env.REDIS_URL) {
     redisPub = await connectRedis(env.REDIS_URL);
     redisSub = await connectRedis(env.REDIS_URL);
-    eventBus = new RedisEventBus(redisPub, redisSub, "hadilao:events");
+    eventBus = new RedisEventBus(redisPub, redisSub, "duong-hanh-phuc:events");
   }
 
   // ===== Express app =====

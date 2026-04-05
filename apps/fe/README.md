@@ -1,6 +1,6 @@
-# Hadilao FE
+# Tiệm lẩu trên Đường Hạnh Phúc FE
 
-Frontend cho customer + internal operations cua Hadilao Online.
+Frontend cho customer + internal operations cua Tiệm lẩu trên Đường Hạnh Phúc.
 
 ## Stack
 - React

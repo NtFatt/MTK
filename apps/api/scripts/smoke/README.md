@@ -14,7 +14,7 @@ Install newman locally (avoid npx download every run):
 
 Then set scripts:
 
-  "smoke": "node scripts/smoke/wait-for-health.mjs postman/Hadilao_Smoke_Local.postman_environment.json 30000 && newman run postman/Hadilao_Smoke_CoreFlow_v1.postman_collection.json -e postman/Hadilao_Smoke_Local.postman_environment.json --reporters cli"
+  "smoke": "node scripts/smoke/wait-for-health.mjs postman/DuongHanhPhuc_Smoke_Local.postman_environment.json 30000 && newman run postman/DuongHanhPhuc_Smoke_CoreFlow_v1.postman_collection.json -e postman/DuongHanhPhuc_Smoke_Local.postman_environment.json --reporters cli"
 
 ## Run
 1) In terminal A: pnpm dev

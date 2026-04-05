@@ -1,6 +1,6 @@
 -- MySQL dump 10.13  Distrib 8.0.45, for Win64 (x86_64)
 --
--- Host: 127.0.0.1    Database: hadilao_online
+-- Host: 127.0.0.1    Database: tiem_lau_tren_duong_hanh_phuc
 -- ------------------------------------------------------
 -- Server version	8.0.45
 
@@ -107,7 +107,7 @@ CREATE TABLE `branches` (
 
 LOCK TABLES `branches` WRITE;
 /*!40000 ALTER TABLE `branches` DISABLE KEYS */;
-INSERT INTO `branches` VALUES (1,'HCM_Q1','Haidilao - Q1 (Demo)','Quận 1, TP.HCM','0280000000','Asia/Ho_Chi_Minh',1,'09:00:00','22:00:00','2026-02-05 11:40:59','2026-02-05 11:40:59');
+INSERT INTO `branches` VALUES (1,'HCM_Q1','Tiệm lẩu trên Đường Hạnh Phúc - Q1 (Demo)','Quận 1, TP.HCM','0280000000','Asia/Ho_Chi_Minh',1,'09:00:00','22:00:00','2026-02-05 11:40:59','2026-02-05 11:40:59');
 /*!40000 ALTER TABLE `branches` ENABLE KEYS */;
 UNLOCK TABLES;
 

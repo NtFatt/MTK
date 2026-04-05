@@ -89,6 +89,7 @@ export const ROLE_PERMISSIONS: Record<InternalRole, readonly Permission[]> = {
     "attendance.read",
     "attendance.manage",
     "payroll.read",
+    "payroll.manage",
     "payroll.bonus.manage",
     "shifts.read",
     "shifts.open",

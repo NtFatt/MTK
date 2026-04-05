@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-const KEY = "hadilao.admin.recentBranches";
+const KEY = "duong_hanh_phuc.admin.recentBranches";
 
 function loadRecent(): string[] {
   try {

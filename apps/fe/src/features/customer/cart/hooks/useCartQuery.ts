@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useAppQuery } from "../../../../shared/http/useAppQuery";
-import { qk } from "@hadilao/contracts";
+import { qk } from "@duong-hanh-phuc/contracts";
 import { getOrCreateCart } from "../services/cartApi";
 import type { Cart } from "../types";
 import { useCustomerSessionStore, selectBranchId } from "../../../../shared/customer/session/sessionStore";

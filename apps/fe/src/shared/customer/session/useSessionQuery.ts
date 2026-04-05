@@ -1,5 +1,5 @@
 import { useAppQuery } from "../../../shared/http/useAppQuery";
-import { qk } from "@hadilao/contracts";
+import { qk } from "@duong-hanh-phuc/contracts";
 import { getSession } from "./sessionApi";
 
 const STALE_MS = 30 * 1000;

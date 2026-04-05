@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS `branches` (
 
 -- Ensure branch 1 exists (upgrade old DBs safely)
 INSERT INTO branches(branch_id, branch_code, branch_name, address, timezone, phone, is_active)
-VALUES (1,'HCM_Q1','Haidilao - Q1 (Demo)','Quận 1, TP.HCM','Asia/Ho_Chi_Minh','0280000000',1)
+VALUES (1,'HCM_Q1','Tiệm lẩu trên Đường Hạnh Phúc - Q1 (Demo)','Quận 1, TP.HCM','Asia/Ho_Chi_Minh','0280000000',1)
 ON DUPLICATE KEY UPDATE
   branch_code=VALUES(branch_code),
   branch_name=VALUES(branch_name),

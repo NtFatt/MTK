@@ -33,7 +33,7 @@ export function CustomerNavbar() {
           <span className="absolute left-5 top-[-18px] h-5 w-px bg-[#d5a766]" />
           <span className="absolute left-20 top-[-18px] h-5 w-px bg-[#d5a766]" />
           <div className="customer-mythmaker-title text-[1.7rem] font-semibold leading-none text-[#fff2d9] sm:text-[2rem]">
-            Hadilao
+            Tiệm lẩu trên Đường Hạnh Phúc
           </div>
           <div className="customer-mythmaker-script mt-1 text-xl text-[#ffcd69]">
             Tiệm lẩu Đường Hạnh Phúc

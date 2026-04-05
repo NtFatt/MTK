@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { useStore } from "zustand";
-import { qk } from "@hadilao/contracts";
+import { qk } from "@duong-hanh-phuc/contracts";
 
 import { authStore } from "../../../../shared/auth/authStore";
 import { Can } from "../../../../shared/auth/guards";

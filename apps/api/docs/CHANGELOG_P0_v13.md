@@ -29,10 +29,10 @@
 ### ✅ Basic metrics (Prometheus)
 - Endpoint: `GET ${METRICS_PATH:-/api/v1/metrics}`
 - Metrics:
-  - `hadilao_http_requests_total{method,status}`
-  - `hadilao_http_request_duration_ms_*`
-  - `hadilao_db_query_duration_ms_*`
-  - `hadilao_db_slow_queries_total{op}`
+  - `duong_hanh_phuc_http_requests_total{method,status}`
+  - `duong_hanh_phuc_http_request_duration_ms_*`
+  - `duong_hanh_phuc_db_query_duration_ms_*`
+  - `duong_hanh_phuc_db_slow_queries_total{op}`
 
 ## 3) ENV additions
 Thêm vào `.env`:

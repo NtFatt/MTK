@@ -1,4 +1,4 @@
-import { qk } from "@hadilao/contracts";
+import { qk } from "@duong-hanh-phuc/contracts";
 
 import { apiFetchAuthed } from "../../../../shared/http/authedFetch";
 import { useAppMutation } from "../../../../shared/http/useAppMutation";

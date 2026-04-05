@@ -17,6 +17,8 @@ export interface IStaffUserRepository {
 
   findById(staffId: string): Promise<StaffUserRecord | null>;
 
+  findManyByIds(staffIds: string[]): Promise<StaffUserRecord[]>;
+
   list(input?: { branchId?: string | null; status?: StaffUserStatus | null }): Promise<StaffUserRecord[]>;
 
   create(input: {

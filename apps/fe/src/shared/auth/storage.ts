@@ -4,9 +4,9 @@
  */
 import type { AuthSession } from "./types";
 
-const KEY_ACCESS = "hadilao.access";
-const KEY_REFRESH = "hadilao.refresh";
-const KEY_SESSION = "hadilao.session";
+const KEY_ACCESS = "duong_hanh_phuc.access";
+const KEY_REFRESH = "duong_hanh_phuc.refresh";
+const KEY_SESSION = "duong_hanh_phuc.session";
 
 export function loadSession(): AuthSession | null {
   try {

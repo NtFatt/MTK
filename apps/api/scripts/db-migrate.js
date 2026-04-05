@@ -26,7 +26,7 @@ function getDbConfig() {
   const port = Number(envPick(["MYSQL_PORT", "DB_PORT"], "3306"));
   const user = envPick(["MYSQL_USER", "DB_USER"], "root");
   const password = envPick(["MYSQL_PASSWORD", "DB_PASSWORD"], "");
-  const database = envPick(["MYSQL_DATABASE", "DB_NAME"], "hadilao_online");
+  const database = envPick(["MYSQL_DATABASE", "DB_NAME"], "tiem_lau_tren_duong_hanh_phuc");
 
   return { host, port, user, password, database };
 }

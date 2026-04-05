@@ -1,6 +1,6 @@
-# BE_SPEC.md — Hadilao Online (Backend Contract Summary)
+# BE_SPEC.md — Tiệm lẩu trên Đường Hạnh Phúc (Backend Contract Summary)
 
-> **Source of Truth:** *Hadilao Backend Software Design Specification — SPEC v7 (Final)*  
+> **Source of Truth:** *Tiệm lẩu trên Đường Hạnh Phúc Backend Software Design Specification — SPEC v7 (Final)*  
 > **Mục tiêu của file này:** “Neo” Cursor/FE vào **contract thật** (route map + flow), tránh hallucination / bịa endpoint.  
 > **Cập nhật:** 2026-02-15
 

@@ -9,7 +9,7 @@ export function CustomerFooter() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="customer-mythmaker-title text-3xl font-semibold text-[#5f2e15]">
-              Hadilao
+              Tiệm lẩu trên Đường Hạnh Phúc
             </div>
             <span className="customer-mythmaker-script text-xl text-[#bd5132]">
               Tiệm lẩu Đường Hạnh Phúc
@@ -28,11 +28,6 @@ export function CustomerFooter() {
           </nav>
         </div>
         <Separator className="my-4 bg-[#dcc29d]/70" />
-        <p className="text-xs leading-6 text-[#7a6255]">
-          Món ăn được hiển thị theo phiên tại bàn, tồn public và hold tạm thời. Giao diện customer
-          được làm lại theo tinh thần quán lẩu phố cũ: ấm, nhộn nhịp, dễ gọi món và nhìn món nào
-          cũng thấy muốn ăn ngay.
-        </p>
       </div>
     </footer>
   );

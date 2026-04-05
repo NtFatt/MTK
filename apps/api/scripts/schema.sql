@@ -1,7 +1,7 @@
 -- NOTE: This file is legacy/reference only. Use scripts/full_schema.sql as the canonical DDL.
 -- Keeping this file for historical context; it is not used by db:reset/db:diff.
 
--- Hadilao Online (BE) - Minimal schema for current codebase
+-- Tiệm lẩu trên Đường Hạnh Phúc (BE) - Minimal schema for current codebase
 -- MySQL 8.0+
 
 -- Note: DB is created by scripts/db-init.js using MYSQL_DATABASE.

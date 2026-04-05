@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Caveat:wght@600;700&family=ZCOOL+XiaoWei&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Caveat:wght@600;700&family=Lora:wght@400;500;600;700&family=ZCOOL+XiaoWei&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -6,6 +6,10 @@
 
 @layer base {
   :root {
+    --font-sans-brand: "Be Vietnam Pro", "Segoe UI", sans-serif;
+--font-display-brand: "Lora", "Times New Roman", serif;
+    --font-script-brand: "Caveat", cursive;
+    --font-copy-brand: "Lora", "Times New Roman", serif;
     --background: 35 73% 95%;
     --foreground: 24 28% 20%;
     --card: 44 60% 97%;
@@ -289,17 +293,26 @@
     radial-gradient(circle at top, rgba(255, 246, 214, 0.72), transparent 28%),
     linear-gradient(180deg, #fdf5e6 0%, #f7ead4 48%, #f1dcc3 100%);
   color: #3f2a1b;
-  font-family: "Be Vietnam Pro", "Segoe UI", sans-serif;
+  font-family: var(--font-sans-brand);
 }
 
 .customer-mythmaker-title {
-  font-family: "ZCOOL XiaoWei", "Times New Roman", serif;
+  font-family: var(--font-display-brand);
   letter-spacing: 0.01em;
 }
 
 .customer-mythmaker-script {
-  font-family: "Caveat", cursive;
+  font-family: var(--font-script-brand);
   letter-spacing: 0.01em;
+}
+
+.customer-mythmaker-copy,
+.customer-mythmaker-shell p,
+.customer-hotpot-page-subtitle,
+.customer-menu-book-note
+.customer-menu-book-entry-title {
+  font-family: var(--font-copy-brand);
+  font-optical-sizing: auto;
 }
 
 .customer-mythmaker-panel {

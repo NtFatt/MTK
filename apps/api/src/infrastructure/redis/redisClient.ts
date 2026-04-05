@@ -60,9 +60,9 @@ function instrumentSendCommand(client: RedisClient): void {
         addSpanEvent("redis.slow_command", {
           "db.system": "redis",
           "db.operation": cmd,
-          "hadilao.rid": rid ?? "",
-          "hadilao.redis_fingerprint": fingerprint,
-          "hadilao.duration_ms": Math.round(ms * 1000) / 1000,
+          "duong_hanh_phuc.rid": rid ?? "",
+          "duong_hanh_phuc.redis_fingerprint": fingerprint,
+          "duong_hanh_phuc.duration_ms": Math.round(ms * 1000) / 1000,
           "db.statement": truncate(argsPreview, 500),
         } as any);
       }

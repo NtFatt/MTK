@@ -1,5 +1,5 @@
 /**
- * @hadilao/contracts
+ * @duong-hanh-phuc/contracts
  *
  * Mục tiêu: “neo” FE (và Cursor) vào contract ổn định.
  * - queryKeys: chuẩn hoá naming TanStack Query

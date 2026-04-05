@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { RequireCustomerSession } from "../../../../shared/customer/session/guards";
 import { markCustomerSessionClosedAfterPayment } from "../../../../shared/customer/session/sessionRecovery";
 import { useOrderQuery } from "../../order/hooks/useOrderQuery";
+import { isOrderPayable, shouldCloseCustomerSessionAfterPayment } from "../../order/types";
 import { useCreatePaymentMutation } from "../hooks/useCreatePaymentMutation";
 import { Alert, AlertDescription } from "../../../../shared/ui/alert";
 import { Button, buttonVariants } from "../../../../shared/ui/button";
@@ -17,7 +18,7 @@ const statusLabel: Record<string, string> = {
   SERVING: "Đang phục vụ",
   SERVED: "Đã phục vụ",
   PAID: "Đã thanh toán",
-  COMPLETED: "Hoàn tất",
+  COMPLETED: "Tạm đóng bill",
   CANCELLED: "Đã hủy",
   CANCELED: "Đã hủy",
 };
@@ -79,8 +80,8 @@ function getOrderDiscount(order: unknown): number | null {
 }
 
 function getStatusTone(status: string): "default" | "positive" | "warn" | "danger" {
-  if (status === "PAID" || status === "COMPLETED") return "positive";
-  if (status === "NEW" || status === "RECEIVED" || status === "PREPARING" || status === "READY") return "warn";
+  if (status === "PAID") return "positive";
+  if (status === "NEW" || status === "RECEIVED" || status === "PREPARING" || status === "READY" || status === "COMPLETED") return "warn";
   if (status === "CANCELLED" || status === "CANCELED") return "danger";
   return "default";
 }
@@ -105,10 +106,16 @@ function PaymentContent() {
   }, []);
 
   useEffect(() => {
-    if (status === "PAID" || status === "COMPLETED") {
+    if (shouldCloseCustomerSessionAfterPayment(status ?? undefined)) {
       markCustomerSessionClosedAfterPayment();
     }
   }, [status]);
+
+  useEffect(() => {
+    if (paymentMutation.error?.code === "ORDER_NOT_PAYABLE") {
+      void orderQuery.refetch();
+    }
+  }, [orderQuery.refetch, paymentMutation.error?.code]);
 
   if (!orderCode) return null;
 
@@ -185,11 +192,7 @@ function PaymentContent() {
   const discount = getOrderDiscount(order);
   const itemCount = getOrderItemCount(order);
 
-  const canPay =
-    statusText !== "PAID" &&
-    statusText !== "COMPLETED" &&
-    statusText !== "CANCELLED" &&
-    statusText !== "CANCELED";
+  const canPay = isOrderPayable(statusText);
 
   return (
     <div className="space-y-6">
@@ -259,20 +262,22 @@ function PaymentContent() {
             <div className="customer-hotpot-stat rounded-[24px] px-5 py-4 text-sm text-[#7a5a43]">
               {status === "PAID"
                 ? "Đơn hàng này đã thanh toán thành công. Phiên gọi món hiện tại sẽ kết thúc cùng bill này; muốn gọi thêm, bạn cần mở lại bàn."
-                : statusText === "COMPLETED"
-                  ? "Bill này đã hoàn tất. Nếu khách muốn gọi thêm, hãy mở lại bàn để tạo lượt mới."
-                  : "Đơn hàng này không còn ở trạng thái cho phép thanh toán."}
+                : "Đơn hàng này không còn ở trạng thái cho phép thanh toán."}
             </div>
           ) : (
             <div className="space-y-3">
               <div className="customer-hotpot-stat rounded-[24px] px-5 py-4 text-sm text-[#7a5a43]">
                 {isOnline
-                  ? "Nhấn nút bên dưới để chuyển sang VNPay. Sau khi hoàn tất, hệ thống sẽ đưa bạn quay lại trang kết quả."
+                  ? statusText === "COMPLETED"
+                    ? "Bill này đang ở trạng thái tạm đóng để chốt phục vụ, nhưng vẫn chưa thanh toán. Bạn vẫn có thể tiếp tục sang VNPay ngay bây giờ."
+                    : "Nhấn nút bên dưới để chuyển sang VNPay. Sau khi hoàn tất, hệ thống sẽ đưa bạn quay lại trang kết quả."
                   : "Thiết bị đang offline. Kết nối mạng trước khi khởi tạo thanh toán."}
               </div>
 
               <div className="customer-hotpot-stat rounded-[24px] px-5 py-4 text-sm text-[#7a5a43]">
-                Nếu giao dịch bị hủy hoặc thất bại, đơn hàng vẫn được giữ lại để bạn quay về thử lại an toàn. Hệ thống đã bọc idempotency cho bước khởi tạo thanh toán.
+                {statusText === "COMPLETED"
+                  ? "Nếu khách còn muốn gọi thêm món, bạn có thể mở lại bàn để tạo lượt mới. Còn nếu chỉ cần chốt bill hiện tại, hãy thanh toán trực tiếp ở bước này."
+                  : "Nếu giao dịch bị hủy hoặc thất bại, đơn hàng vẫn được giữ lại để bạn quay về thử lại an toàn. Hệ thống đã bọc idempotency cho bước khởi tạo thanh toán."}
               </div>
             </div>
           )}
@@ -321,7 +326,7 @@ function PaymentContent() {
               Theo dõi đơn
             </Link>
 
-            {!canPay && (statusText === "PAID" || statusText === "COMPLETED") ? (
+            {!canPay && statusText === "PAID" ? (
               <Link
                 to="/c/qr?next=%2Fc%2Fmenu"
                 className={cn(

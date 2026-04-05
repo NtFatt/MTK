@@ -1,4 +1,4 @@
-import { normalizeApiError as contractsNormalize } from "@hadilao/contracts";
+import { normalizeApiError as contractsNormalize } from "@duong-hanh-phuc/contracts";
 import type { HttpError } from "./errors";
 
 function mapAppErrorMessage(code?: string) {
@@ -37,10 +37,14 @@ function mapAppErrorMessage(code?: string) {
       return "Hãy nhập ghi chú khi kết ca có chênh lệch.";
     case "SHIFT_STALE":
       return "Dữ liệu ca vừa thay đổi. Vui lòng tải lại rồi thử lại.";
+    case "ORDER_NOT_PAYABLE":
+      return "Bill này hiện không còn ở trạng thái có thể thanh toán. Hãy kiểm tra lại trạng thái mới nhất của đơn.";
+    case "SHIFT_NOT_ASSIGNED_TO_ACTOR":
+      return "Bạn chưa được phân vào ca này nên không thể tự mở hoặc kết ca.";
     case "SHIFT_SCHEMA_MISSING":
       return "CSDL local chưa có bảng ca làm việc. Hãy chạy migration mới rồi tải lại màn hình.";
     case "ATTENDANCE_SCHEMA_MISSING":
-      return "CSDL local chưa có bảng chấm công. Hãy chạy migration mới rồi tải lại màn hình.";
+      return "CSDL local chưa có bảng chấm công hoặc phân ca. Hãy chạy migration mới rồi tải lại màn hình.";
     case "PAYROLL_SCHEMA_MISSING":
       return "CSDL local chưa có bảng tính lương/thưởng. Hãy chạy migration mới rồi tải lại màn hình.";
     case "ATTENDANCE_ALREADY_OPEN":
@@ -63,6 +67,8 @@ function mapAppErrorMessage(code?: string) {
       return "Không tìm thấy nhân sự phù hợp trong chi nhánh này.";
     case "STAFF_NOT_ACTIVE":
       return "Nhân sự này đang không ở trạng thái hoạt động nên không thể chấm công.";
+    case "STAFF_BRANCH_MISMATCH":
+      return "Nhân sự được chọn không thuộc chi nhánh hiện tại nên không thể phân ca.";
     case "PAYROLL_MONTH_INVALID":
       return "Tháng tính lương không hợp lệ.";
     case "PAYROLL_AMOUNT_INVALID":

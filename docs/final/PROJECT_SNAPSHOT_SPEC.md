@@ -8,7 +8,7 @@ _Audience:_ maintainers, reviewers, handover owners, onboarding developers
 
 ## 1) Purpose
 
-This document is the current-state snapshot of the Hadilao Online monorepo.
+This document is the current-state snapshot of the Tiệm lẩu trên Đường Hạnh Phúc monorepo.
 
 It is intended to answer, in one place:
 
@@ -283,7 +283,7 @@ Current customer UX/state characteristics:
 
 | Concern | Current pattern |
 |---|---|
-| Server state | TanStack Query with shared query keys from `@hadilao/contracts` |
+| Server state | TanStack Query with shared query keys from `@duong-hanh-phuc/contracts` |
 | Client state | Zustand stores for internal auth and customer session |
 | API transport | `apiFetch` + normalized `HttpError` model |
 | Route guard | internal auth guards + customer session guard |
@@ -611,7 +611,7 @@ For someone inheriting or reviewing the project, the best reading order is:
 
 ## 17) Bottom Line
 
-The current Hadilao Online repository is a structured monorepo with:
+The current Tiệm lẩu trên Đường Hạnh Phúc repository is a structured monorepo with:
 
 - a layered TypeScript backend
 - a React customer/internal frontend

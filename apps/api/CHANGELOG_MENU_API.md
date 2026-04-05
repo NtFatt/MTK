@@ -1,7 +1,7 @@
 # MENU BASELINE + MENU READ API (P1)
 
 ## Summary
-- **Seed menu “đậm Hadilao hơn”**: ~120 món (broth / thịt / hải sản / viên / rau-nấm / tinh bột / nước / tráng miệng / gia vị), **8 combo** có composition thực tế.
+- **Seed menu “đậm Tiệm lẩu trên Đường Hạnh Phúc hơn”**: ~120 món (broth / thịt / hải sản / viên / rau-nấm / tinh bột / nước / tráng miệng / gia vị), **8 combo** có composition thực tế.
 - **Meat Profiles**: thịt chia **cut rõ** (beef/pork/lamb) để FE hiển thị “...tổng quan món thịt” một cách thông minh.
 - **Menu Read API** theo Clean Architecture: ports → use-cases → repositories → controller/routes.
 

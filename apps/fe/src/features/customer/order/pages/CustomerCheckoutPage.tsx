@@ -233,7 +233,7 @@ function CheckoutContent() {
 
       <div className={`grid gap-4 ${discount > 0 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
         <div className="customer-hotpot-stat px-5 py-4">
-          <div className="customer-hotpot-kicker">{hasOpenBill ? "Món mới sap them" : "So luong mon"}</div>
+          <div className="customer-hotpot-kicker">{hasOpenBill ? "Món mới sap them" : "Số lượng món"}</div>
           <div className="customer-mythmaker-title mt-2 text-4xl text-[#5a301a]">{itemCount}</div>
         </div>
 

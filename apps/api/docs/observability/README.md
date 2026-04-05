@@ -7,7 +7,7 @@ Mục tiêu: chạy local **Prometheus + Grafana + OTelCollector + Jaeger** và 
 - Runtime health (rss, event-loop delay)
 - Trace end-to-end (request → mysql2/redis) qua Jaeger
 
-Theo đúng Phase 3 (Observability) trong *Hadilao Software Design Spec v4 Enterprise*.
+Theo đúng Phase 3 (Observability) trong *Tiệm lẩu trên Đường Hạnh Phúc Software Design Spec v4 Enterprise*.
 
 ---
 
@@ -15,7 +15,7 @@ Theo đúng Phase 3 (Observability) trong *Hadilao Software Design Spec v4 Enter
 
 ### 1.1 Start API
 
-Trong root `hadilao-online/`:
+Trong root `tiem-lau-tren-duong-hanh-phuc/`:
 
 ```bash
 pnpm -C apps/api install
@@ -58,7 +58,7 @@ REDIS_SLOW_OP_MS=50
 
 OTEL_ENABLED=true
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318/v1/traces
-OTEL_SERVICE_NAME=hadilao-api
+OTEL_SERVICE_NAME=duong-hanh-phuc-api
 ```
 
 ---
@@ -77,15 +77,15 @@ OTEL_SERVICE_NAME=hadilao-api
 ## 4) Dashboard mapping (PromQL gợi ý)
 
 - **RPS**:
-  - `sum(rate(hadilao_http_requests_total[1m]))`
+  - `sum(rate(duong_hanh_phuc_http_requests_total[1m]))`
 - **Error rate**:
-  - `sum(rate(hadilao_http_errors_total[5m])) / sum(rate(hadilao_http_requests_total[5m]))`
+  - `sum(rate(duong_hanh_phuc_http_errors_total[5m])) / sum(rate(duong_hanh_phuc_http_requests_total[5m]))`
 - **p95 latency (HTTP)**:
-  - `histogram_quantile(0.95, sum(rate(hadilao_http_request_duration_ms_bucket[5m])) by (le))`
+  - `histogram_quantile(0.95, sum(rate(duong_hanh_phuc_http_request_duration_ms_bucket[5m])) by (le))`
 - **p95 latency (DB)**:
-  - `histogram_quantile(0.95, sum(rate(hadilao_db_query_duration_ms_bucket[5m])) by (le))`
+  - `histogram_quantile(0.95, sum(rate(duong_hanh_phuc_db_query_duration_ms_bucket[5m])) by (le))`
 - **p95 latency (Redis)**:
-  - `histogram_quantile(0.95, sum(rate(hadilao_redis_command_duration_ms_bucket[5m])) by (le))`
+  - `histogram_quantile(0.95, sum(rate(duong_hanh_phuc_redis_command_duration_ms_bucket[5m])) by (le))`
 
 ---
 

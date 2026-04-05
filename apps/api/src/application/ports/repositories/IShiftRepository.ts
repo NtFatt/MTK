@@ -60,6 +60,7 @@ export type ShiftRunView = {
 export interface IShiftRepository {
   listTemplates(branchId: string): Promise<ShiftTemplateDefinition[]>;
   getCurrent(branchId: string): Promise<ShiftRunView | null>;
+  getById(input: { shiftRunId: string; branchId: string }): Promise<ShiftRunView | null>;
   listHistory(input: { branchId: string; limit: number }): Promise<ShiftRunView[]>;
   openShift(input: {
     branchId: string;

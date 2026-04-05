@@ -2,7 +2,7 @@ import {
   Schemas,
   type AdminTableMutationPayload,
   type AdminTableRecord,
-} from "@hadilao/contracts";
+} from "@duong-hanh-phuc/contracts";
 import { apiFetchAuthed } from "../../../../../shared/http/authedFetch";
 
 function normalizePayload(payload: AdminTableMutationPayload): AdminTableMutationPayload {

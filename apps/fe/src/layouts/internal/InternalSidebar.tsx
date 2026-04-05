@@ -75,7 +75,7 @@ export function InternalSidebar() {
     <aside className="sticky top-0 h-screen w-[280px] border-r bg-background">
       <div className="flex h-full flex-col">
         <div className="px-5 py-5">
-          <div className="text-lg font-semibold">Hadilao Admin</div>
+          <div className="text-lg font-semibold">Quản trị Tiệm lẩu trên Đường Hạnh Phúc</div>
           <div className="text-xs text-muted-foreground">Internal Console</div>
         </div>
 

@@ -67,7 +67,6 @@ export function MenuGrid({
         >
           <section className="customer-menu-book-page">
             <div className="customer-menu-book-page-header">
-              <span className="customer-menu-book-page-label">Trang trái</span>
               <span className="customer-menu-book-page-number">{pageIndex * 2 + 1}</span>
             </div>
 
@@ -82,7 +81,6 @@ export function MenuGrid({
 
           <section className="customer-menu-book-page">
             <div className="customer-menu-book-page-header">
-              <span className="customer-menu-book-page-label">Trang phải</span>
               <span className="customer-menu-book-page-number">{pageIndex * 2 + 2}</span>
             </div>
 

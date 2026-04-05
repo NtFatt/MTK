@@ -12,7 +12,7 @@ export const CATEGORIES: MenuCategory[] = [
   { id: "trang-mieng", name: "Tráng miệng" },
 ];
 
-const placeholder = "https://placehold.co/400x300/e8e4e0/c4bfb8?text=Hadilao";
+const placeholder = "https://placehold.co/400x300/e8e4e0/c4bfb8?text=Tiệm lẩu trên Đường Hạnh Phúc";
 
 export const ITEMS: MenuItem[] = [
   { id: "1", name: "Lẩu Tứ Xuyên", price: 299000, imageUrl: placeholder, categoryId: "lau", tags: ["Đặc sản"], isAvailable: true },

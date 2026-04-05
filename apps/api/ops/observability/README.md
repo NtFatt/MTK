@@ -47,6 +47,6 @@ OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318/v1/traces
 Grafana được provision sẵn:
 
 - Datasource: Prometheus
-- Dashboard: **Hadilao API - Observability (v15)**
+- Dashboard: **Tiệm lẩu trên Đường Hạnh Phúc API - Observability (v15)**
 
-File dashboard: `grafana/dashboards/hadilao_api_observability.json`
+File dashboard: `grafana/dashboards/duong_hanh_phuc_api_observability.json`

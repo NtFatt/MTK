@@ -62,6 +62,8 @@ export type AttendanceBoardRow = Omit<AttendanceRecordView, "attendanceId" | "so
   source: AttendanceSource | null;
   version: number | null;
   isPlaceholder: boolean;
+  isScheduled: boolean;
+  assignmentId: string | null;
 };
 
 export interface IAttendanceRepository {
@@ -69,7 +71,7 @@ export interface IAttendanceRepository {
     branchId: string;
     businessDate: string;
     shiftCode: ShiftCode;
-    staffIds: string[];
+    staffIds?: string[] | null;
   }): Promise<AttendanceRecordView[]>;
 
   getById(input: { branchId: string; attendanceId: string }): Promise<AttendanceRecordView | null>;

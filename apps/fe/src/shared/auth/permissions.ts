@@ -1,4 +1,4 @@
-import { hasInternalPermission, isInternalRole } from "@hadilao/contracts";
+import { hasInternalPermission, isInternalRole } from "@duong-hanh-phuc/contracts";
 import type { AuthSession } from "./types";
 
 export function isAdminSession(session: AuthSession | null | undefined) {

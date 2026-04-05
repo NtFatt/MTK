@@ -1,4 +1,4 @@
-# Hadilao Smoke Packs
+# Tiệm lẩu trên Đường Hạnh Phúc Smoke Packs
 
 Muc tieu: verify local runtime theo dung contract hien tai, khong chi happy path ma ca negative/idempotency/realtime/oversell.
 
@@ -28,7 +28,7 @@ pnpm -C apps/api verify:smokes
 - `smoke:oversell` ep stock = 1 roi dua 2 cart song song; ky vong dung la 1 success + 1 `409 OUT_OF_STOCK`.
 
 ## Postman environment
-File chinh: `postman/Hadilao_Smoke_Local.postman_environment.json`
+File chinh: `postman/DuongHanhPhuc_Smoke_Local.postman_environment.json`
 
 Keys quan trong:
 - `baseUrl`

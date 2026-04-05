@@ -1,4 +1,4 @@
-# CONTRACT_RULES.md — FE/Client Contract Guardrails (Hadilao Online)
+# CONTRACT_RULES.md — FE/Client Contract Guardrails (Tiệm lẩu trên Đường Hạnh Phúc)
 
 > File này là **luật chơi**: Cursor/FE phải tuân thủ tuyệt đối.  
 > Mục tiêu: **Contract Lock**, **RBAC đúng**, **branch isolation**, **idempotency đúng chỗ**, **UX lỗi nhất quán**.

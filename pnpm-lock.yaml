@@ -13,7 +13,7 @@ importers:
 
   apps/api:
     dependencies:
-      '@hadilao/contracts':
+      '@duong-hanh-phuc/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@opentelemetry/api':
@@ -107,7 +107,7 @@ importers:
 
   apps/fe:
     dependencies:
-      '@hadilao/contracts':
+      '@duong-hanh-phuc/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@tanstack/react-query':

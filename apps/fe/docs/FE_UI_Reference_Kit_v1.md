@@ -1,16 +1,16 @@
-# Hadilao FE — UI Reference Kit (v1)
-> Nguồn: `hadilao-client-menu.zip` (UI mẫu) + hiện trạng `apps/fe` (fe.zip).  
+# Tiệm lẩu trên Đường Hạnh Phúc FE — UI Reference Kit (v1)
+> Nguồn: `duong-hanh-phuc-client-menu.zip` (UI mẫu) + hiện trạng `apps/fe` (fe.zip).  
 > Mục tiêu: chuẩn hoá “giao diện mẫu” thành **UI Kit có thể port sang Vite/React Router**, dùng được làm baseline cho toàn bộ FE (Customer + Internal Console).
 
 ---
 
 ## 1) Bóc tách nhanh 2 repo
 
-### File 2 — UI mẫu (hadilao-client-menu.zip)
+### File 2 — UI mẫu (duong-hanh-phuc-client-menu.zip)
 **Stack**: Next (App Router) + Tailwind + shadcn/ui (Radix) + lucide-react + next-themes.  
 **Điểm mạnh**:
 - Bộ **design tokens** qua CSS variables (`--background`, `--primary`, `--radius`…) + Tailwind mapping.
-- “Hadilao Origami” style: typography serif/sans, gradient hairline, shadow/hover tinh tế, animation nhẹ.
+- “Tiệm lẩu trên Đường Hạnh Phúc Origami” style: typography serif/sans, gradient hairline, shadow/hover tinh tế, animation nhẹ.
 - Bộ component composition sẵn: `Navbar`, `HeroBanner`, `CategoryTabs`, `MenuCard`, `MenuGridSkeleton`, `EmptyState`, `Footer`.
 - Có sẵn full shadcn primitives (`components/ui/*`) đủ dùng cho cả Customer và Admin Console.
 
@@ -37,12 +37,12 @@
 
 ### 2.1. Design tokens (bắt buộc)
 - **Nguồn gốc**: giữ nguyên token set từ UI mẫu (CSS variables).
-- **Không hardcode màu** trong feature code (trừ “hadilao accent” đã được thống nhất).
+- **Không hardcode màu** trong feature code (trừ “duong_hanh_phuc accent” đã được thống nhất).
 - Tailwind config map **đúng** như UI mẫu: `colors.background = hsl(var(--background))`, …
 
 ### 2.2. Component layers
 - **Primitives**: `src/components/ui/*` (shadcn ui)
-- **Compositions**: `src/components/hadilao/*` (Navbar/Hero/…)
+- **Compositions**: `src/components/duong_hanh_phuc/*` (Navbar/Hero/…)
 - **Feature UI**: `src/features/<domain>/**` (page, hooks, vm mapping)
 
 ### 2.3. Định danh & style guide
@@ -67,7 +67,7 @@ src/
       ThemeProvider.tsx
   components/
     ui/                # shadcn primitives
-    hadilao/           # Navbar/Hero/...
+    duong_hanh_phuc/           # Navbar/Hero/...
   features/
     customer/
       menu/
@@ -99,7 +99,7 @@ src/
 - `tailwind.config.*` + `postcss.config.*`
 - `lib/utils.ts` (cn)
 - `components/ui`: tối thiểu `button`, `input`, `badge`, `card`, `skeleton`, `tabs`, `dialog`, `sheet/drawer`, `sonner/toast`.
-- `components/hadilao`: 7 component đã có.
+- `components/duong_hanh_phuc`: 7 component đã có.
 
 ---
 
@@ -118,6 +118,6 @@ src/
 
 ## 5) Checklist để feed Cursor (đưa vào prompt)
 - “Không dùng Next.js APIs.”
-- “Không tự chế API contract; gọi qua `apiFetch` + `@hadilao/contracts`.”
-- “Giữ đúng folder layering: ui -> hadilao -> features.”
+- “Không tự chế API contract; gọi qua `apiFetch` + `@duong-hanh-phuc/contracts`.”
+- “Giữ đúng folder layering: ui -> duong_hanh_phuc -> features.”
 - “Luôn viết TSX, strict typecheck pass.”

@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { qk } from "@hadilao/contracts";
+import { qk } from "@duong-hanh-phuc/contracts";
 import type { EventEnvelope } from "./types";
 import { createInvalidateDebouncer } from "./invalidateDebounce";
 import { realtimeConfig } from "./config";
@@ -176,8 +176,8 @@ function enqueueCashierRefresh(branchId?: string | number | null) {
 
 function enqueueShiftRefresh(branchId?: string | number | null) {
   if (branchId != null) {
-    enqueueInvalidate(["shifts", "current", { branchId }], false);
-    enqueueInvalidate(["shifts", "history", { branchId }], false);
+    enqueueInvalidate(["shifts", "current"], false);
+    enqueueInvalidate(["shifts", "history"], false);
     return;
   }
   enqueueInvalidate(["shifts", "current"], false);
@@ -235,6 +235,7 @@ const SHIFT_EVENTS = new Set([
 
 const ATTENDANCE_EVENTS = new Set([
   "attendance.changed",
+  "attendance.schedule.changed",
 ]);
 
 export function routeRealtimeEvent(env: EventEnvelope) {
@@ -357,9 +358,12 @@ export function routeRealtimeEvent(env: EventEnvelope) {
   // 3c) Attendance
   if (ATTENDANCE_EVENTS.has(type)) {
     if (branchId != null) {
-      const b = String(branchId);
-      enqueueInvalidate(["attendance", "board", { branchId: b }], false);
-      enqueueInvalidate(["attendance", "staffHistory", { branchId: b }], false);
+      enqueueInvalidate(["attendance", "board"], false);
+      enqueueInvalidate(["attendance", "assignments"], false);
+      enqueueInvalidate(["attendance", "staffHistory"], false);
+      if (type === "attendance.schedule.changed") {
+        enqueueShiftRefresh(branchId);
+      }
       enqueueDashboardRefresh(branchId);
     }
     return;

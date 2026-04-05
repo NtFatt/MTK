@@ -1,4 +1,5 @@
 import type { IAttendanceRepository } from "../../../ports/repositories/IAttendanceRepository.js";
+import type { IStaffShiftAssignmentRepository } from "../../../ports/repositories/IStaffShiftAssignmentRepository.js";
 import type { IStaffUserRepository } from "../../../ports/repositories/IStaffUserRepository.js";
 import type { IEventBus } from "../../../ports/events/IEventBus.js";
 import type { ShiftCode } from "../../../../domain/shifts/templates.js";
@@ -15,6 +16,7 @@ export class MarkAttendanceAbsent {
   constructor(
     private readonly attendanceRepo: IAttendanceRepository,
     private readonly staffRepo: IStaffUserRepository,
+    private readonly assignmentRepo: IStaffShiftAssignmentRepository,
     private readonly eventBus: IEventBus,
   ) {}
 
@@ -35,6 +37,18 @@ export class MarkAttendanceAbsent {
     if (!staff) throw new Error("STAFF_NOT_FOUND");
     if (String(staff.branchId ?? "") !== scopedBranchId) throw new Error("FORBIDDEN");
     if (staff.status !== "ACTIVE") throw new Error("STAFF_NOT_ACTIVE");
+
+    await this.assignmentRepo.upsertAssignments({
+      branchId: scopedBranchId,
+      businessDate: input.businessDate,
+      shiftCode: input.shiftCode,
+      staffIds: [input.staffId],
+      actor: {
+        actorType: input.actor.actorType,
+        actorId: input.actor.userId,
+        actorName: input.actor.username,
+      },
+    });
 
     const record = await this.attendanceRepo.markAbsent({
       branchId: scopedBranchId,
@@ -67,4 +81,3 @@ export class MarkAttendanceAbsent {
     return record;
   }
 }
-

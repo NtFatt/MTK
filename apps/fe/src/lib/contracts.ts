@@ -7,4 +7,4 @@
  * - Zod schemas: dùng `Schemas.*`
  */
 
-export { qk, normalizeApiError, Schemas } from "@hadilao/contracts";
+export { qk, normalizeApiError, Schemas } from "@duong-hanh-phuc/contracts";

@@ -1,5 +1,5 @@
 /**
- * Order types — contract-first from @hadilao/contracts schemas/orders.
+ * Order types — contract-first from @duong-hanh-phuc/contracts schemas/orders.
  * OrderStatus is string per zOrderStatus (no enum in contract).
  */
 
@@ -31,6 +31,10 @@ export type Order = {
   updatedAt?: string;
 };
 
+function normalizeOrderStatus(status: OrderStatus | undefined): string {
+  return String(status ?? "").trim().toUpperCase();
+}
+
 /** Terminal statuses: stop polling when reached */
 export const ORDER_TERMINAL_STATUSES: OrderStatus[] = [
   "PAID",
@@ -39,6 +43,15 @@ export const ORDER_TERMINAL_STATUSES: OrderStatus[] = [
 ];
 
 export function isOrderTerminal(status: OrderStatus | undefined): boolean {
-  if (!status) return false;
-  return ORDER_TERMINAL_STATUSES.includes(status);
+  const normalized = normalizeOrderStatus(status);
+  return normalized.length > 0 && ORDER_TERMINAL_STATUSES.includes(normalized);
+}
+
+export function isOrderPayable(status: OrderStatus | undefined): boolean {
+  const normalized = normalizeOrderStatus(status);
+  return normalized.length > 0 && normalized !== "PAID" && normalized !== "CANCELED" && normalized !== "CANCELLED";
+}
+
+export function shouldCloseCustomerSessionAfterPayment(status: OrderStatus | undefined): boolean {
+  return normalizeOrderStatus(status) === "PAID";
 }

@@ -1,4 +1,4 @@
-# Hadilao API - Patch P1.3 (Enterprise)
+# Tiệm lẩu trên Đường Hạnh Phúc API - Patch P1.3 (Enterprise)
 
 Date: 2026-02-08
 
@@ -55,4 +55,4 @@ Environment:
 - `REDIS_STOCK_HOLDS_ENABLED=true`
 
 Smoke:
-- Set `smokeRealtime=true` in `postman/Hadilao_Smoke_Local.postman_environment.json`.
+- Set `smokeRealtime=true` in `postman/DuongHanhPhuc_Smoke_Local.postman_environment.json`.

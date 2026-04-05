@@ -153,6 +153,11 @@ function shiftDisplayLabel(code: ShiftCode) {
   return code === "MORNING" ? "Ca sáng" : "Ca chiều";
 }
 
+function formatAssignedShiftLabels(codes: ShiftCode[]): string {
+  if (!codes.length) return "Chưa được phân ca";
+  return codes.map(shiftDisplayLabel).join(", ");
+}
+
 export function InternalKitchenPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const session = useStore(authStore, (state) => state.session);
@@ -170,6 +175,7 @@ export function InternalKitchenPage() {
   const canOpenShifts = hasPermission(session, "shifts.open");
   const canCloseShifts = hasPermission(session, "shifts.close");
   const enabled = !!session && !!branchParam && !isBranchMismatch && canReadKitchen;
+  const shiftLookupDate = todayLocalDate();
 
   const {
     query,
@@ -210,7 +216,7 @@ export function InternalKitchenPage() {
     data: shiftData,
     error: shiftError,
     isFetching: isShiftFetching,
-  } = useCurrentShiftQuery(branchParam, enabled && canReadShifts);
+  } = useCurrentShiftQuery(branchParam, enabled && canReadShifts, shiftLookupDate);
   const openShiftMutation = useOpenShiftMutation(branchParam);
   const closeShiftMutation = useCloseShiftMutation(branchParam);
 
@@ -246,6 +252,9 @@ export function InternalKitchenPage() {
 
   const allRows = useMemo(() => sortKitchenRows(data ?? []), [data]);
   const currentShift = shiftData?.current ?? null;
+  const actorSchedule = shiftData?.actorSchedule ?? null;
+  const isPrivilegedShiftActor = Boolean(actorSchedule?.isPrivileged) || isAdminRole(role);
+  const assignedShiftCodes = actorSchedule?.assignedShiftCodes ?? [];
   const shiftTemplates = shiftData?.templates?.length
     ? shiftData.templates
     : [
@@ -270,6 +279,10 @@ export function InternalKitchenPage() {
       currentShift.summary.cashSales > 0 ||
       currentShift.summary.nonCashSales > 0 ||
       currentShift.expectedCash > 0);
+  const kitchenShiftAssignmentBlocked =
+    !!currentShift &&
+    !isPrivilegedShiftActor &&
+    !assignedShiftCodes.includes(currentShift.shiftCode);
 
   const filteredRows = useMemo(() => {
     return allRows.filter((row) => {
@@ -536,6 +549,11 @@ export function InternalKitchenPage() {
                         Ca này đã dính bill mở hoặc doanh thu, nên cashier hoặc quản lý sẽ là người kết ca.
                       </div>
                     ) : null}
+                    {kitchenShiftAssignmentBlocked ? (
+                      <div className="text-sm text-[#8f2f2f]">
+                        Ca đang mở không nằm trong lịch của bạn hôm nay, nên bạn chỉ được theo dõi queue và không thể tự kết ca.
+                      </div>
+                    ) : null}
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -543,6 +561,23 @@ export function InternalKitchenPage() {
                     <div className="text-sm text-[#7a5a43]">
                       Mở nhanh ca sáng hoặc ca chiều để chấm công và đồng bộ vận hành trong chi nhánh.
                     </div>
+                    {!isPrivilegedShiftActor ? (
+                      <div className="rounded-[16px] border border-[#ead8c0] bg-[#fffaf4] px-4 py-3 text-sm text-[#7a5a43]">
+                        Ca của bạn hôm nay:{" "}
+                        <span className="font-semibold text-[#4e2916]">
+                          {formatAssignedShiftLabels(assignedShiftCodes)}
+                        </span>
+                        {assignedShiftCodes.length === 0 ? (
+                          <span className="mt-2 block text-[#8f2f2f]">
+                            Bạn chưa được phân ca nên không thể tự mở ca. Hãy liên hệ quản lý chi nhánh.
+                          </span>
+                        ) : (
+                          <span className="mt-2 block">
+                            Bạn chỉ có thể tự mở đúng ca đã được phân.
+                          </span>
+                        )}
+                      </div>
+                    ) : null}
                   </div>
                 )}
 
@@ -565,19 +600,28 @@ export function InternalKitchenPage() {
                 ) : null}
                 {canReadShifts && !currentShift ? (
                   <>
-                    {shiftTemplates.map((template) => (
-                      <Button
-                        key={template.code}
-                        type="button"
-                        disabled={!canOpenShifts || openShiftMutation.isPending}
-                        onClick={() => handleKitchenShiftOpen(template.code)}
-                        className="rounded-full bg-[#cf5b42] text-white hover:bg-[#b94031]"
-                      >
-                        {openShiftMutation.isPending
-                          ? "Đang mở ca..."
-                          : `Mở ${shiftDisplayLabel(template.code)}`}
-                      </Button>
-                    ))}
+                    {shiftTemplates.map((template) => {
+                      const assignmentBlocked =
+                        !isPrivilegedShiftActor && !assignedShiftCodes.includes(template.code);
+                      return (
+                        <Button
+                          key={template.code}
+                          type="button"
+                          disabled={!canOpenShifts || openShiftMutation.isPending || assignmentBlocked}
+                          onClick={() => handleKitchenShiftOpen(template.code)}
+                          className="rounded-full bg-[#cf5b42] text-white hover:bg-[#b94031]"
+                          title={
+                            assignmentBlocked
+                              ? `Bạn chưa được phân ${shiftDisplayLabel(template.code).toLowerCase()} hôm nay`
+                              : undefined
+                          }
+                        >
+                          {openShiftMutation.isPending
+                            ? "Đang mở ca..."
+                            : `Mở ${shiftDisplayLabel(template.code)}`}
+                        </Button>
+                      );
+                    })}
                   </>
                 ) : null}
 
@@ -585,7 +629,12 @@ export function InternalKitchenPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    disabled={!canCloseShifts || closeShiftMutation.isPending || kitchenShiftCloseBlocked}
+                    disabled={
+                      !canCloseShifts ||
+                      closeShiftMutation.isPending ||
+                      kitchenShiftCloseBlocked ||
+                      kitchenShiftAssignmentBlocked
+                    }
                     onClick={handleKitchenShiftClose}
                     className="rounded-full border-[#d9bd95] bg-white/80 text-[#6a3b20]"
                   >

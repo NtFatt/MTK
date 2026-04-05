@@ -25,8 +25,8 @@ status=VALUES(status);
 -- For local dev/demo, we ensure branch_id=1 exists.
 INSERT INTO branches(branch_id, branch_code, branch_name, address, phone, timezone, is_active, open_time, close_time)
 VALUES
-(1,'HCM1','Haidilao HCM - Demo','Demo Address, Ho Chi Minh City','0900000000','Asia/Ho_Chi_Minh',1,'09:00:00','22:00:00'),
-(999,'HCM999','Haidilao HCM - Demo Branch 999','Demo Address, Ho Chi Minh City','0900000999','Asia/Ho_Chi_Minh',1,'09:00:00','22:00:00')
+(1,'HCM1','Tiệm lẩu trên Đường Hạnh Phúc HCM - Demo','Demo Address, Ho Chi Minh City','0900000000','Asia/Ho_Chi_Minh',1,'09:00:00','22:00:00'),
+(999,'HCM999','Tiệm lẩu trên Đường Hạnh Phúc HCM - Demo Branch 999','Demo Address, Ho Chi Minh City','0900000999','Asia/Ho_Chi_Minh',1,'09:00:00','22:00:00')
 ON DUPLICATE KEY UPDATE
 branch_code=VALUES(branch_code),
 branch_name=VALUES(branch_name),

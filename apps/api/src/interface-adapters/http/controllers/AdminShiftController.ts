@@ -15,6 +15,7 @@ const BreakdownItemSchema = z.object({
 
 const CurrentQuerySchema = z.object({
   branchId: z.union([z.string().min(1), z.number().int().positive()]).transform(String),
+  businessDate: DateOnly.optional(),
 });
 
 const HistoryQuerySchema = z.object({
@@ -89,8 +90,18 @@ export class AdminShiftController {
 
   current = async (req: Request, res: Response) => {
     const query = CurrentQuerySchema.parse(req.query);
-    this.assertBranchAccess(this.actorFrom(res), query.branchId);
-    const out = await this.getCurrentShiftUc.execute({ branchId: query.branchId });
+    const actor = this.actorFrom(res);
+    this.assertBranchAccess(actor, query.branchId);
+    const out = await this.getCurrentShiftUc.execute({
+      actor: {
+        actorType: actor.actorType,
+        role: actor.role,
+        userId: actor.actorId,
+        branchId: actor.branchId,
+      },
+      branchId: query.branchId,
+      businessDate: query.businessDate ?? null,
+    });
     return res.json(out);
   };
 

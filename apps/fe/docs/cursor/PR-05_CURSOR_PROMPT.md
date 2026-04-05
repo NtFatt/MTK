@@ -1,6 +1,6 @@
 # PR-05 — Checkout + Create Order (Idempotency) + Order Status Page (Contract-first) — Cursor Prompt
 
-> **Repo:** `hadilao-online` (pnpm workspace)  
+> **Repo:** `tiem-lau-tren-duong-hanh-phuc` (pnpm workspace)  
 > **Scope PR:** chỉ thay đổi trong `apps/fe/**`  
 > **Hiện trạng:** PR-00..PR-04 đã pass. Customer flow `/c/*` đã có session + cart CRUD.  
 > **Mục tiêu PR-05:** có thể **đặt món** từ cart → tạo order (idempotent) → xem trang trạng thái order.
@@ -10,7 +10,7 @@
 ## 0) HARD CONSTRAINTS (KHÔNG ĐƯỢC VI PHẠM)
 
 1) **Không dùng Next APIs.**  
-2) **Không đoán contract.** Trước khi code phải mở và xác định từ `@hadilao/contracts` / OpenAPI / docs trong repo:
+2) **Không đoán contract.** Trước khi code phải mở và xác định từ `@duong-hanh-phuc/contracts` / OpenAPI / docs trong repo:
    - Endpoint tạo order (POST)
    - Endpoint lấy order detail/tracking (GET)
    - Payment endpoints (nếu tồn tại) — PR-05 chỉ cần “init payment” (optional)  
@@ -90,7 +90,7 @@ apps/fe/src/features/customer/order/
 ### 3.1 idempotency.ts
 - Export:
   - `createIdempotencyKey(): string` → dùng `crypto.randomUUID()` (không thêm dependency)
-  - `getOrCreateIdempotencyKey(scope: string): string` → lưu sessionStorage theo key `hadilao.idem.<scope>`
+  - `getOrCreateIdempotencyKey(scope: string): string` → lưu sessionStorage theo key `duong_hanh_phuc.idem.<scope>`
   - `clearIdempotencyKey(scope: string): void`
 - Scope gợi ý:
   - `order.create.<sessionKey>`

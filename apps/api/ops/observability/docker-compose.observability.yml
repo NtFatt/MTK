@@ -1,9 +1,9 @@
-name: hadilao-observability
+name: duong-hanh-phuc-observability
 
 services:
   prometheus:
     image: prom/prometheus:latest
-    container_name: hadilao-prometheus
+    container_name: duong-hanh-phuc-prometheus
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:
@@ -11,7 +11,7 @@ services:
 
   grafana:
     image: grafana/grafana:latest
-    container_name: hadilao-grafana
+    container_name: duong-hanh-phuc-grafana
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
@@ -26,14 +26,14 @@ services:
 
   jaeger:
     image: jaegertracing/all-in-one:latest
-    container_name: hadilao-jaeger
+    container_name: duong-hanh-phuc-jaeger
     ports:
       - "16686:16686"   # UI
       - "14250:14250"   # gRPC (collector)
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
-    container_name: hadilao-otel-collector
+    container_name: duong-hanh-phuc-otel-collector
     command: ["--config=/etc/otelcol/config.yml"]
     volumes:
       - ./otel-collector/config.yml:/etc/otelcol/config.yml:ro

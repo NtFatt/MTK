@@ -39,7 +39,7 @@ Date: 2026-02-08
 - `src/main/di.ts`
 - `scripts/smoke/reset-dev-state.mjs`
 - `scripts/smoke/run-smoke.mjs`
-- `postman/Hadilao_Smoke_Local.postman_environment.json`
+- `postman/DuongHanhPhuc_Smoke_Local.postman_environment.json`
 - `postman/README_SMOKE.md`
 - `.env.example`
 

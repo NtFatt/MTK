@@ -23,7 +23,7 @@ export function printStartupBanner(
   const lines: string[] = [];
 
   lines.push("╭─────────────────────────────────────────────────────────────╮");
-  lines.push(`│ Hadilao API (${env.NODE_ENV})`.padEnd(61) + "│");
+  lines.push(`│ Tiệm lẩu trên Đường Hạnh Phúc API (${env.NODE_ENV})`.padEnd(61) + "│");
   lines.push("├─────────────────────────────────────────────────────────────┤");
   lines.push(`│ HTTP      : ${opts.httpUrl}`.padEnd(61) + "│");
   lines.push(
@@ -35,7 +35,7 @@ export function printStartupBanner(
       .padEnd(61) + "│"
   );
   lines.push(
-    `│ DB        : mysql ${opts.mysql.host}:${opts.mysql.port}/${opts.mysql.db}`
+    `│ DB        : mysql ${opts.mysql.host}:${opts.mysql.port} (schema configured)`
       .padEnd(61) + "│"
   );
   lines.push("├─────────────────────────────────────────────────────────────┤");

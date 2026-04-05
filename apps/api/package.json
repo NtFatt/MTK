@@ -1,8 +1,8 @@
 {
-  "name": "@hadilao/api",
+  "name": "@duong-hanh-phuc/api",
   "version": "1.0.0",
   "private": true,
-  "description": "Hadilao Online Backend API",
+  "description": "Tiệm lẩu trên Đường Hạnh Phúc Backend API",
   "type": "module",
   "main": "dist/main/start.js",
   "scripts": {
@@ -20,16 +20,16 @@
     "admin:create": "node scripts/admin-create.js",
     "staff:create": "node scripts/staff-create.js",
     "seed:internal": "node scripts/dev-seed-internal.js",
-    "seed:negative-fixture": "node scripts/smoke/seed-negative-fixtures.mjs postman/Hadilao_Smoke_Local.postman_environment.json",
+    "seed:negative-fixture": "node scripts/smoke/seed-negative-fixtures.mjs postman/DuongHanhPhuc_Smoke_Local.postman_environment.json",
 
     "route:map": "tsx scripts/route-map.ts",
 
-    "smoke": "node scripts/smoke/run-smoke.mjs postman/Hadilao_Smoke_Local.postman_environment.json postman/Hadilao_Smoke_CoreFlow_v1.postman_collection.json 30000",
-    "smoke:full": "node scripts/smoke/run-smoke.mjs postman/Hadilao_Smoke_Local.postman_environment.json postman/Hadilao_Smoke_FullFlow_7Roles_v1.postman_collection.json 45000",
-    "smoke:admin": "node scripts/smoke/run-smoke.mjs postman/Hadilao_Smoke_Local.postman_environment.json postman/Hadilao_Smoke_CoreFlow_v1.postman_collection.json 30000 \"00 - Admin\"",
+    "smoke": "node scripts/smoke/run-smoke.mjs postman/DuongHanhPhuc_Smoke_Local.postman_environment.json postman/DuongHanhPhuc_Smoke_CoreFlow_v1.postman_collection.json 30000",
+    "smoke:full": "node scripts/smoke/run-smoke.mjs postman/DuongHanhPhuc_Smoke_Local.postman_environment.json postman/DuongHanhPhuc_Smoke_FullFlow_7Roles_v1.postman_collection.json 45000",
+    "smoke:admin": "node scripts/smoke/run-smoke.mjs postman/DuongHanhPhuc_Smoke_Local.postman_environment.json postman/DuongHanhPhuc_Smoke_CoreFlow_v1.postman_collection.json 30000 \"00 - Admin\"",
     "smoke:oversell": "node scripts/smoke/oversell.mjs",
-    "smoke:realtime": "node scripts/smoke/realtime-sanity.mjs postman/Hadilao_Smoke_Local.postman_environment.json 45000",
-    "smoke:negative": "node scripts/smoke/run-negative.mjs postman/Hadilao_Smoke_Local.postman_environment.json 60000",
+    "smoke:realtime": "node scripts/smoke/realtime-sanity.mjs postman/DuongHanhPhuc_Smoke_Local.postman_environment.json 45000",
+    "smoke:negative": "node scripts/smoke/run-negative.mjs postman/DuongHanhPhuc_Smoke_Local.postman_environment.json 60000",
 
     "verify:smokes": "pnpm smoke:full && pnpm smoke:negative && pnpm smoke:realtime && pnpm smoke:oversell",
     "verify:local": "pnpm typecheck && pnpm build && pnpm verify:smokes"
@@ -39,7 +39,7 @@
   "license": "ISC",
   "packageManager": "pnpm@10.4.1",
   "dependencies": {
-    "@hadilao/contracts": "workspace:*",
+    "@duong-hanh-phuc/contracts": "workspace:*",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/auto-instrumentations-node": "^0.53.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.53.0",

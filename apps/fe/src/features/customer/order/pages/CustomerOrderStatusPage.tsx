@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { useOrderQuery } from "../hooks/useOrderQuery";
+import { isOrderPayable, shouldCloseCustomerSessionAfterPayment } from "../types";
 import {
   useCustomerSessionStore,
   selectSessionKey,
@@ -21,7 +22,7 @@ const statusLabel: Record<string, string> = {
   SERVING: "Đang phục vụ",
   SERVED: "Đã phục vụ",
   PAID: "Đã thanh toán",
-  COMPLETED: "Hoàn tất",
+  COMPLETED: "Tạm đóng bill",
   CANCELLED: "Đã hủy",
   CANCELED: "Đã hủy",
 };
@@ -83,8 +84,8 @@ function getOrderDiscount(order: unknown): number | null {
 }
 
 function getStatusTone(status: string | null): "default" | "positive" | "warn" | "danger" {
-  if (status === "PAID" || status === "COMPLETED") return "positive";
-  if (status === "NEW" || status === "RECEIVED" || status === "PREPARING" || status === "READY" || status === "SERVING" || status === "SERVED") return "warn";
+  if (status === "PAID") return "positive";
+  if (status === "NEW" || status === "RECEIVED" || status === "PREPARING" || status === "READY" || status === "SERVING" || status === "SERVED" || status === "COMPLETED") return "warn";
   if (status === "CANCELLED" || status === "CANCELED") return "danger";
   return "default";
 }
@@ -116,18 +117,12 @@ export function CustomerOrderStatusPage() {
   const itemCount = getOrderItemCount(data);
 
   useEffect(() => {
-    if (status === "PAID" || status === "COMPLETED") {
+    if (shouldCloseCustomerSessionAfterPayment(status ?? undefined)) {
       markCustomerSessionClosedAfterPayment();
     }
   }, [status]);
 
-  const canPay =
-    !!orderCode &&
-    status !== null &&
-    status !== "PAID" &&
-    status !== "COMPLETED" &&
-    status !== "CANCELLED" &&
-    status !== "CANCELED";
+  const canPay = !!orderCode && isOrderPayable(status ?? undefined);
 
   if (isLoading) {
     return (
@@ -255,7 +250,9 @@ export function CustomerOrderStatusPage() {
 
               {canPay ? (
                 <div className="customer-hotpot-stat rounded-[24px] px-5 py-4 text-sm text-[#8a5d1e]">
-                  Đơn chưa thanh toán. Bạn có thể tiếp tục sang bước thanh toán ngay bây giờ.
+                  {status === "COMPLETED"
+                    ? "Bill đang ở trạng thái tạm đóng để chốt phục vụ, nhưng vẫn chưa thanh toán. Bạn có thể thanh toán ngay hoặc mở lại bàn nếu còn muốn gọi thêm."
+                    : "Đơn chưa thanh toán. Bạn có thể tiếp tục sang bước thanh toán ngay bây giờ."}
                 </div>
               ) : null}
 
@@ -265,11 +262,6 @@ export function CustomerOrderStatusPage() {
                 </div>
               ) : null}
 
-              {status === "COMPLETED" ? (
-                <div className="customer-hotpot-stat rounded-[24px] px-5 py-4 text-sm text-[#5f7a35]">
-                  Đơn hàng đã hoàn tất. Muốn tiếp tục gọi thêm món, hãy mở lại bàn để tạo lượt mới.
-                </div>
-              ) : null}
             </div>
 
             <div className="space-y-3">
@@ -307,7 +299,7 @@ export function CustomerOrderStatusPage() {
                     Xem trang thanh toán
                   </Link>
 
-                  {(status === "PAID" || status === "COMPLETED") ? (
+                  {status === "PAID" ? (
                     <Link
                       to="/c/qr?next=%2Fc%2Fmenu"
                       className={cn(

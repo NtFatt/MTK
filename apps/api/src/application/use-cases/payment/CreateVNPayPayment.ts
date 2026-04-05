@@ -2,6 +2,7 @@ import type { IPaymentGateway } from "../../ports/gateways/IPaymentGateway.js";
 import type { IOrderRepository } from "../../ports/repositories/IOrderRepository.js";
 import type { IPaymentRepository } from "../../ports/repositories/IPaymentRepository.js";
 import { env } from "../../../infrastructure/config/env.js";
+import { isOrderPayableStatus } from "../../../domain/policies/orderPaymentPolicy.js";
 
 export class CreateVNPayPayment {
   constructor(
@@ -13,7 +14,7 @@ export class CreateVNPayPayment {
   async execute(orderCode: string) {
     const order = await this.orderRepo.findStatusByOrderCode(orderCode);
     if (!order) throw new Error("ORDER_NOT_FOUND");
-    if (order.orderStatus !== "NEW") throw new Error("ORDER_NOT_PAYABLE");
+    if (!isOrderPayableStatus(order.orderStatus)) throw new Error("ORDER_NOT_PAYABLE");
 
     const { paymentId, txnRef, amount } = await this.paymentRepo.createInitPayment(orderCode, {
       provider: "VNPAY",

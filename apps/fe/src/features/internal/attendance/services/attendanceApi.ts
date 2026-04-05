@@ -51,6 +51,8 @@ export type AttendanceBoardRow = {
   version: number | null;
   isOpen: boolean;
   isPlaceholder: boolean;
+  isScheduled: boolean;
+  assignmentId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -69,6 +71,31 @@ export type AttendanceRecord = Omit<AttendanceBoardRow, "rowKey" | "isPlaceholde
   version: number;
 };
 
+export type AttendanceAssignmentRow = {
+  staffId: string;
+  staffName: string | null;
+  username: string;
+  staffRole: string;
+  staffStatus: string;
+  isInactiveButAssigned: boolean;
+  morningAssigned: boolean;
+  morningAssignmentId: string | null;
+  eveningAssigned: boolean;
+  eveningAssignmentId: string | null;
+};
+
+export type AttendanceAssignmentsPayload = {
+  branchId: string;
+  businessDate: string;
+  summary: {
+    totalStaff: number;
+    assignedStaffCount: number;
+    morningAssignedCount: number;
+    eveningAssignedCount: number;
+  };
+  items: AttendanceAssignmentRow[];
+};
+
 export type FetchAttendanceBoardParams = {
   branchId: string;
   businessDate: string;
@@ -82,6 +109,13 @@ export type AttendanceHistoryParams = {
   branchId: string;
   staffId: string;
   limit?: number;
+};
+
+export type FetchAttendanceAssignmentsParams = {
+  branchId: string;
+  businessDate: string;
+  role?: AttendanceRole | null;
+  q?: string | null;
 };
 
 export type AttendanceCheckInPayload = {
@@ -104,6 +138,12 @@ export type AttendanceMarkAbsentPayload = {
   businessDate: string;
   shiftCode: AttendanceShiftCode;
   note: string;
+};
+
+export type ReplaceAttendanceAssignmentsPayload = {
+  branchId: string;
+  businessDate: string;
+  staffIds: string[];
 };
 
 function toNullableString(value: unknown): string | null {
@@ -156,8 +196,25 @@ function normalizeBoardRow(raw: any): AttendanceBoardRow {
         : toNumber(raw?.version),
     isOpen: Boolean(raw?.isOpen ?? raw?.is_open),
     isPlaceholder: Boolean(raw?.isPlaceholder ?? raw?.is_placeholder),
+    isScheduled: Boolean(raw?.isScheduled ?? raw?.is_scheduled),
+    assignmentId: toNullableString(raw?.assignmentId ?? raw?.assignment_id),
     createdAt: String(raw?.createdAt ?? raw?.created_at ?? ""),
     updatedAt: String(raw?.updatedAt ?? raw?.updated_at ?? ""),
+  };
+}
+
+function normalizeAssignmentRow(raw: any): AttendanceAssignmentRow {
+  return {
+    staffId: String(raw?.staffId ?? raw?.staff_id ?? ""),
+    staffName: toNullableString(raw?.staffName ?? raw?.staff_name ?? raw?.fullName ?? raw?.full_name),
+    username: String(raw?.username ?? ""),
+    staffRole: String(raw?.staffRole ?? raw?.staff_role ?? ""),
+    staffStatus: String(raw?.staffStatus ?? raw?.staff_status ?? ""),
+    isInactiveButAssigned: Boolean(raw?.isInactiveButAssigned ?? raw?.is_inactive_but_assigned),
+    morningAssigned: Boolean(raw?.morningAssigned ?? raw?.morning_assigned),
+    morningAssignmentId: toNullableString(raw?.morningAssignmentId ?? raw?.morning_assignment_id),
+    eveningAssigned: Boolean(raw?.eveningAssigned ?? raw?.evening_assigned),
+    eveningAssignmentId: toNullableString(raw?.eveningAssignmentId ?? raw?.evening_assignment_id),
   };
 }
 
@@ -189,6 +246,29 @@ export async function fetchAttendanceBoard(
     shiftCode: String(raw?.shiftCode ?? raw?.shift_code ?? params.shiftCode).toUpperCase() as AttendanceShiftCode,
     shiftName: String(raw?.shiftName ?? raw?.shift_name ?? params.shiftCode),
     items: Array.isArray(raw?.items) ? raw.items.map(normalizeBoardRow) : [],
+  };
+}
+
+export async function fetchAttendanceAssignments(
+  params: FetchAttendanceAssignmentsParams,
+): Promise<AttendanceAssignmentsPayload> {
+  const query = new URLSearchParams();
+  query.set("branchId", params.branchId);
+  query.set("businessDate", params.businessDate);
+  if (params.role) query.set("role", params.role);
+  if (params.q && params.q.trim()) query.set("q", params.q.trim());
+
+  const raw = await apiFetchAuthed<any>(`/admin/attendance/assignments?${query.toString()}`);
+  return {
+    branchId: String(raw?.branchId ?? raw?.branch_id ?? params.branchId),
+    businessDate: String(raw?.businessDate ?? raw?.business_date ?? params.businessDate),
+    summary: {
+      totalStaff: toNumber(raw?.summary?.totalStaff ?? raw?.summary?.total_staff),
+      assignedStaffCount: toNumber(raw?.summary?.assignedStaffCount ?? raw?.summary?.assigned_staff_count),
+      morningAssignedCount: toNumber(raw?.summary?.morningAssignedCount ?? raw?.summary?.morning_assigned_count),
+      eveningAssignedCount: toNumber(raw?.summary?.eveningAssignedCount ?? raw?.summary?.evening_assigned_count),
+    },
+    items: Array.isArray(raw?.items) ? raw.items.map(normalizeAssignmentRow) : [],
   };
 }
 
@@ -243,4 +323,21 @@ export async function markAttendanceAbsent(
     idempotencyKey,
   });
   return normalizeRecord(raw);
+}
+
+export async function replaceAttendanceAssignments(
+  shiftCode: AttendanceShiftCode,
+  payload: ReplaceAttendanceAssignmentsPayload,
+  idempotencyKey?: string,
+): Promise<AttendanceAssignmentsPayload> {
+  await apiFetchAuthed<any>(`/admin/attendance/assignments/${encodeURIComponent(shiftCode)}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+    idempotencyKey,
+  });
+
+  return fetchAttendanceAssignments({
+    branchId: payload.branchId,
+    businessDate: payload.businessDate,
+  });
 }

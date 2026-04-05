@@ -1,10 +1,10 @@
 /**
  * Customer session persistence (sessionStorage).
- * Key: hadilao.customer.session
+ * Key: duong_hanh_phuc.customer.session
  */
 import type { CustomerSession } from "./types";
 
-const KEY = "hadilao.customer.session";
+const KEY = "duong_hanh_phuc.customer.session";
 
 export function loadCustomerSession(): CustomerSession | null {
   try {

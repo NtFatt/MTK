@@ -96,6 +96,11 @@ function shiftDisplayLabel(code: ShiftCode) {
   return code === "MORNING" ? "Ca sáng" : "Ca chiều";
 }
 
+function formatAssignedShiftLabels(codes: ShiftCode[]): string {
+  if (!codes.length) return "Chưa được phân ca";
+  return codes.map(shiftDisplayLabel).join(", ");
+}
+
 function BreakdownEditor({
   rows,
   onChange,
@@ -326,6 +331,24 @@ export function InternalShiftCenterPage() {
   const simpleShiftMode = !canHandleCash;
   const enabled = !!session && !!branchParam && !isBranchMismatch && canRead;
 
+  const [shiftCode, setShiftCode] = useState<ShiftCode>("MORNING");
+  const [businessDate, setBusinessDate] = useState(todayLocalDate());
+  const [openingFloat, setOpeningFloat] = useState(0);
+  const [openingBreakdown, setOpeningBreakdown] = useState<ShiftBreakdownInput[]>(() =>
+    buildEmptyBreakdown(),
+  );
+  const [openingNote, setOpeningNote] = useState("");
+
+  const [closeDraft, setCloseDraft] = useState<{
+    scopeKey: string;
+    breakdown: ShiftBreakdownInput[];
+    note: string;
+  }>({
+    scopeKey: "",
+    breakdown: buildEmptyBreakdown(),
+    note: "",
+  });
+
   useRealtimeRoom(
     enabled ? `shift:${branchParam}` : null,
     enabled,
@@ -345,7 +368,7 @@ export function InternalShiftCenterPage() {
     isLoading: currentLoading,
     isFetching: currentFetching,
     refetch: refetchCurrent,
-  } = useCurrentShiftQuery(branchParam, enabled);
+  } = useCurrentShiftQuery(branchParam, enabled, businessDate);
   const {
     data: history,
     error: historyError,
@@ -361,25 +384,10 @@ export function InternalShiftCenterPage() {
   const closeMutation = useCloseShiftMutation(branchParam);
 
   const current = currentData?.current ?? null;
+  const actorSchedule = currentData?.actorSchedule ?? null;
+  const isPrivilegedShiftActor = Boolean(actorSchedule?.isPrivileged) || isAdminRole(role);
+  const assignedShiftCodes = actorSchedule?.assignedShiftCodes ?? [];
   const templates = useMemo(() => currentData?.templates ?? [], [currentData?.templates]);
-
-  const [shiftCode, setShiftCode] = useState<ShiftCode>("MORNING");
-  const [businessDate, setBusinessDate] = useState(todayLocalDate());
-  const [openingFloat, setOpeningFloat] = useState(0);
-  const [openingBreakdown, setOpeningBreakdown] = useState<ShiftBreakdownInput[]>(() =>
-    buildEmptyBreakdown(),
-  );
-  const [openingNote, setOpeningNote] = useState("");
-
-  const [closeDraft, setCloseDraft] = useState<{
-    scopeKey: string;
-    breakdown: ShiftBreakdownInput[];
-    note: string;
-  }>({
-    scopeKey: "",
-    breakdown: buildEmptyBreakdown(),
-    note: "",
-  });
 
   const resolvedShiftCode = useMemo<ShiftCode>(() => {
     if (templates.some((item) => item.code === shiftCode)) return shiftCode;
@@ -457,6 +465,10 @@ export function InternalShiftCenterPage() {
       current.summary.cashSales > 0 ||
       current.summary.nonCashSales > 0 ||
       current.expectedCash > 0);
+  const openBlockedByAssignment =
+    !isPrivilegedShiftActor && !assignedShiftCodes.includes(resolvedShiftCode);
+  const closeBlockedByAssignment =
+    !!current && !isPrivilegedShiftActor && !assignedShiftCodes.includes(current.shiftCode);
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-6">
@@ -539,6 +551,26 @@ export function InternalShiftCenterPage() {
             </Alert>
           ) : null}
 
+          {!isPrivilegedShiftActor ? (
+            <Alert className="border-[#ead8c0] bg-[#fffaf4] text-[#6d4928]">
+              <AlertDescription>
+                Ca của bạn trong ngày <span className="font-semibold">{businessDate}</span>:{" "}
+                <span className="font-semibold text-[#4e2916]">
+                  {formatAssignedShiftLabels(assignedShiftCodes)}
+                </span>
+                {assignedShiftCodes.length === 0 ? (
+                  <span className="mt-1 block text-[#8f2f2f]">
+                    Bạn chưa được phân ca nên không thể tự mở hoặc kết ca. Hãy liên hệ quản lý chi nhánh.
+                  </span>
+                ) : (
+                  <span className="mt-1 block">
+                    Bạn chỉ có thể tự thao tác với đúng ca đã được phân trong ngày này.
+                  </span>
+                )}
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
           <section
             className={`grid gap-6 ${
               simpleShiftMode
@@ -580,6 +612,22 @@ export function InternalShiftCenterPage() {
                           ) : null}
                         </AlertDescription>
                       </Alert>
+                    ) : null}
+
+                    {!isPrivilegedShiftActor && assignedShiftCodes.length === 0 ? (
+                      <div className="rounded-[18px] border border-[#efc4c4] bg-[#fff4f4] px-4 py-3 text-sm text-[#8f2f2f]">
+                        Bạn chưa có lịch cho ngày này nên không thể tự mở ca.
+                      </div>
+                    ) : null}
+
+                    {!isPrivilegedShiftActor && assignedShiftCodes.length > 0 && openBlockedByAssignment ? (
+                      <div className="rounded-[18px] border border-[#ead8c0] bg-[#fffaf4] px-4 py-3 text-sm text-[#7a5a43]">
+                        Ca đang chọn không nằm trong lịch của bạn. Hãy chuyển sang{" "}
+                        <span className="font-semibold text-[#4e2916]">
+                          {formatAssignedShiftLabels(assignedShiftCodes)}
+                        </span>{" "}
+                        hoặc liên hệ quản lý để cập nhật phân ca.
+                      </div>
                     ) : null}
 
                     <div className="space-y-4">
@@ -697,7 +745,8 @@ export function InternalShiftCenterPage() {
                         !canOpen ||
                         openMutation.isPending ||
                         (!simpleShiftMode && openingTotal !== openingFloat) ||
-                        !businessDate
+                        !businessDate ||
+                        openBlockedByAssignment
                       }
                       onClick={handleOpenShift}
                       className="h-12 w-full rounded-[18px] bg-[#cf5b42] text-white hover:bg-[#b94031]"
@@ -733,6 +782,12 @@ export function InternalShiftCenterPage() {
                           ) : null}
                         </AlertDescription>
                       </Alert>
+                    ) : null}
+
+                    {closeBlockedByAssignment ? (
+                      <div className="rounded-[18px] border border-[#efc4c4] bg-[#fff4f4] px-4 py-3 text-sm text-[#8f2f2f]">
+                        Ca đang mở không nằm trong lịch của bạn hôm nay nên bạn không thể tự kết ca này.
+                      </div>
                     ) : null}
 
                     {simpleShiftMode ? (
@@ -833,7 +888,8 @@ export function InternalShiftCenterPage() {
                         closeMutation.isPending ||
                         current.summary.unpaidCount > 0 ||
                         (!simpleShiftMode && variance !== 0 && !closeNote.trim()) ||
-                        simpleModeCloseBlocked
+                        simpleModeCloseBlocked ||
+                        closeBlockedByAssignment
                       }
                       onClick={handleCloseShift}
                       className="h-12 w-full rounded-[18px] bg-[#cf5b42] text-white hover:bg-[#b94031]"

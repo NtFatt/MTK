@@ -55,7 +55,7 @@
   }
 }
 
-/* Hadilao Origami Custom Animations */
+/* Tiệm lẩu trên Đường Hạnh Phúc Origami Custom Animations */
 @keyframes float-ornament {
   0%, 100% { transform: translateY(0) rotate(0deg); }
   25% { transform: translateY(-10px) rotate(1.5deg); }

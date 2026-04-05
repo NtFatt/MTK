@@ -1,8 +1,8 @@
-# FINAL_HANDOVER.md -- Hadilao Online After PR25 Rescue
+# FINAL_HANDOVER.md -- Tiệm lẩu trên Đường Hạnh Phúc After PR25 Rescue
 
 ## 1) Executive summary
 
-Hadilao Online hien la monorepo full-stack cho customer ordering + internal restaurant operations voi:
+Tiệm lẩu trên Đường Hạnh Phúc hien la monorepo full-stack cho customer ordering + internal restaurant operations voi:
 
 - customer session/menu/cart/checkout/order/payment flow
 - internal ops tables/session/order flow

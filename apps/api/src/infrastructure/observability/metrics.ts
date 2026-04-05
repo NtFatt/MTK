@@ -164,70 +164,70 @@ function normalizeRoute(raw: string | undefined): string {
 
 export const metrics = {
   // HTTP
-  httpRequestsTotal: new Counter("hadilao_http_requests_total", "Total HTTP requests"),
+  httpRequestsTotal: new Counter("duong_hanh_phuc_http_requests_total", "Total HTTP requests"),
   httpRequestDurationMs: new Histogram(
-    "hadilao_http_request_duration_ms",
+    "duong_hanh_phuc_http_request_duration_ms",
     "HTTP request duration in milliseconds",
     [5, 10, 25, 50, 100, 200, 500, 1000, 2000, 5000],
   ),
-  httpInFlight: new Gauge("hadilao_http_in_flight", "HTTP requests currently in-flight"),
-  httpErrorsTotal: new Counter("hadilao_http_errors_total", "Total HTTP error responses (4xx/5xx)"),
+  httpInFlight: new Gauge("duong_hanh_phuc_http_in_flight", "HTTP requests currently in-flight"),
+  httpErrorsTotal: new Counter("duong_hanh_phuc_http_errors_total", "Total HTTP error responses (4xx/5xx)"),
 
   // MySQL
-  dbQueriesTotal: new Counter("hadilao_db_queries_total", "Total MySQL queries (query/execute)"),
+  dbQueriesTotal: new Counter("duong_hanh_phuc_db_queries_total", "Total MySQL queries (query/execute)"),
   dbQueryDurationMs: new Histogram(
-    "hadilao_db_query_duration_ms",
+    "duong_hanh_phuc_db_query_duration_ms",
     "MySQL query duration in milliseconds",
     [1, 2, 5, 10, 25, 50, 100, 200, 500, 1000, 2000],
   ),
-  dbSlowQueriesTotal: new Counter("hadilao_db_slow_queries_total", "Total slow MySQL queries"),
+  dbSlowQueriesTotal: new Counter("duong_hanh_phuc_db_slow_queries_total", "Total slow MySQL queries"),
 
   // Redis
-  redisCommandsTotal: new Counter("hadilao_redis_commands_total", "Total Redis commands"),
+  redisCommandsTotal: new Counter("duong_hanh_phuc_redis_commands_total", "Total Redis commands"),
   redisCommandDurationMs: new Histogram(
-    "hadilao_redis_command_duration_ms",
+    "duong_hanh_phuc_redis_command_duration_ms",
     "Redis command duration in milliseconds",
     [0.5, 1, 2, 5, 10, 25, 50, 100, 200, 500, 1000],
   ),
-  redisSlowCommandsTotal: new Counter("hadilao_redis_slow_commands_total", "Total slow Redis commands"),
+  redisSlowCommandsTotal: new Counter("duong_hanh_phuc_redis_slow_commands_total", "Total slow Redis commands"),
 
   // Runtime
-  buildInfo: new Gauge("hadilao_build_info", "Build info (value=1)") ,
-  processUptimeSeconds: new Gauge("hadilao_process_uptime_seconds", "Process uptime in seconds"),
-  processResidentMemoryBytes: new Gauge("hadilao_process_resident_memory_bytes", "Process RSS memory in bytes"),
-  processHeapUsedBytes: new Gauge("hadilao_process_heap_used_bytes", "Process heap used in bytes"),
-  processHeapTotalBytes: new Gauge("hadilao_process_heap_total_bytes", "Process heap total in bytes"),
-  eventLoopDelayMeanMs: new Gauge("hadilao_event_loop_delay_mean_ms", "Event loop delay mean in ms"),
-  eventLoopDelayP99Ms: new Gauge("hadilao_event_loop_delay_p99_ms", "Event loop delay p99 in ms"),
-  systemLoad1: new Gauge("hadilao_system_load1", "System load average (1m)"),
+  buildInfo: new Gauge("duong_hanh_phuc_build_info", "Build info (value=1)") ,
+  processUptimeSeconds: new Gauge("duong_hanh_phuc_process_uptime_seconds", "Process uptime in seconds"),
+  processResidentMemoryBytes: new Gauge("duong_hanh_phuc_process_resident_memory_bytes", "Process RSS memory in bytes"),
+  processHeapUsedBytes: new Gauge("duong_hanh_phuc_process_heap_used_bytes", "Process heap used in bytes"),
+  processHeapTotalBytes: new Gauge("duong_hanh_phuc_process_heap_total_bytes", "Process heap total in bytes"),
+  eventLoopDelayMeanMs: new Gauge("duong_hanh_phuc_event_loop_delay_mean_ms", "Event loop delay mean in ms"),
+  eventLoopDelayP99Ms: new Gauge("duong_hanh_phuc_event_loop_delay_p99_ms", "Event loop delay p99 in ms"),
+  systemLoad1: new Gauge("duong_hanh_phuc_system_load1", "System load average (1m)"),
 
   // Inventory drift control (Phase-2)
   inventoryRehydrateRunsTotal: new Counter(
-    "hadilao_inventory_stock_rehydrate_runs_total",
+    "duong_hanh_phuc_inventory_stock_rehydrate_runs_total",
     "Total inventory stock rehydrate runs",
   ),
   inventoryRehydrateScannedLast: new Gauge(
-    "hadilao_inventory_stock_rehydrate_scanned_last",
+    "duong_hanh_phuc_inventory_stock_rehydrate_scanned_last",
     "Last inventory stock rehydrate scanned count",
   ),
   inventoryRehydrateCorrectedLast: new Gauge(
-    "hadilao_inventory_stock_rehydrate_corrected_last",
+    "duong_hanh_phuc_inventory_stock_rehydrate_corrected_last",
     "Last inventory stock rehydrate corrected count",
   ),
   inventoryStockDriftMaxAbsLast: new Gauge(
-    "hadilao_inventory_stock_drift_max_abs_last",
+    "duong_hanh_phuc_inventory_stock_drift_max_abs_last",
     "Last inventory stock drift max absolute value",
   ),
   inventoryStockDriftTotalAbsLast: new Gauge(
-    "hadilao_inventory_stock_drift_total_abs_last",
+    "duong_hanh_phuc_inventory_stock_drift_total_abs_last",
     "Last inventory stock drift total absolute value",
   ),
   inventoryRehydrateLastTimestampSeconds: new Gauge(
-    "hadilao_inventory_stock_rehydrate_last_timestamp_seconds",
+    "duong_hanh_phuc_inventory_stock_rehydrate_last_timestamp_seconds",
     "Last inventory stock rehydrate timestamp (unix seconds)",
   ),
   inventoryRehydrateSkippedTotal: new Counter(
-    "hadilao_inventory_stock_rehydrate_skipped_total",
+    "duong_hanh_phuc_inventory_stock_rehydrate_skipped_total",
     "Total inventory stock rehydrate skipped due to lock contention",
   ),
 
@@ -241,7 +241,7 @@ export const metrics = {
       this.systemLoad1.set({}, os.loadavg?.()[0] ?? 0);
 
       const version = process.env.npm_package_version ?? "0.0.0";
-      this.buildInfo.set({ service: "hadilao-api", version, node: process.version, platform: process.platform }, 1);
+      this.buildInfo.set({ service: "duong-hanh-phuc-api", version, node: process.version, platform: process.platform }, 1);
 
       if (elDelay) {
         const meanMs = Number(elDelay.mean) / 1e6;

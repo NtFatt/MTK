@@ -2,7 +2,7 @@
 
 ## Input luật (bắt buộc đọc trước khi code)
 1) FE Spec v2.0 Cursor Enterprise (guardrails + Appendix F folder template)
-2) UI mẫu `hadilao-client-menu.zip` (tokens + animation + layout baseline)
+2) UI mẫu `duong-hanh-phuc-client-menu.zip` (tokens + animation + layout baseline)
 3) Repo hiện tại `apps/fe` (từ `fe.zip`) — Vite + React Router + React Query + Zustand + socket.io-client
 
 ## Context (repo facts — KHÔNG được phá)
@@ -13,13 +13,13 @@
   - `src/lib/contracts.ts` (re-export `qk`, `Schemas`, `normalizeApiError`)
 
 ## Goal
-Thiết lập “nền” để PR-01 có thể port UI mẫu sang Vite mà không vỡ: Tailwind + tokens Hadilao + folder skeleton theo SPEC v2.
+Thiết lập “nền” để PR-01 có thể port UI mẫu sang Vite mà không vỡ: Tailwind + tokens Tiệm lẩu trên Đường Hạnh Phúc + folder skeleton theo SPEC v2.
 
 ## Definition of Done (DoD)
 A) Tailwind hoạt động trong Vite
 - Có `tailwind.config.ts` + `postcss.config.*` đúng chuẩn Vite.
 - `src/index.css` đổi sang Tailwind directives + **tokens & custom CSS** khớp UI mẫu (`app/globals.css`):
-  - CSS variables palette Hadilao (background/foreground/primary/accent…)
+  - CSS variables palette Tiệm lẩu trên Đường Hạnh Phúc (background/foreground/primary/accent…)
   - custom animations: float-ornament, float-blossom, float-paper, shimmer-text, pulse-jade, fade-in-up
   - scrollbar styling + `.paper-texture` utility
 - Xoá/loại bỏ CSS template mặc định của Vite (tránh conflict theme).
@@ -52,7 +52,7 @@ D) Lint/Typecheck alignment
 ## Implementation checklist (files expected)
 - [ ] `apps/fe/tailwind.config.ts`
 - [ ] `apps/fe/postcss.config.cjs` (hoặc `.js` ESM phù hợp)
-- [ ] `apps/fe/src/index.css` (tokens Hadilao parity UI sample)
+- [ ] `apps/fe/src/index.css` (tokens Tiệm lẩu trên Đường Hạnh Phúc parity UI sample)
 - [ ] `apps/fe/src/shared/utils/cn.ts`
 - [ ] `apps/fe/src/app/{router.tsx,providers.tsx,App.tsx}`
 - [ ] `apps/fe/src/layouts/{public,customer,internal}/` (có thể empty placeholder)

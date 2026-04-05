@@ -46,6 +46,21 @@ function isAdminRole(role: unknown): boolean {
   return String(role ?? "").toUpperCase() === "ADMIN";
 }
 
+function todayLocalDate() {
+  const now = new Date();
+  const offset = now.getTimezoneOffset();
+  return new Date(now.getTime() - offset * 60_000).toISOString().slice(0, 10);
+}
+
+function shiftDisplayLabel(code: "MORNING" | "EVENING"): string {
+  return code === "MORNING" ? "Ca sáng" : "Ca chiều";
+}
+
+function formatAssignedShiftLabels(codes: ("MORNING" | "EVENING")[]): string {
+  if (!codes.length) return "Chưa được phân ca";
+  return codes.map(shiftDisplayLabel).join(", ");
+}
+
 function getAgeMinutes(row: CashierOrderRow): number {
   const anchor = getSeatAnchor(row);
   if (!anchor) return 0;
@@ -125,6 +140,7 @@ export function InternalCashierPage() {
   const canSettle = hasPermission(session, "cashier.settle_cash");
   const canReadShifts = hasPermission(session, "shifts.read");
   const enabled = !!session && !!branchParam && !isBranchMismatch && canRead;
+  const shiftLookupDate = todayLocalDate();
 
   const [query, setQuery] = useState("");
   const [ageBucket, setAgeBucket] = useState<AgeBucket>("all");
@@ -148,7 +164,7 @@ export function InternalCashierPage() {
     data: shiftData,
     error: shiftError,
     isFetching: isShiftFetching,
-  } = useCurrentShiftQuery(branchParam, enabled && canReadShifts);
+  } = useCurrentShiftQuery(branchParam, enabled && canReadShifts, shiftLookupDate);
 
   useEffect(() => {
     if (!enabled) return;
@@ -184,6 +200,9 @@ export function InternalCashierPage() {
 
   const rows = useMemo(() => data ?? [], [data]);
   const currentShift = shiftData?.current ?? null;
+  const actorSchedule = shiftData?.actorSchedule ?? null;
+  const isPrivilegedShiftActor = Boolean(actorSchedule?.isPrivileged) || isAdminRole(role);
+  const assignedShiftCodes = actorSchedule?.assignedShiftCodes ?? [];
   const settleDisabledReason = !canReadShifts
     ? null
     : shiftError
@@ -404,6 +423,23 @@ export function InternalCashierPage() {
                         Cashier chỉ có thể settle cash sau khi một ca hợp lệ được mở cho chi
                         nhánh này.
                       </div>
+                      {!isPrivilegedShiftActor ? (
+                        <div className="rounded-[16px] border border-[#ead8c0] bg-[#fffaf4] px-4 py-3 text-sm text-[#7a5a43]">
+                          Ca của bạn hôm nay:{" "}
+                          <span className="font-semibold text-[#4e2916]">
+                            {formatAssignedShiftLabels(assignedShiftCodes)}
+                          </span>
+                          {assignedShiftCodes.length === 0 ? (
+                            <span className="mt-2 block text-[#8f2f2f]">
+                              Bạn chưa được phân ca nên không thể tự yêu cầu mở ca. Hãy liên hệ quản lý chi nhánh.
+                            </span>
+                          ) : (
+                            <span className="mt-2 block">
+                              Bạn chỉ nên mở đúng ca đã được phân tại màn hình ca làm việc.
+                            </span>
+                          )}
+                        </div>
+                      ) : null}
                     </div>
                   )}
                 </div>

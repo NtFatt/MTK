@@ -1,7 +1,7 @@
 import type { HttpError } from "../../http/errors";
 import { customerSessionStore } from "./sessionStore";
 
-const RECOVERY_KEY = "hadilao.customer.session.recovery";
+const RECOVERY_KEY = "duong_hanh_phuc.customer.session.recovery";
 
 export type CustomerSessionRecoveryReason = "SESSION_CLOSED" | "SESSION_NOT_FOUND";
 export type CustomerSessionRecoveryStoredReason =

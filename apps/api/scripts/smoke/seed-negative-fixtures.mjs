@@ -76,7 +76,7 @@ async function main() {
     port: Number(envPick(["MYSQL_PORT", "DB_PORT"], "3306")),
     user: envPick(["MYSQL_USER", "DB_USER"], "root"),
     password: envPick(["MYSQL_PASSWORD", "DB_PASSWORD"], ""),
-    database: envPick(["MYSQL_DATABASE", "DB_NAME"], "hadilao_online"),
+    database: envPick(["MYSQL_DATABASE", "DB_NAME"], "tiem_lau_tren_duong_hanh_phuc"),
   });
 
   try {

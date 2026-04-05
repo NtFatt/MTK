@@ -1,7 +1,7 @@
 {
-  "uid": "hadilao-api-v15",
-  "title": "Hadilao API - Observability (v15)",
-  "tags": ["hadilao", "api", "observability"],
+  "uid": "duong-hanh-phuc-api-v15",
+  "title": "Tiệm lẩu trên Đường Hạnh Phúc API - Observability (v15)",
+  "tags": ["duong_hanh_phuc", "api", "observability"],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
@@ -19,7 +19,7 @@
       "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
       "targets": [
         {
-          "expr": "sum(rate(hadilao_http_requests_total[1m]))",
+          "expr": "sum(rate(duong_hanh_phuc_http_requests_total[1m]))",
           "legendFormat": "rps"
         }
       ]
@@ -32,7 +32,7 @@
       "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
       "targets": [
         {
-          "expr": "100 * (sum(rate(hadilao_http_errors_total[5m])) / sum(rate(hadilao_http_requests_total[5m])))",
+          "expr": "100 * (sum(rate(duong_hanh_phuc_http_errors_total[5m])) / sum(rate(duong_hanh_phuc_http_requests_total[5m])))",
           "legendFormat": "%"
         }
       ]
@@ -45,7 +45,7 @@
       "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(hadilao_http_request_duration_ms_bucket[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(duong_hanh_phuc_http_request_duration_ms_bucket[5m])) by (le))",
           "legendFormat": "p95"
         }
       ]
@@ -58,7 +58,7 @@
       "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
       "targets": [
         {
-          "expr": "hadilao_http_in_flight",
+          "expr": "duong_hanh_phuc_http_in_flight",
           "legendFormat": "in_flight"
         }
       ]
@@ -71,7 +71,7 @@
       "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(hadilao_db_query_duration_ms_bucket[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(duong_hanh_phuc_db_query_duration_ms_bucket[5m])) by (le))",
           "legendFormat": "p95"
         }
       ]
@@ -84,7 +84,7 @@
       "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(hadilao_redis_command_duration_ms_bucket[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(duong_hanh_phuc_redis_command_duration_ms_bucket[5m])) by (le))",
           "legendFormat": "p95"
         }
       ]
@@ -97,11 +97,11 @@
       "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
       "targets": [
         {
-          "expr": "sum(rate(hadilao_db_slow_queries_total[5m]))",
+          "expr": "sum(rate(duong_hanh_phuc_db_slow_queries_total[5m]))",
           "legendFormat": "db_slow/s"
         },
         {
-          "expr": "sum(rate(hadilao_redis_slow_commands_total[5m]))",
+          "expr": "sum(rate(duong_hanh_phuc_redis_slow_commands_total[5m]))",
           "legendFormat": "redis_slow/s"
         }
       ]
@@ -114,11 +114,11 @@
       "gridPos": { "x": 12, "y": 24, "w": 12, "h": 8 },
       "targets": [
         {
-          "expr": "hadilao_process_resident_memory_bytes",
+          "expr": "duong_hanh_phuc_process_resident_memory_bytes",
           "legendFormat": "rss_bytes"
         },
         {
-          "expr": "hadilao_event_loop_delay_p99_ms",
+          "expr": "duong_hanh_phuc_event_loop_delay_p99_ms",
           "legendFormat": "event_loop_p99_ms"
         }
       ]

@@ -2,6 +2,8 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import type { IAuditLogRepository } from "../../../application/ports/repositories/IAuditLogRepository.js";
 import type { ListAttendanceBoard } from "../../../application/use-cases/admin/attendance/ListAttendanceBoard.js";
+import type { ListAttendanceAssignments } from "../../../application/use-cases/admin/attendance/ListAttendanceAssignments.js";
+import type { ReplaceAttendanceAssignments } from "../../../application/use-cases/admin/attendance/ReplaceAttendanceAssignments.js";
 import type { ListStaffAttendanceHistory } from "../../../application/use-cases/admin/attendance/ListStaffAttendanceHistory.js";
 import type { ManualAttendanceCheckIn } from "../../../application/use-cases/admin/attendance/ManualAttendanceCheckIn.js";
 import type { ManualAttendanceCheckOut } from "../../../application/use-cases/admin/attendance/ManualAttendanceCheckOut.js";
@@ -34,6 +36,13 @@ const HistoryQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(30).optional(),
 });
 
+const AssignmentQuerySchema = z.object({
+  branchId: z.union([z.string().min(1), z.number().int().positive()]).transform(String),
+  businessDate: DateOnly,
+  role: z.enum(["BRANCH_MANAGER", "STAFF", "KITCHEN", "CASHIER"]).optional(),
+  q: z.string().max(120).optional(),
+});
+
 const CheckInBodySchema = z.object({
   branchId: z.union([z.string().min(1), z.number().int().positive()]).transform(String),
   businessDate: DateOnly,
@@ -56,6 +65,15 @@ const MarkAbsentBodySchema = z.object({
   note: z.string().trim().min(2).max(1000),
 });
 
+const ReplaceAssignmentsBodySchema = z.object({
+  branchId: z.union([z.string().min(1), z.number().int().positive()]).transform(String),
+  businessDate: DateOnly,
+  staffIds: z
+    .array(z.union([z.string().min(1), z.number().int().positive()]).transform(String))
+    .max(200)
+    .default([]),
+});
+
 type InternalActor = {
   actorType: "ADMIN" | "STAFF";
   actorId: string;
@@ -71,6 +89,8 @@ function resolveDefaultShiftCode(): "MORNING" | "EVENING" {
 export class AdminAttendanceController {
   constructor(
     private readonly listBoardUc: ListAttendanceBoard,
+    private readonly listAssignmentsUc: ListAttendanceAssignments,
+    private readonly replaceAssignmentsUc: ReplaceAttendanceAssignments,
     private readonly listStaffHistoryUc: ListStaffAttendanceHistory,
     private readonly manualCheckInUc: ManualAttendanceCheckIn,
     private readonly manualCheckOutUc: ManualAttendanceCheckOut,
@@ -109,6 +129,21 @@ export class AdminAttendanceController {
       shiftCode: query.shiftCode ?? resolveDefaultShiftCode(),
       role: query.role ?? null,
       status: query.status ?? null,
+      q: query.q ?? null,
+    });
+    return res.json(out);
+  };
+
+  assignments = async (req: Request, res: Response) => {
+    const query = AssignmentQuerySchema.parse(req.query);
+    const actor = this.actorFrom(res);
+    this.assertBranchAccess(actor, query.branchId);
+
+    const out = await this.listAssignmentsUc.execute({
+      actor: { role: actor.role, branchId: actor.branchId },
+      branchId: query.branchId,
+      businessDate: query.businessDate,
+      role: query.role ?? null,
       q: query.q ?? null,
     });
     return res.json(out);
@@ -172,6 +207,45 @@ export class AdminAttendanceController {
     });
 
     return res.status(201).json(record);
+  };
+
+  replaceAssignments = async (req: Request, res: Response) => {
+    const shiftCode = z.enum(["MORNING", "EVENING"]).parse(req.params.shiftCode);
+    const body = ReplaceAssignmentsBodySchema.parse(req.body);
+    const actor = this.actorFrom(res);
+    this.assertBranchAccess(actor, body.branchId);
+
+    const out = await this.replaceAssignmentsUc.execute({
+      actor: {
+        actorType: actor.actorType,
+        role: actor.role,
+        branchId: actor.branchId,
+        userId: actor.actorId,
+        username: actor.username,
+      },
+      branchId: body.branchId,
+      businessDate: body.businessDate,
+      shiftCode,
+      staffIds: body.staffIds,
+    });
+
+    await this.auditRepo.append({
+      actorType: actor.actorType,
+      actorId: actor.actorId,
+      action: "attendance.assignments.replace",
+      entity: "staff_shift_assignments",
+      entityId: `${body.branchId}:${body.businessDate}:${shiftCode}`,
+      payload: {
+        branchId: body.branchId,
+        businessDate: body.businessDate,
+        shiftCode,
+        staffIds: out.staffIds,
+        ip: req.ip,
+        userAgent: req.header("user-agent") ?? null,
+      },
+    });
+
+    return res.json(out);
   };
 
   manualCheckOut = async (req: Request, res: Response) => {

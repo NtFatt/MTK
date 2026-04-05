@@ -14,11 +14,11 @@ function getBaseUrlFromEnvFile(envPath) {
   }
 }
 
-const envPath = process.argv[2] || "postman/Hadilao_Smoke_Local.postman_environment.json";
+const envPath = process.argv[2] || "postman/DuongHanhPhuc_Smoke_Local.postman_environment.json";
 const timeout = process.argv[3] || "30000";
 
 const baseUrl = getBaseUrlFromEnvFile(envPath) || process.env.BASE_URL || "http://localhost:3001";
-const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "hadilao-negative-"));
+const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "duong_hanh_phuc-negative-"));
 const tempEnvPath = path.join(tempDir, path.basename(envPath));
 
 console.log(`\n🧪 Negative pack -> ${baseUrl}`);
@@ -38,7 +38,7 @@ try {
   {
     const r = spawnSync(
       process.execPath,
-      ["scripts/smoke/run-smoke.mjs", tempEnvPath, "postman/Hadilao_Smoke_Negative_v1.postman_collection.json", timeout],
+      ["scripts/smoke/run-smoke.mjs", tempEnvPath, "postman/DuongHanhPhuc_Smoke_Negative_v1.postman_collection.json", timeout],
       { stdio: "inherit", env: { ...process.env, BASE_URL: baseUrl } },
     );
     if (r.status !== 0) process.exit(r.status ?? 1);

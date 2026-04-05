@@ -19,7 +19,7 @@ export type PendingAddCartItem = {
 
 export type PendingAction = PendingAddCartItem;
 
-const KEY = "hadilao.pendingAction.v1";
+const KEY = "duong_hanh_phuc.pendingAction.v1";
 
 function canUseStorage(): boolean {
   return typeof window !== "undefined" && typeof window.sessionStorage !== "undefined";

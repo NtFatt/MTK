@@ -11,7 +11,7 @@ chore(fe): PR-XX <short scope>
 ## Spec / Law Mapping
 - FE Spec v2.0 sections: <e.g., §0 Guardrails, Appendix F, §13 UI/UX, §10 Data layer>
 - UI Sample parity (nếu liên quan UI): <Navbar/Hero/CategoryTabs/MenuCard/...>
-- Contracts used (`@hadilao/contracts`):
+- Contracts used (`@duong-hanh-phuc/contracts`):
   - qk: <qk.*>
   - Schemas: <Schemas.*>
   - Errors: normalizeApiError()

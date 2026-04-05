@@ -1,6 +1,6 @@
 # PR-04 — Customer Session Bootstrap + Cart (Contract-first, /c namespace) — Cursor Prompt (COPY/PASTE)
 
-> **Repo:** `hadilao-online` (pnpm workspace)  
+> **Repo:** `tiem-lau-tren-duong-hanh-phuc` (pnpm workspace)  
 > **Scope PR:** chỉ thay đổi trong `apps/fe/**`  
 > **Hiện trạng:** PR-00/01/02/03 đã pass.  
 > - `/customer/menu` đang chạy (menu API + mock fallback)  
@@ -12,7 +12,7 @@
 ## 0) HARD CONSTRAINTS (KHÔNG ĐƯỢC VI PHẠM)
 
 1) **Không dùng Next APIs.**  
-2) **Không đoán contract.** Trước khi code, phải mở `@hadilao/contracts` + docs trong repo để xác định:
+2) **Không đoán contract.** Trước khi code, phải mở `@duong-hanh-phuc/contracts` + docs trong repo để xác định:
    - Payload/response của `POST /api/v1/sessions/open`
    - `GET /api/v1/sessions/:sessionKey`
    - Cart endpoints: `POST /api/v1/cart/items`, `PATCH /api/v1/cart/items/:id`, `DELETE /api/v1/cart/items/:id`, `GET /api/v1/cart (nếu có)`  
@@ -115,7 +115,7 @@ apps/fe/src/shared/ui/select.tsx    (optional: nếu qr page cần dropdown bran
   ```
 
 **`storage.ts`**
-- sessionStorage key: `hadilao.customer.session`
+- sessionStorage key: `duong_hanh_phuc.customer.session`
 - `loadCustomerSession()`, `saveCustomerSession()`, `clearCustomerSession()`
 
 **`sessionStore.ts`**
@@ -213,7 +213,7 @@ Add hydrate runner trong `providers.tsx`:
 **`hooks/useCartQuery.ts`**
 - `useCartQuery(sessionKey)` dùng `useAppQuery`
 - staleTime 0–10s (cart nên fresh)
-- query key: ưu tiên `@hadilao/contracts` qk nếu có; nếu không, tạo `cartQueryKey(sessionKey)` (trong hook), TODO migrate.
+- query key: ưu tiên `@duong-hanh-phuc/contracts` qk nếu có; nếu không, tạo `cartQueryKey(sessionKey)` (trong hook), TODO migrate.
 
 **`hooks/useCartMutations.ts`**
 - `useAddCartItem(sessionKey)` / `useUpdateCartItem(sessionKey)` / `useRemoveCartItem(sessionKey)`

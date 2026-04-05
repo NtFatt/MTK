@@ -1,6 +1,7 @@
 import type { IOrderRepository } from "../../ports/repositories/IOrderRepository.js";
 import type { IPaymentRepository } from "../../ports/repositories/IPaymentRepository.js";
 import type { ApplyPaymentSuccess } from "./ApplyPaymentSuccess.js";
+import { isOrderPayableStatus } from "../../../domain/policies/orderPaymentPolicy.js";
 
 // Dev-only helper to unblock smoke tests when VNPay isn't configured.
 // It creates a payment row, marks SUCCESS, then applies order PAID + history (idempotent).
@@ -14,7 +15,7 @@ export class CreateMockPaymentSuccess {
   async execute(orderCode: string) {
     const order = await this.orderRepo.findStatusByOrderCode(orderCode);
     if (!order) throw new Error("ORDER_NOT_FOUND");
-    if (order.orderStatus !== "NEW") throw new Error("ORDER_NOT_PAYABLE");
+    if (!isOrderPayableStatus(order.orderStatus)) throw new Error("ORDER_NOT_PAYABLE");
 
     const { paymentId, txnRef, amount } = await this.paymentRepo.createInitPayment(orderCode, {
       provider: "MOCK",

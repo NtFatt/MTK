@@ -10,11 +10,13 @@ import { Button } from "../../../../shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../shared/ui/card";
 import { Input } from "../../../../shared/ui/input";
 import { cn } from "../../../../shared/utils/cn";
+import { useAttendanceAssignmentsQuery } from "../hooks/useAttendanceAssignmentsQuery";
 import { useAttendanceBoardQuery } from "../hooks/useAttendanceBoardQuery";
 import { useAttendanceMutations } from "../hooks/useAttendanceMutations";
 import { useStaffAttendanceHistoryQuery } from "../hooks/useStaffAttendanceHistoryQuery";
 import { useRealtimeRoom } from "../../../../shared/realtime/useRealtimeRoom";
 import type {
+  AttendanceAssignmentRow,
   AttendanceBoardRow,
   AttendanceRole,
   AttendanceShiftCode,
@@ -137,6 +139,8 @@ function getSourceLabel(source: string | null) {
 function countStatuses(rows: AttendanceBoardRow[]) {
   return {
     total: rows.length,
+    scheduled: rows.filter((row) => row.isScheduled).length,
+    outsideSchedule: rows.filter((row) => !row.isScheduled).length,
     checkedIn: rows.filter((row) => !["NOT_CHECKED_IN", "ABSENT"].includes(row.status)).length,
     late: rows.filter((row) => row.status === "LATE").length,
     missingCheckout: rows.filter((row) => row.status === "MISSING_CHECKOUT").length,
@@ -156,6 +160,16 @@ function buildAttendanceActionDraft(rowKey = ""): AttendanceActionDraft {
     performedAt: toDateTimeLocalInput(),
     note: "",
   };
+}
+
+function getShiftLabel(shiftCode: AttendanceShiftCode) {
+  return shiftCode === "MORNING" ? "Ca sáng" : "Ca chiều";
+}
+
+function deriveAssignedStaffIds(items: AttendanceAssignmentRow[], shiftCode: AttendanceShiftCode) {
+  return items
+    .filter((row) => (shiftCode === "MORNING" ? row.morningAssigned : row.eveningAssigned))
+    .map((row) => row.staffId);
 }
 
 function StaffRow({
@@ -189,9 +203,16 @@ function StaffRow({
             @{row.username} • {getRoleLabel(row.staffRole)}
           </div>
         </div>
-        <Badge className={cn("rounded-full px-3 py-1 text-xs font-semibold", status.className)}>
-          {status.label}
-        </Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          {!row.isScheduled && (
+            <Badge className="rounded-full border-[#efc4c4] bg-[#fff4f4] text-[#8f2f2f]">
+              Ngoài lịch
+            </Badge>
+          )}
+          <Badge className={cn("rounded-full px-3 py-1 text-xs font-semibold", status.className)}>
+            {status.label}
+          </Badge>
+        </div>
       </div>
 
       <div className="mt-4 grid gap-3 text-sm text-[#6b4e36] sm:grid-cols-2">
@@ -235,6 +256,76 @@ function StaffRow({
   );
 }
 
+function AssignmentPlannerRowCard({
+  row,
+  activeShift,
+  canManage,
+  isBusy,
+  onToggle,
+}: {
+  row: AttendanceAssignmentRow;
+  activeShift: AttendanceShiftCode;
+  canManage: boolean;
+  isBusy: boolean;
+  onToggle: (shiftCode: AttendanceShiftCode, staffId: string) => void;
+}) {
+  const buttons: ReadonlyArray<{ shiftCode: AttendanceShiftCode; assigned: boolean }> = [
+    { shiftCode: "MORNING", assigned: row.morningAssigned },
+    { shiftCode: "EVENING", assigned: row.eveningAssigned },
+  ];
+
+  return (
+    <div className="rounded-[24px] border border-[#ead8c0] bg-white px-4 py-4 shadow-[0_14px_32px_rgba(184,130,73,0.08)]">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-lg font-semibold text-[#4e2916]">{row.staffName || row.username}</div>
+          <div className="mt-1 text-sm text-[#8a684d]">
+            @{row.username} • {getRoleLabel(row.staffRole)}
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {row.isInactiveButAssigned && (
+            <Badge className="rounded-full border-[#efc4c4] bg-[#fff4f4] text-[#8f2f2f]">
+              Inactive nhưng còn lịch
+            </Badge>
+          )}
+          <Badge className="rounded-full border-[#ead8c0] bg-[#fffaf4] text-[#7d5732]">
+            {row.staffStatus}
+          </Badge>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        {buttons.map((button) => {
+          const disabled = !canManage || isBusy || (!button.assigned && row.staffStatus !== "ACTIVE");
+          return (
+            <Button
+              key={button.shiftCode}
+              type="button"
+              variant="outline"
+              disabled={disabled}
+              onClick={() => onToggle(button.shiftCode, row.staffId)}
+              className={cn(
+                "h-12 justify-between rounded-2xl border px-4 text-left",
+                button.assigned
+                  ? activeShift === button.shiftCode
+                    ? "border-[#cf5b42] bg-[#fff0e8] text-[#8f3d26] hover:bg-[#ffe8db]"
+                    : "border-[#c6d9b6] bg-[#f1f8eb] text-[#39663a] hover:bg-[#e8f4df]"
+                  : "border-[#ead8c0] bg-[#fffdf9] text-[#7d5732] hover:bg-[#fff7ee]",
+              )}
+            >
+              <span>{getShiftLabel(button.shiftCode)}</span>
+              <span className="text-xs font-semibold uppercase tracking-[0.14em]">
+                {button.assigned ? "Đã phân" : "Chưa phân"}
+              </span>
+            </Button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function InternalAttendancePage() {
   const { branchId } = useParams<{ branchId: string }>();
   const session = useStore(authStore, (state) => state.session);
@@ -253,6 +344,14 @@ export function InternalAttendancePage() {
     buildAttendanceActionDraft(),
   );
 
+  const assignmentsQuery = useAttendanceAssignmentsQuery({
+    branchId: resolvedBranchId,
+    businessDate,
+    role: null,
+    q: null,
+    enabled: canRead,
+  });
+
   const boardQuery = useAttendanceBoardQuery({
     branchId: resolvedBranchId,
     businessDate,
@@ -266,6 +365,28 @@ export function InternalAttendancePage() {
   useRealtimeRoom(`ops:${resolvedBranchId}`, canRead && Boolean(resolvedBranchId));
 
   const items = useMemo(() => boardQuery.data?.items ?? [], [boardQuery.data?.items]);
+  const allAssignmentRows = useMemo(
+    () => assignmentsQuery.data?.items ?? [],
+    [assignmentsQuery.data?.items],
+  );
+  const assignmentRows = useMemo(
+    () =>
+      allAssignmentRows.filter((row) => {
+        if (roleFilter !== "ALL" && row.staffRole !== roleFilter) return false;
+        const q = search.trim().toLowerCase();
+        if (!q) return true;
+        return (
+          String(row.username ?? "").toLowerCase().includes(q) ||
+          String(row.staffName ?? "").toLowerCase().includes(q) ||
+          String(row.staffId ?? "").toLowerCase().includes(q)
+        );
+      }),
+    [allAssignmentRows, roleFilter, search],
+  );
+  const currentShiftAssignedIds = useMemo(
+    () => deriveAssignedStaffIds(allAssignmentRows, shiftCode),
+    [allAssignmentRows, shiftCode],
+  );
 
   const effectiveSelectedRowKey = useMemo(() => {
     if (!items.length) return "";
@@ -298,6 +419,7 @@ export function InternalAttendancePage() {
     checkInMutation,
     checkOutMutation,
     markAbsentMutation,
+    replaceAssignmentsMutation,
   } = useAttendanceMutations();
 
   const isBusy =
@@ -332,6 +454,24 @@ export function InternalAttendancePage() {
         ...patch,
         rowKey: effectiveSelectedRowKey,
       };
+    });
+  }
+
+  async function handleToggleAssignment(targetShiftCode: AttendanceShiftCode, staffId: string) {
+    const currentAssignedIds = deriveAssignedStaffIds(allAssignmentRows, targetShiftCode);
+    const nextAssignedIds = currentAssignedIds.includes(staffId)
+      ? currentAssignedIds.filter((id) => id !== staffId)
+      : allAssignmentRows
+          .map((row) => row.staffId)
+          .filter((id) => id === staffId || currentAssignedIds.includes(id));
+
+    await replaceAssignmentsMutation.mutateAsync({
+      shiftCode: targetShiftCode,
+      payload: {
+        branchId: resolvedBranchId,
+        businessDate,
+        staffIds: nextAssignedIds,
+      },
     });
   }
 
@@ -408,7 +548,10 @@ export function InternalAttendancePage() {
           <Button
             variant="outline"
             className="h-11 rounded-full border-[#d9bb95] px-6 text-[#7b4b22] hover:bg-[#fff4e6]"
-            onClick={() => boardQuery.refetch()}
+            onClick={() => {
+              void assignmentsQuery.refetch();
+              void boardQuery.refetch();
+            }}
           >
             Làm mới
           </Button>
@@ -487,13 +630,78 @@ export function InternalAttendancePage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <Card className="border-[#ead8c0] bg-[#fffdf9] shadow-[0_18px_36px_rgba(184,130,73,0.08)]">
+        <CardHeader className="pb-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="text-sm uppercase tracking-[0.34em] text-[#b48b63]">Shift Planner</div>
+              <CardTitle className="mt-3 text-3xl text-[#5a2f17]">Phân ca theo từng nhân viên</CardTitle>
+              <CardDescription>
+                Mỗi nhân viên có lịch riêng theo ngày. Board bên dưới chỉ đọc danh sách đã phân ca cho {getShiftLabel(shiftCode).toLowerCase()} và các bản ghi phát sinh thực tế.
+              </CardDescription>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Badge className="rounded-full border-[#ead8c0] bg-[#fffaf4] px-4 py-1 text-[#7d5732]">
+                Tổng nhân sự: {assignmentsQuery.data?.summary.totalStaff ?? 0}
+              </Badge>
+              <Badge className="rounded-full border-[#c6d9b6] bg-[#f1f8eb] px-4 py-1 text-[#39663a]">
+                Sáng: {assignmentsQuery.data?.summary.morningAssignedCount ?? 0}
+              </Badge>
+              <Badge className="rounded-full border-[#d6c6ef] bg-[#f7f2ff] px-4 py-1 text-[#6b4a96]">
+                Chiều: {assignmentsQuery.data?.summary.eveningAssignedCount ?? 0}
+              </Badge>
+              <Badge className="rounded-full border-[#ead8c0] bg-[#fff6ec] px-4 py-1 text-[#7b4b22]">
+                Đang xem {currentShiftAssignedIds.length} nhân sự cho {getShiftLabel(shiftCode).toLowerCase()}
+              </Badge>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {assignmentsQuery.error && (
+            <Alert variant="destructive">
+              <AlertTitle>Không tải được planner</AlertTitle>
+              <AlertDescription>{assignmentsQuery.error.message}</AlertDescription>
+            </Alert>
+          )}
+          {replaceAssignmentsMutation.error && (
+            <Alert variant="destructive">
+              <AlertTitle>Cập nhật phân ca thất bại</AlertTitle>
+              <AlertDescription>{replaceAssignmentsMutation.error.message}</AlertDescription>
+            </Alert>
+          )}
+          {assignmentsQuery.isLoading ? (
+            <div className="rounded-2xl border border-dashed border-[#ead8c0] px-4 py-10 text-center text-[#8b6a50]">
+              Đang tải planner phân ca...
+            </div>
+          ) : assignmentRows.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-[#ead8c0] px-4 py-10 text-center text-[#8b6a50]">
+              Chưa có nhân sự nào phù hợp với bộ lọc hiện tại.
+            </div>
+          ) : (
+            <div className="grid gap-4 xl:grid-cols-2">
+              {assignmentRows.map((row) => (
+                <AssignmentPlannerRowCard
+                  key={row.staffId}
+                  row={row}
+                  activeShift={shiftCode}
+                  canManage={canManage}
+                  isBusy={replaceAssignmentsMutation.isPending}
+                  onToggle={handleToggleAssignment}
+                />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         {[
-          { label: "Nhân sự trong ca", value: summary.total, tone: "text-[#5a2f17]" },
+          { label: "Nhân sự hiển thị", value: summary.total, tone: "text-[#5a2f17]" },
+          { label: "Đã phân lịch", value: summary.scheduled, tone: "text-[#39663a]" },
+          { label: "Ngoài lịch", value: summary.outsideSchedule, tone: "text-[#8f2f2f]" },
           { label: "Đã check-in", value: summary.checkedIn, tone: "text-[#44723b]" },
           { label: "Đi trễ", value: summary.late, tone: "text-[#8f5b17]" },
           { label: "Thiếu checkout", value: summary.missingCheckout, tone: "text-[#a03f3f]" },
-          { label: "Vắng mặt", value: summary.absent, tone: "text-[#6d4928]" },
         ].map((item) => (
           <Card
             key={item.label}
@@ -536,7 +744,7 @@ export function InternalAttendancePage() {
               </div>
             ) : items.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-[#ead8c0] px-4 py-10 text-center text-[#8b6a50]">
-                Không có nhân sự phù hợp với bộ lọc hiện tại.
+                Chưa có nhân sự nào được phân vào {getShiftLabel(shiftCode).toLowerCase()} trong ngày này.
               </div>
             ) : (
               <div className="max-h-[820px] space-y-4 overflow-y-auto pr-2">
@@ -584,6 +792,15 @@ export function InternalAttendancePage() {
                     <Badge className="rounded-full border-[#ead8c0] bg-[#fffaf4] px-3 py-1 text-[#7d5732]">
                       {getSourceLabel(selectedRow.source)}
                     </Badge>
+                    {selectedRow.isScheduled ? (
+                      <Badge className="rounded-full border-[#c6d9b6] bg-[#f1f8eb] px-3 py-1 text-[#39663a]">
+                        Đã phân lịch
+                      </Badge>
+                    ) : (
+                      <Badge className="rounded-full border-[#efc4c4] bg-[#fff4f4] px-3 py-1 text-[#8f2f2f]">
+                        Phát sinh ngoài lịch
+                      </Badge>
+                    )}
                     {selectedRow.isOpen && (
                       <Badge className="rounded-full border-[#bad7d4] bg-[#edf9f7] px-3 py-1 text-[#2d6d66]">
                         Bản ghi đang mở

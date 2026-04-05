@@ -4,7 +4,7 @@ Date: 2026-02-10
 
 ## Scope
 
-Phase 3 (Observability) theo **Hadilao Software Design Spec v4 Enterprise**:
+Phase 3 (Observability) theo **Tiệm lẩu trên Đường Hạnh Phúc Software Design Spec v4 Enterprise**:
 
 - Metrics Prometheus (HTTP/DB/Redis/Runtime) + route normalization + in-flight.
 - Slow query/slow redis sampling + admin endpoints để triage nhanh.

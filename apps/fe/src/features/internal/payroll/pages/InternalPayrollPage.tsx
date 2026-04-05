@@ -207,8 +207,8 @@ function PayrollProfilePanel({
         <CardTitle className="text-xl text-[#5a2f17]">Policy lương</CardTitle>
         <CardDescription>
           {canManageProfiles
-            ? "Admin có thể tùy chỉnh mode lương, mức cơ bản và toàn bộ penalty cho từng nhân sự."
-            : "Branch manager chỉ xem policy hiện tại, không thay đổi cấu hình lương lõi."}
+            ? "Người quản lý được cấp quyền có thể tùy chỉnh mode lương, mức cơ bản và toàn bộ penalty cho từng nhân sự trong chi nhánh."
+            : "Tài khoản hiện tại chỉ xem policy lương, chưa được thay đổi cấu hình lương lõi."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -356,7 +356,7 @@ function PayrollBonusPanel({
       <Card className="border-[#ead8c0] bg-[#fffdf9] shadow-none">
         <CardHeader className="pb-4">
           <CardTitle className="text-xl text-[#5a2f17]">Thưởng / điều chỉnh</CardTitle>
-          <CardDescription>Branch manager có thể thêm thưởng nhân viên làm tốt hoặc điều chỉnh hợp lệ theo ngày.</CardDescription>
+          <CardDescription>Người quản lý được cấp quyền có thể thêm thưởng nhân viên làm tốt hoặc điều chỉnh hợp lệ theo ngày.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {canManageBonuses ? (
@@ -610,10 +610,6 @@ export function InternalPayrollPage() {
             <h1 className="mt-4 text-4xl font-semibold tracking-tight text-[#4e2916]">
               Tính lương & thưởng chi nhánh {resolvedBranchId}
             </h1>
-            <p className="mt-3 max-w-3xl text-lg text-[#8b6a50]">
-              Admin setup công thức lương linh hoạt theo nhân sự. Branch manager thêm thưởng cho nhân viên làm tốt
-              mà không phá policy lõi.
-            </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">

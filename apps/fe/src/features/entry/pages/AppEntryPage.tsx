@@ -4,7 +4,7 @@ export function AppEntryPage() {
   return (
     <div className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-md rounded-xl border bg-card p-6 shadow-sm">
-        <h1 className="text-xl font-semibold">Hadilao Online</h1>
+        <h1 className="text-xl font-semibold">Tiệm lẩu trên Đường Hạnh Phúc</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Chọn chế độ. Khách hàng thường quét QR tại bàn để vào menu.
         </p>

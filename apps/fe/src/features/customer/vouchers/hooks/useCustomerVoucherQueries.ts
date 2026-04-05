@@ -1,4 +1,4 @@
-import { qk } from "@hadilao/contracts";
+import { qk } from "@duong-hanh-phuc/contracts";
 import { useAppMutation } from "../../../../shared/http/useAppMutation";
 import { useAppQuery } from "../../../../shared/http/useAppQuery";
 import { recoverInvalidCustomerSession } from "../../../../shared/customer/session/sessionRecovery";

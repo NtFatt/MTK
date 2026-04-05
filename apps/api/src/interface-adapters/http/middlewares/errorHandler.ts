@@ -135,6 +135,11 @@ const MAP: Record<string, ErrorMapping> = {
     code: "SHIFT_STALE",
     message: "Dữ liệu ca đã thay đổi, vui lòng tải lại rồi thử lại",
   },
+  SHIFT_NOT_ASSIGNED_TO_ACTOR: {
+    status: 409,
+    code: "SHIFT_NOT_ASSIGNED_TO_ACTOR",
+    message: "Bạn chưa được phân vào ca này nên không thể tự thao tác mở hoặc kết ca",
+  },
   ATTENDANCE_NOT_FOUND: {
     status: 404,
     code: "ATTENDANCE_NOT_FOUND",
@@ -174,6 +179,11 @@ const MAP: Record<string, ErrorMapping> = {
     status: 409,
     code: "ATTENDANCE_STALE",
     message: "Bản ghi chấm công đã thay đổi, vui lòng tải lại rồi thử lại",
+  },
+  STAFF_BRANCH_MISMATCH: {
+    status: 409,
+    code: "STAFF_BRANCH_MISMATCH",
+    message: "Nhân viên không thuộc chi nhánh đang thao tác",
   },
   PAYROLL_PROFILE_NOT_FOUND: {
     status: 404,
@@ -460,7 +470,7 @@ export function errorHandler(err: any, _req: Request, res: Response, _next: Next
   }
 
   if (
-    rawMessage.includes("attendance_records") &&
+    (rawMessage.includes("attendance_records") || rawMessage.includes("staff_shift_assignments")) &&
     rawMessage.includes("doesn't exist")
   ) {
     return respond(

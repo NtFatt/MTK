@@ -1,5 +1,6 @@
 import type { IEventBus } from "../../../ports/events/IEventBus.js";
 import type { IShiftRepository, ShiftBreakdownInput } from "../../../ports/repositories/IShiftRepository.js";
+import type { IStaffShiftAssignmentRepository } from "../../../ports/repositories/IStaffShiftAssignmentRepository.js";
 import type { ShiftCode } from "../../../../domain/shifts/templates.js";
 
 type InternalActor = {
@@ -13,6 +14,7 @@ type InternalActor = {
 export class OpenShift {
   constructor(
     private readonly shiftRepo: IShiftRepository,
+    private readonly assignmentRepo: IStaffShiftAssignmentRepository,
     private readonly eventBus: IEventBus,
   ) {}
 
@@ -34,6 +36,28 @@ export class OpenShift {
       String(input.actor.branchId) !== branchId
     ) {
       throw new Error("FORBIDDEN");
+    }
+
+    const actorRole = String(input.actor.role ?? "").toUpperCase();
+    if (input.actor.actorType === "STAFF" && actorRole !== "BRANCH_MANAGER") {
+      const assignment = await this.assignmentRepo.findForStaffShift({
+        branchId,
+        staffId: input.actor.userId,
+        businessDate: input.businessDate,
+        shiftCode: input.shiftCode,
+      });
+      if (!assignment) {
+        const err: any = new Error("SHIFT_NOT_ASSIGNED_TO_ACTOR");
+        err.status = 409;
+        err.code = "SHIFT_NOT_ASSIGNED_TO_ACTOR";
+        err.details = {
+          branchId,
+          businessDate: input.businessDate,
+          shiftCode: input.shiftCode,
+          staffId: input.actor.userId,
+        };
+        throw err;
+      }
     }
 
     const created = await this.shiftRepo.openShift({

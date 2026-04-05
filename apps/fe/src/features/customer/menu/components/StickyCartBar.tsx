@@ -39,7 +39,7 @@ export function StickyCartBar() {
   if (count <= 0) return null;
 
   const openBill = cartQuery.data.openBill ?? null;
-  const headline = openBill ? `Gọi thêm món • ${count} Món mới` : `Noi dang cho • ${count} mon`;
+  const headline = openBill ? `Gọi thêm món • ${count} Món mới` : `Nồi đang chờ • ${count} món`;
   const subline = openBill
     ? `Bill ${openBill.orderCode} • Tạm tính Món mới: ${formatVnd(total)}`
     : `Tạm tính: ${formatVnd(total)}`;

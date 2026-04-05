@@ -206,6 +206,20 @@ export class MySQLShiftRepository implements IShiftRepository {
     return row ? hydrateShift(pool, row) : null;
   }
 
+  async getById(input: { shiftRunId: string; branchId: string }): Promise<ShiftRunView | null> {
+    const [rows]: any = await pool.query(
+      `SELECT *
+       FROM shift_runs
+       WHERE shift_run_id = ?
+         AND branch_id = ?
+       LIMIT 1`,
+      [input.shiftRunId, input.branchId],
+    );
+
+    const row = rows?.[0];
+    return row ? hydrateShift(pool, row) : null;
+  }
+
   async listHistory(input: { branchId: string; limit: number }): Promise<ShiftRunView[]> {
     const limit = Math.max(1, Math.min(50, Number(input.limit ?? 20)));
     const [rows]: any = await pool.query(

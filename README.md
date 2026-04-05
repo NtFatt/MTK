@@ -1,4 +1,4 @@
-# Hadilao Online
+# Tiệm lẩu trên Đường Hạnh Phúc
 
 Monorepo `pnpm workspace` cho he thong ordering + operations nha hang, gom customer flow, internal roles, inventory/hold, payment, reservation va realtime.
 

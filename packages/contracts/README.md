@@ -1,4 +1,4 @@
-# @hadilao/contracts
+# @duong-hanh-phuc/contracts
 
 **Mục tiêu:** biến “contract lock” thành **code lock**.
 
@@ -22,7 +22,7 @@
 ## Ví dụ
 
 ```ts
-import { qk, normalizeApiError, Schemas } from "@hadilao/contracts";
+import { qk, normalizeApiError, Schemas } from "@duong-hanh-phuc/contracts";
 
 const key = qk.menu.items({ categoryId: 1, page: 1 });
 

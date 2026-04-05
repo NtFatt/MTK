@@ -23,7 +23,11 @@ export class UpsertPayrollProfile {
     note?: string | null;
     expectedVersion?: number | null;
   }) {
-    const branchId = String(input.branchId ?? "").trim();
+    const actorRole = String(input.actor.role ?? "").toUpperCase();
+    const branchId =
+      actorRole === "BRANCH_MANAGER"
+        ? String(input.actor.branchId ?? "").trim()
+        : String(input.branchId ?? "").trim();
     if (!branchId) throw new Error("BRANCH_REQUIRED");
 
     const staff = await this.staffRepo.findById(input.staffId);

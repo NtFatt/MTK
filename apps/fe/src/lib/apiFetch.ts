@@ -1,4 +1,4 @@
-import { normalizeApiError } from "@hadilao/contracts";
+import { normalizeApiError } from "@duong-hanh-phuc/contracts";
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string) || "/api/v1";
 

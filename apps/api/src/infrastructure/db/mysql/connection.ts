@@ -74,9 +74,9 @@ async function instrumented(op: "query" | "execute", fn: Function, args: any[]) 
         "db.system": "mysql",
         "db.operation": op,
         "db.statement": truncate(sql, 500),
-        "hadilao.rid": rid ?? "",
-        "hadilao.sql_fingerprint": fingerprint,
-        "hadilao.duration_ms": Math.round(ms * 1000) / 1000,
+        "duong_hanh_phuc.rid": rid ?? "",
+        "duong_hanh_phuc.sql_fingerprint": fingerprint,
+        "duong_hanh_phuc.duration_ms": Math.round(ms * 1000) / 1000,
       } as any);
     }
   }

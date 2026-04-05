@@ -1,4 +1,5 @@
 import type { IAttendanceRepository } from "../../../ports/repositories/IAttendanceRepository.js";
+import type { IStaffShiftAssignmentRepository } from "../../../ports/repositories/IStaffShiftAssignmentRepository.js";
 import type { IEventBus } from "../../../ports/events/IEventBus.js";
 import type { DomainEvent } from "../../../ports/events/DomainEvent.js";
 import type { ShiftCode } from "../../../../domain/shifts/templates.js";
@@ -7,6 +8,7 @@ import { log } from "../../../../infrastructure/observability/logger.js";
 export class AutoCheckInOnShiftOpened {
   constructor(
     private readonly attendanceRepo: IAttendanceRepository,
+    private readonly assignmentRepo: IStaffShiftAssignmentRepository,
     private readonly eventBus: IEventBus,
   ) {}
 
@@ -17,6 +19,18 @@ export class AutoCheckInOnShiftOpened {
     if (!branchId || !businessDate || !shiftCode || !openedBy) return;
 
     try {
+      await this.assignmentRepo.upsertAssignments({
+        branchId: String(branchId),
+        businessDate: String(businessDate),
+        shiftCode: String(shiftCode).toUpperCase() as ShiftCode,
+        staffIds: [String(openedBy.userId)],
+        actor: {
+          actorType: String(openedBy.actorType ?? "STAFF").toUpperCase() as "ADMIN" | "STAFF",
+          actorId: String(openedBy.userId),
+          actorName: String(openedBy.username ?? ""),
+        },
+      });
+
       const record = await this.attendanceRepo.autoCheckInFromShift({
         branchId: String(branchId),
         staffId: String(openedBy.userId),

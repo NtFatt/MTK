@@ -1,8 +1,8 @@
 # PR-01 — Port UI mẫu “Customer Menu” (Next → Vite) — Cursor Prompt (COPY/PASTE)
 
-> **Bạn đang làm trong repo:** `hadilao-online` (monorepo)  
+> **Bạn đang làm trong repo:** `tiem-lau-tren-duong-hanh-phuc` (monorepo)  
 > **Scope PR:** chỉ thay đổi trong `apps/fe/**`  
-> **Nền đã có:** PR-00 đã pass `lint/typecheck/build`, có Tailwind + tokens Hadilao trong `src/index.css`, skeleton Appendix F, router đã map `/customer/menu` → `CustomerMenuPage`.
+> **Nền đã có:** PR-00 đã pass `lint/typecheck/build`, có Tailwind + tokens Tiệm lẩu trên Đường Hạnh Phúc trong `src/index.css`, skeleton Appendix F, router đã map `/customer/menu` → `CustomerMenuPage`.
 
 ---
 
@@ -99,7 +99,7 @@ apps/fe/src/shared/ui/
 
 ### 3.3 Navbar
 - `CustomerNavbar`:
-  - Brand “Hadilao” (text)
+  - Brand “Tiệm lẩu trên Đường Hạnh Phúc” (text)
   - 1–2 action buttons (vd: “Giỏ hàng”, “Đăng nhập”) (chỉ UI, không logic)
   - Sticky + blur nhẹ (dùng classes), không hardcode màu
 

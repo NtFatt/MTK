@@ -63,13 +63,11 @@ export function CheckoutSummary({ cart }: CheckoutSummaryProps) {
               {openBillStatusLabel[openBill.status] ?? openBill.status}
             </span>
           </div>
-          <p className="mt-2 text-[#7a5a43]">
-            Xac nhan xong, cac mon ben duoi se duoc cong vao bill nay va kitchen/cashier van theo doi cung mot ma don.
-          </p>
+      
           <div className="mt-3 grid gap-2 text-xs text-[#7a5b44] sm:grid-cols-3">
-            <span>Tong bill hien tai: {formatVnd(openBill.total)}</span>
+            <span>Tổng bill hiện tại: {formatVnd(openBill.total)}</span>
             <span>Tạm tính Món mới: {formatVnd(total)}</span>
-            <span>Sau khi cong mon, bill se cap nhat theo tong moi.</span>
+            <span>Sau khi cộng món, bill sẽ được cập nhật theo tổng mới.</span>
           </div>
         </div>
       ) : null}

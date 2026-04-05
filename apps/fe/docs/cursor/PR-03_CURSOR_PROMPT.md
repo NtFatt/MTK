@@ -1,6 +1,6 @@
 # PR-03 — Internal Login (OTP) + Auth Session + RBAC Guards + Route namespace /i (Cursor Prompt)
 
-> **Repo:** `hadilao-online` (pnpm workspace)  
+> **Repo:** `tiem-lau-tren-duong-hanh-phuc` (pnpm workspace)  
 > **Scope PR:** chỉ thay đổi trong `apps/fe/**`  
 > **Hiện trạng:** PR-00 + PR-01 + PR-02 đã pass. `/customer/menu` đang chạy, menu query đã có data layer.
 
@@ -9,7 +9,7 @@
 ## 0) HARD CONSTRAINTS (KHÔNG ĐƯỢC VI PHẠM)
 
 1) **Không dùng Next APIs**.  
-2) **Không đoán contract**: endpoint/DTO phải bám **FE Spec v2** + `@hadilao/contracts` + docs trong repo.  
+2) **Không đoán contract**: endpoint/DTO phải bám **FE Spec v2** + `@duong-hanh-phuc/contracts` + docs trong repo.  
 3) **Contract Lock**: chỉ gọi `/api/v1/*`.  
 4) **Không sửa phá**: `src/lib/apiFetch.ts` (giữ nguyên) — nếu cần Authorization, tạo wrapper mới.  
 5) **Zustand chỉ giữ auth/session local**; server-truth dùng React Query.  
@@ -131,7 +131,7 @@ export type AuthSession = {
   - có TTL (expiresAt) — hydrate phải tự clear nếu expired.
 
 **`storage.ts`**
-- Keys: `hadilao.access`, `hadilao.refresh`, `hadilao.session` (tuỳ bạn) nhưng phải nhất quán.
+- Keys: `duong_hanh_phuc.access`, `duong_hanh_phuc.refresh`, `duong_hanh_phuc.session` (tuỳ bạn) nhưng phải nhất quán.
 - Helpers:
   - `loadSession(): AuthSession | null`
   - `saveSession(session: AuthSession): void`
@@ -166,7 +166,7 @@ BẮT BUỘC bám spec:
 Dùng `apiFetch` hiện có. **Không** thêm client mới.
 
 Payload/DTO:
-- Ưu tiên import type từ `@hadilao/contracts` (schemas/types). Nếu chưa có type, dùng `unknown`/minimal type nhưng phải để TODO + không bịa field name.
+- Ưu tiên import type từ `@duong-hanh-phuc/contracts` (schemas/types). Nếu chưa có type, dùng `unknown`/minimal type nhưng phải để TODO + không bịa field name.
 - Khi verify thành công phải trả về đủ dữ liệu để build `AuthSession`. Nếu server không trả `permissions`/`role` ngoài token, bạn được phép decode JWT payload **KHÔNG THÊM DEP**:
   - Viết helper `decodeJwtClaims(accessToken)` base64url → JSON parse.
   - Không fail nếu decode hỏng; fallback require server fields.

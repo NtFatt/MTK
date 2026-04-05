@@ -79,7 +79,7 @@ const newmanArgs = [
 ];
 
 // Export environment after run so we can chain further smoke steps (realtime, etc.)
-const exportEnvPath = path.join(os.tmpdir(), `hadilao_smoke_env_${Date.now()}.json`);
+const exportEnvPath = path.join(os.tmpdir(), `duong_hanh_phuc_smoke_env_${Date.now()}.json`);
 newmanArgs.push("--export-environment", exportEnvPath);
 if (folder) {
   newmanArgs.push("--folder", folder);

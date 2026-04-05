@@ -4,10 +4,14 @@ import {
   manualAttendanceCheckIn,
   manualAttendanceCheckOut,
   markAttendanceAbsent,
+  replaceAttendanceAssignments,
+  type AttendanceAssignmentsPayload,
   type AttendanceCheckInPayload,
   type AttendanceCheckOutPayload,
   type AttendanceMarkAbsentPayload,
   type AttendanceRecord,
+  type AttendanceShiftCode,
+  type ReplaceAttendanceAssignmentsPayload,
 } from "../services/attendanceApi";
 
 function buildIdempotencyKey(scope: string): string {
@@ -19,6 +23,7 @@ export function useAttendanceMutations() {
 
   const invalidateAttendance = () => {
     queryClient.invalidateQueries({ queryKey: ["attendance", "board"] });
+    queryClient.invalidateQueries({ queryKey: ["attendance", "assignments"] });
     queryClient.invalidateQueries({ queryKey: ["attendance", "staffHistory"] });
   };
 
@@ -56,9 +61,24 @@ export function useAttendanceMutations() {
     onSuccess: invalidateAttendance,
   });
 
+  const replaceAssignmentsMutation = useAppMutation<
+    AttendanceAssignmentsPayload,
+    any,
+    { shiftCode: AttendanceShiftCode; payload: ReplaceAttendanceAssignmentsPayload }
+  >({
+    mutationFn: async ({ shiftCode, payload }) =>
+      replaceAttendanceAssignments(
+        shiftCode,
+        payload,
+        buildIdempotencyKey(`attendance-assignments:${shiftCode}`),
+      ),
+    onSuccess: invalidateAttendance,
+  });
+
   return {
     checkInMutation,
     checkOutMutation,
     markAbsentMutation,
+    replaceAssignmentsMutation,
   };
 }

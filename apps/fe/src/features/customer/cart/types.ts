@@ -1,5 +1,5 @@
 /**
- * Cart types — aligned with @hadilao/contracts cart schema.
+ * Cart types — aligned with @duong-hanh-phuc/contracts cart schema.
  */
 
 export type CartItemOption = {

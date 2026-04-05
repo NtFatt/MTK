@@ -1,4 +1,4 @@
-# Docs index (Hadilao FE Monorepo)
+# Docs index (Tiệm lẩu trên Đường Hạnh Phúc FE Monorepo)
 
 - [BE_SPEC.md](../BE_SPEC.md) — contract summary để “neo” Cursor/FE vào endpoint thật.
 - [CONTRACT_RULES.md](../CONTRACT_RULES.md) — guardrails (contract lock, idempotency, error mapping, realtime).

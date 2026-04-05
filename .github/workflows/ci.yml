@@ -13,7 +13,7 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: "123456"
-          MYSQL_DATABASE: hadilao_online
+          MYSQL_DATABASE: tiem_lau_tren_duong_hanh_phuc
         ports:
           - 3306:3306
         options: >-

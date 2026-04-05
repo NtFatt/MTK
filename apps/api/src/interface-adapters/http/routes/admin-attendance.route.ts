@@ -15,9 +15,19 @@ export function createAdminAttendanceRouter(
 
   r.get("/attendance", requirePermission("attendance.read"), asyncHandler(controller.board));
   r.get(
+    "/attendance/assignments",
+    requirePermission("attendance.read"),
+    asyncHandler(controller.assignments),
+  );
+  r.get(
     "/attendance/staff/:staffId/history",
     requirePermission("attendance.read"),
     asyncHandler(controller.staffHistory),
+  );
+  r.put(
+    "/attendance/assignments/:shiftCode",
+    requirePermission("attendance.manage"),
+    asyncHandler(controller.replaceAssignments),
   );
   r.post(
     "/attendance/:staffId/check-in",

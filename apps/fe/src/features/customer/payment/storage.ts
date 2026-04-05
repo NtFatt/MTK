@@ -1,4 +1,4 @@
-const LAST_PAYMENT_ORDER_KEY = "hadilao.payment.lastOrderCode";
+const LAST_PAYMENT_ORDER_KEY = "duong_hanh_phuc.payment.lastOrderCode";
 
 export function setLastPaymentOrderCode(orderCode: string) {
   sessionStorage.setItem(LAST_PAYMENT_ORDER_KEY, orderCode);

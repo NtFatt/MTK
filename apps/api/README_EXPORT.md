@@ -1,4 +1,4 @@
-# Hadilao Online – Export Package (2026-02-07)
+# Tiệm lẩu trên Đường Hạnh Phúc – Export Package (2026-02-07)
 
 Mục tiêu gói này: **thay thế chat cũ** bằng một bộ artefact có thể clone/chạy/hand-over ngay.
 

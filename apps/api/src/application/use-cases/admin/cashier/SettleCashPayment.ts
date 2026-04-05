@@ -2,6 +2,7 @@ import type { IOrderRepository, OrderStatusHistoryActor } from "../../../ports/r
 import type { IPaymentRepository } from "../../../ports/repositories/IPaymentRepository.js";
 import type { IShiftRepository } from "../../../ports/repositories/IShiftRepository.js";
 import type { ApplyPaymentSuccess } from "../../payment/ApplyPaymentSuccess.js";
+import { isOrderPayableStatus } from "../../../../domain/policies/orderPaymentPolicy.js";
 
 type InternalActor = {
   actorType: "ADMIN" | "STAFF";
@@ -42,7 +43,7 @@ export class SettleCashPayment {
     if (status.orderStatus === "PAID") {
       return { orderCode, changed: false, alreadyPaid: true };
     }
-    if (status.orderStatus === "CANCELED") throw new Error("ORDER_NOT_PAYABLE");
+    if (!isOrderPayableStatus(status.orderStatus)) throw new Error("ORDER_NOT_PAYABLE");
     if (!scope?.branchId) throw new Error("ORDER_NOT_FOUND");
 
     const activeShift = await this.shiftRepo.getCurrent(String(scope.branchId));

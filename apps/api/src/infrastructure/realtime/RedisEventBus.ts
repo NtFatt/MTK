@@ -24,7 +24,7 @@ export class RedisEventBus implements IEventBus {
   constructor(
     private pub: RedisClient,
     private sub: RedisClient,
-    private channel: string = "hadilao:events",
+    private channel: string = "duong-hanh-phuc:events",
   ) {}
 
   async publish(event: DomainEvent): Promise<void> {

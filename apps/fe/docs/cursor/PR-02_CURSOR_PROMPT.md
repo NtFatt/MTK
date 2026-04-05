@@ -1,6 +1,6 @@
 # PR-02 — Data layer chuẩn + Nối Menu API thật (Contract-first) — Cursor Prompt (COPY/PASTE)
 
-> **Repo:** `hadilao-online` (pnpm workspace)  
+> **Repo:** `tiem-lau-tren-duong-hanh-phuc` (pnpm workspace)  
 > **Scope PR:** chỉ thay đổi trong `apps/fe/**`  
 > **Hiện trạng:** PR-00 + PR-01 đã pass. `/customer/menu` đang chạy UI baseline + mock + `?state=`.
 
@@ -8,11 +8,11 @@
 
 ## 0) HARD CONSTRAINTS (KHÔNG ĐƯỢC VI PHẠM)
 
-1) **Không phát minh endpoint/field**: mọi API path/DTO phải lấy từ `docs/BE_SPEC.md` và/hoặc OpenAPI trong `packages/contracts` (hoặc exports từ `@hadilao/contracts`). Nếu không tìm thấy → dừng và để TODO rõ + fallback mock (nhưng không đoán).
+1) **Không phát minh endpoint/field**: mọi API path/DTO phải lấy từ `docs/BE_SPEC.md` và/hoặc OpenAPI trong `packages/contracts` (hoặc exports từ `@duong-hanh-phuc/contracts`). Nếu không tìm thấy → dừng và để TODO rõ + fallback mock (nhưng không đoán).
 2) **Contract Lock**: chỉ gọi `/api/v1/*`. Nếu baseURL không chứa `/api/v1` phải fail-fast (giữ logic `apiFetch.ts` hiện có).
 3) **Không dùng Next APIs**.
 4) **Separation of concerns**: component UI không gọi fetch trực tiếp. Phải tách `services/` + `hooks/`.
-5) **Query keys/DTO/error codes**: ưu tiên dùng từ `@hadilao/contracts` hoặc `apps/fe/src/lib/contracts.ts` (không tự bịa key string trong page).
+5) **Query keys/DTO/error codes**: ưu tiên dùng từ `@duong-hanh-phuc/contracts` hoặc `apps/fe/src/lib/contracts.ts` (không tự bịa key string trong page).
 6) **DoD phải pass**:
    - `pnpm -C apps/fe lint`
    - `pnpm -C apps/fe typecheck`
@@ -109,7 +109,7 @@ apps/fe/src/features/customer/menu/
 ### 3.3 Menu API: đọc contract trước khi code
 **BẮT BUỘC**: mở và đọc trong repo:
 - `docs/BE_SPEC.md` (tìm section Menu)
-- `packages/contracts/**` (openapi / generated types) hoặc `@hadilao/contracts`
+- `packages/contracts/**` (openapi / generated types) hoặc `@duong-hanh-phuc/contracts`
 - `apps/fe/src/lib/contracts.ts` (xem nó export gì: qk? schemas? DTO?)
 
 **`menuApi.ts`**

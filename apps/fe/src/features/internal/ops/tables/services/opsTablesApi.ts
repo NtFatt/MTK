@@ -2,7 +2,7 @@ import {
   Schemas,
   type OpsTableRow,
   type OpsTableTopItem,
-} from "@hadilao/contracts";
+} from "@duong-hanh-phuc/contracts";
 import { apiFetchAuthed } from "../../../../../shared/http/authedFetch";
 
 export type OpsTableDto = {

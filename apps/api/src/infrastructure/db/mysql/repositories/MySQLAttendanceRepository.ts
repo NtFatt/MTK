@@ -217,18 +217,28 @@ export class MySQLAttendanceRepository implements IAttendanceRepository {
     branchId: string;
     businessDate: string;
     shiftCode: ShiftCode;
-    staffIds: string[];
+    staffIds?: string[] | null;
   }): Promise<AttendanceRecordView[]> {
-    if (!input.staffIds.length) return [];
-    const placeholders = input.staffIds.map(() => "?").join(", ");
+    const staffIds = (input.staffIds ?? []).filter(Boolean);
+    if (input.staffIds != null && !staffIds.length) return [];
+
+    const where = [
+      "ar.branch_id = ?",
+      "ar.business_date = ?",
+      "ar.shift_code = ?",
+    ];
+    const params: unknown[] = [input.branchId, input.businessDate, input.shiftCode];
+    if (staffIds.length) {
+      const placeholders = staffIds.map(() => "?").join(", ");
+      where.push(`ar.staff_id IN (${placeholders})`);
+      params.push(...staffIds);
+    }
+
     const [rows]: any = await pool.query(
       `${BASE_SELECT}
-       WHERE ar.branch_id = ?
-         AND ar.business_date = ?
-         AND ar.shift_code = ?
-         AND ar.staff_id IN (${placeholders})
+       WHERE ${where.join("\n         AND ")}
        ORDER BY COALESCE(su.full_name, su.username) ASC, su.staff_id ASC`,
-      [input.branchId, input.businessDate, input.shiftCode, ...input.staffIds],
+      params,
     );
 
     return ((rows as any[]) ?? []).map(mapRow);

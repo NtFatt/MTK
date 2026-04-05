@@ -7,7 +7,7 @@
  * - Internal login:POST /api/v1/admin/login
  */
 import { apiFetch } from "../../lib/apiFetch";
-import { getInternalRolePermissions, isInternalRole } from "@hadilao/contracts";
+import { getInternalRolePermissions, isInternalRole } from "@duong-hanh-phuc/contracts";
 import { authStore } from "./authStore";
 import type { AuthSession, Role } from "./types";
 

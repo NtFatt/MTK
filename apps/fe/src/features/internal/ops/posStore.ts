@@ -57,7 +57,7 @@ export const posStore = create<PosTableContext>()(
       _hasHydrated: false,
     }),
     {
-      name: "hadilao.pos",
+      name: "duong_hanh_phuc.pos",
       storage: createJSONStorage(() => sessionStorage),
       partialize: (s) => ({
         branchId: s.branchId,

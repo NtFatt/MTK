@@ -27,6 +27,8 @@ import { CreateTable } from "../../application/use-cases/admin/ops/CreateTable.j
 import { UpdateTable } from "../../application/use-cases/admin/ops/UpdateTable.js";
 import { DeleteTable } from "../../application/use-cases/admin/ops/DeleteTable.js";
 import { ListAttendanceBoard } from "../../application/use-cases/admin/attendance/ListAttendanceBoard.js";
+import { ListAttendanceAssignments } from "../../application/use-cases/admin/attendance/ListAttendanceAssignments.js";
+import { ReplaceAttendanceAssignments } from "../../application/use-cases/admin/attendance/ReplaceAttendanceAssignments.js";
 import { ListStaffAttendanceHistory } from "../../application/use-cases/admin/attendance/ListStaffAttendanceHistory.js";
 import { ManualAttendanceCheckIn } from "../../application/use-cases/admin/attendance/ManualAttendanceCheckIn.js";
 import { ManualAttendanceCheckOut } from "../../application/use-cases/admin/attendance/ManualAttendanceCheckOut.js";
@@ -48,6 +50,7 @@ import { MySQLAttendanceRepository } from "../../infrastructure/db/mysql/reposit
 import { MySQLPayrollRepository } from "../../infrastructure/db/mysql/repositories/MySQLPayrollRepository.js";
 import { MySQLAuditLogRepository } from "../../infrastructure/db/mysql/repositories/MySQLAuditLogRepository.js";
 import { MySQLStaffUserRepository } from "../../infrastructure/db/mysql/repositories/MySQLStaffUserRepository.js";
+import { MySQLStaffShiftAssignmentRepository } from "../../infrastructure/db/mysql/repositories/MySQLStaffShiftAssignmentRepository.js";
 import { AdminOrderController } from "../../interface-adapters/http/controllers/AdminOrderController.js";
 import { AdminOpsController } from "../../interface-adapters/http/controllers/AdminOpsController.js";
 import { AdminKitchenController } from "../../interface-adapters/http/controllers/AdminKitchenController.js";
@@ -101,6 +104,7 @@ export function buildInternalAdminControllers(deps: BuildInternalAdminController
   const payrollRepo = new MySQLPayrollRepository();
   const auditRepo = new MySQLAuditLogRepository();
   const staffUserRepo = new MySQLStaffUserRepository();
+  const staffShiftAssignmentRepo = new MySQLStaffShiftAssignmentRepository();
   const opsTableSummaryRepo = new MySQLOpsTableOrderSummaryRepository();
 
   const listOrders = new ListOrders(orderQueryRepo);
@@ -142,10 +146,10 @@ export function buildInternalAdminControllers(deps: BuildInternalAdminController
   const deleteTable = new DeleteTable(deps.tableRepo, deps.sessionRepo, deps.orderRepo, deps.eventBus);
   const adminTableController = new AdminTableController(createTable, updateTable, deleteTable);
 
-  const getCurrentShift = new GetCurrentShift(shiftRepo);
+  const getCurrentShift = new GetCurrentShift(shiftRepo, staffShiftAssignmentRepo);
   const listShiftHistory = new ListShiftHistory(shiftRepo);
-  const openShift = new OpenShift(shiftRepo, deps.eventBus);
-  const closeShift = new CloseShift(shiftRepo, deps.eventBus);
+  const openShift = new OpenShift(shiftRepo, staffShiftAssignmentRepo, deps.eventBus);
+  const closeShift = new CloseShift(shiftRepo, staffShiftAssignmentRepo, deps.eventBus);
   const adminShiftController = new AdminShiftController(
     getCurrentShift,
     listShiftHistory,
@@ -154,13 +158,31 @@ export function buildInternalAdminControllers(deps: BuildInternalAdminController
     auditRepo,
   );
 
-  const listAttendanceBoard = new ListAttendanceBoard(attendanceRepo, staffUserRepo);
+  const listAttendanceBoard = new ListAttendanceBoard(attendanceRepo, staffUserRepo, staffShiftAssignmentRepo);
+  const listAttendanceAssignments = new ListAttendanceAssignments(staffShiftAssignmentRepo, staffUserRepo);
+  const replaceAttendanceAssignments = new ReplaceAttendanceAssignments(
+    staffShiftAssignmentRepo,
+    staffUserRepo,
+    deps.eventBus,
+  );
   const listStaffAttendanceHistory = new ListStaffAttendanceHistory(attendanceRepo, staffUserRepo);
-  const manualAttendanceCheckIn = new ManualAttendanceCheckIn(attendanceRepo, staffUserRepo, deps.eventBus);
+  const manualAttendanceCheckIn = new ManualAttendanceCheckIn(
+    attendanceRepo,
+    staffUserRepo,
+    staffShiftAssignmentRepo,
+    deps.eventBus,
+  );
   const manualAttendanceCheckOut = new ManualAttendanceCheckOut(attendanceRepo, deps.eventBus);
-  const markAttendanceAbsent = new MarkAttendanceAbsent(attendanceRepo, staffUserRepo, deps.eventBus);
+  const markAttendanceAbsent = new MarkAttendanceAbsent(
+    attendanceRepo,
+    staffUserRepo,
+    staffShiftAssignmentRepo,
+    deps.eventBus,
+  );
   const adminAttendanceController = new AdminAttendanceController(
     listAttendanceBoard,
+    listAttendanceAssignments,
+    replaceAttendanceAssignments,
     listStaffAttendanceHistory,
     manualAttendanceCheckIn,
     manualAttendanceCheckOut,
@@ -168,7 +190,7 @@ export function buildInternalAdminControllers(deps: BuildInternalAdminController
     auditRepo,
   );
 
-  const autoCheckIn = new AutoCheckInOnShiftOpened(attendanceRepo, deps.eventBus);
+  const autoCheckIn = new AutoCheckInOnShiftOpened(attendanceRepo, staffShiftAssignmentRepo, deps.eventBus);
   const autoCheckOut = new AutoCheckOutOnShiftClosed(attendanceRepo, deps.eventBus);
   deps.eventBus.subscribe(autoCheckIn.handler);
   deps.eventBus.subscribe(autoCheckOut.handler);

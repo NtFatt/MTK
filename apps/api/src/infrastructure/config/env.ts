@@ -168,7 +168,7 @@ export const env = {
   MYSQL_PORT: raw.MYSQL_PORT ?? raw.DB_PORT ?? 3306,
   MYSQL_USER: raw.MYSQL_USER ?? raw.DB_USER ?? "root",
   MYSQL_PASSWORD: raw.MYSQL_PASSWORD ?? raw.DB_PASSWORD ?? "",
-  MYSQL_DATABASE: raw.MYSQL_DATABASE ?? raw.DB_NAME ?? "hadilao_online",
+  MYSQL_DATABASE: raw.MYSQL_DATABASE ?? raw.DB_NAME ?? "tiem_lau_tren_duong_hanh_phuc",
 
   // VNPay URL fallback chain
   VNPAY_URL: raw.VNPAY_URL ?? raw.VNPAY_PAYMENT_URL ?? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html",
@@ -194,7 +194,7 @@ export const env = {
 
   // OpenTelemetry: off by default, can be enabled per environment.
   OTEL_ENABLED: raw.OTEL_ENABLED ?? false,
-  OTEL_SERVICE_NAME: raw.OTEL_SERVICE_NAME ?? "hadilao-api",
+  OTEL_SERVICE_NAME: raw.OTEL_SERVICE_NAME ?? "duong-hanh-phuc-api",
   OTEL_EXPORTER_OTLP_ENDPOINT: raw.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://localhost:4318/v1/traces",
   OTEL_TRACES_SAMPLER: raw.OTEL_TRACES_SAMPLER ?? "parentbased_traceidratio",
   OTEL_TRACES_SAMPLER_ARG: raw.OTEL_TRACES_SAMPLER_ARG ?? "1.0",

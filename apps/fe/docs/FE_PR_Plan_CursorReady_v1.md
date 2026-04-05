@@ -1,4 +1,4 @@
-# Hadilao FE — PR Plan (Cursor-ready) (v1)
+# Tiệm lẩu trên Đường Hạnh Phúc FE — PR Plan (Cursor-ready) (v1)
 > Mục tiêu: chia nhỏ công việc thành các PR “reviewable” (1–2h/PR), có checklist rõ ràng, để Cursor làm nhanh mà vẫn không drift spec.
 
 ---
@@ -17,7 +17,7 @@
 - remove/replace `src/App.jsx`, `src/main.jsx`, `src/App.css` (tuỳ chọn)
 
 **Acceptance**
-- `pnpm dev` chạy, có route `/` render “Hello Hadilao”.
+- `pnpm dev` chạy, có route `/` render “Hello Tiệm lẩu trên Đường Hạnh Phúc”.
 - `pnpm typecheck` pass.
 
 **Cursor prompt (copy/paste)**
@@ -65,18 +65,18 @@
 
 ---
 
-## PR-03 — Port Hadilao composition components (Navbar/Hero/…)
-**Branch**: `feat/fe-pr03-hadilao-composition`  
+## PR-03 — Port Tiệm lẩu trên Đường Hạnh Phúc composition components (Navbar/Hero/…)
+**Branch**: `feat/fe-pr03-duong_hanh_phuc-composition`  
 **Scope**
 - Port 7 component: `Navbar`, `HeroBanner`, `CategoryTabs`, `MenuCard`, `MenuGridSkeleton`, `EmptyState`, `Footer`.
 - Replace `next/image` -> `<img>`.
 - Chuẩn hoá text VN (có dấu) nếu muốn (optional).
 
 **Acceptance**
-- Có thể render toàn bộ layout sample trong 1 route `/ui/hadilao-menu` dùng mock.
+- Có thể render toàn bộ layout sample trong 1 route `/ui/duong_hanh_phuc-menu` dùng mock.
 
 **Cursor prompt**
-- “Copy hadilao composition components from UI sample. Remove Next-only APIs. Keep styling & animations. Use primitives from src/components/ui.”
+- “Copy duong_hanh_phuc composition components from UI sample. Remove Next-only APIs. Keep styling & animations. Use primitives from src/components/ui.”
 
 ---
 
@@ -100,7 +100,7 @@
 **Branch**: `feat/fe-pr05-menu-api`  
 **Scope**
 - Viết `useMenuItemsQuery()` dùng `apiFetch` + `qk.*`.
-- Parse/validate bằng `Schemas.*` từ `@hadilao/contracts` (nếu schema có).
+- Parse/validate bằng `Schemas.*` từ `@duong-hanh-phuc/contracts` (nếu schema có).
 - Replace mock bằng API thật.
 
 **Acceptance**

@@ -65,13 +65,27 @@ export function HeroBanner({
       <span className="customer-hotpot-steam customer-hotpot-steam-delay-2 absolute left-[58%] top-[18%]" />
       <span className="customer-hotpot-steam absolute right-[12%] top-[26%]" />
 
-      <div className="relative z-10 grid gap-7 xl:grid-cols-[1.24fr_0.76fr] xl:items-start">
-        <div className="space-y-7">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#f6dca8]/30 bg-[#fff6dc]/10 px-3 py-1 text-[11px] uppercase tracking-[0.28em] text-[#ffe4af]">
-            Nếp xưa phố cũ, lẩu dọn liền tay – Trạm dừng Hạnh Phúc.
+      <div className="relative z-10 space-y-7">
+        <div className="relative flex w-full max-w-full flex-col items-center gap-3 overflow-hidden rounded-[30px] border border-[#f6dca8]/40 bg-[linear-gradient(135deg,rgba(255,248,224,0.18),rgba(255,213,126,0.10))] px-6 py-5 text-center shadow-[0_22px_48px_-28px_rgba(35,16,6,0.8)] backdrop-blur-sm md:px-7">
+          <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,239,189,0.26),transparent_55%)]" />
+          <div className="relative flex items-center justify-center gap-3 text-[10px] font-semibold uppercase tracking-[0.36em] text-[#ffd98e]">
+            <span className="h-px w-8 bg-gradient-to-r from-transparent to-[#ffd98e]" />
+            TÂM TÌNH CỦA QUÁN
+            <span className="h-px w-8 bg-gradient-to-l from-transparent to-[#ffd98e]" />
           </div>
+          <div className="relative flex w-full flex-col items-center gap-1 pb-1 text-base font-semibold leading-7 tracking-[0.14em] text-[#fff3d0] drop-shadow-[0_12px_24px_rgba(48,18,6,0.45)] md:text-[1.15rem]">
+            <div className="max-w-full overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="mx-auto inline-flex min-w-max items-center justify-center whitespace-nowrap px-3 pr-1">
+                <span>Vương vấn phố xưa, làn hương đón ngõ</span>
+              </div>
+            </div>
+            <div className="text-[#ffe8ad]">Trạm dừng Hạnh Phúc</div>
+          </div>
+        </div>
 
-          <div className="mt-5 max-w-2xl">
+        <div className="grid gap-7 xl:grid-cols-[1.24fr_0.76fr] xl:items-start">
+          <div className="space-y-7">
+            <div className="mt-5 max-w-2xl">
             <div className="customer-mythmaker-script text-[2rem] text-[#ffd07a] md:text-[2.4rem]">
               Tiệm lẩu Đường Hạnh Phúc
             </div>
@@ -126,9 +140,7 @@ export function HeroBanner({
                 <div className="text-[11px] uppercase tracking-[0.28em] text-[#9b7452]">
                   Kệ thẻ tre theo quầy
                 </div>
-                <div className="customer-mythmaker-title mt-2 text-2xl text-[#5a301a]">
-                  Chọn nhanh mà không bị dồn cục
-                </div>
+                
               </div>
 
               <div className="rounded-full border border-[#e1c49f]/80 bg-[#fff8ed] px-3 py-1 text-xs uppercase tracking-[0.24em] text-[#8b643e]">
@@ -163,8 +175,8 @@ export function HeroBanner({
           </div>
         </div>
 
-        <div className="grid gap-3">
-          <div className="customer-hotpot-receipt rounded-[28px] p-5">
+          <div className="grid gap-3">
+            <div className="customer-hotpot-receipt rounded-[28px] p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="text-[11px] uppercase tracking-[0.28em] text-[#9b7452]">
@@ -189,39 +201,39 @@ export function HeroBanner({
             </div>
           </div>
 
-          {featuredItems.slice(0, 2).map((item, index) => (
-            <div key={item.id} className="customer-hotpot-receipt relative rounded-[26px] px-5 py-4">
-              <span className="customer-hotpot-washi left-5 top-[-10px]">
-                {index === 0 ? "Đặc trưng" : "Gợi ý hôm nay"}
-              </span>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-sm text-[#9d7858]">Món quán hay lên cùng bàn</div>
-                  <div className="customer-mythmaker-title mt-1 text-2xl font-semibold text-[#4b2715]">
-                    {item.name}
-                  </div>
-                </div>
-                <span
-                  className={cn(
-                    "rounded-full border px-3 py-1 text-xs font-medium",
-                    item.isAvailable
-                      ? "border-[#c2d9ae] bg-[#f0f8e8] text-[#54712a]"
-                      : "border-[#e4c6bc] bg-[#fff0ed] text-[#a24d42]"
-                  )}
-                >
-                  {item.isAvailable ? "Còn hàng" : "Hết hàng"}
+            {featuredItems.slice(0, 2).map((item, index) => (
+              <div key={item.id} className="customer-hotpot-receipt relative rounded-[26px] px-5 py-4">
+                <span className="customer-hotpot-washi left-5 top-[-10px]">
+                  {index === 0 ? "Đặc trưng" : "Gợi ý hôm nay"}
                 </span>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm text-[#9d7858]">Món quán hay lên cùng bàn</div>
+                    <div className="customer-mythmaker-title mt-1 text-2xl font-semibold text-[#4b2715]">
+                      {item.name}
+                    </div>
+                  </div>
+                  <span
+                    className={cn(
+                      "rounded-full border px-3 py-1 text-xs font-medium",
+                      item.isAvailable
+                        ? "border-[#c2d9ae] bg-[#f0f8e8] text-[#54712a]"
+                        : "border-[#e4c6bc] bg-[#fff0ed] text-[#a24d42]"
+                    )}
+                  >
+                    {item.isAvailable ? "Còn hàng" : "Hết hàng"}
+                  </span>
+                </div>
+                <div className="mt-3 text-lg font-semibold text-[#bd3b2d]">{formatVnd(item.price)}</div>
               </div>
+            ))}
 
-              <div className="mt-3 text-lg font-semibold text-[#bd3b2d]">{formatVnd(item.price)}</div>
-            </div>
-          ))}
-
-          {featuredItems.length === 0 ? (
-            <div className="customer-hotpot-receipt rounded-[26px] p-5 text-sm text-[#7c5d46]">
-              Bảng gợi ý đang được bếp cập nhật. Bạn vẫn có thể xem toàn bộ thực đơn bên dưới.
-            </div>
-          ) : null}
+            {featuredItems.length === 0 ? (
+              <div className="customer-hotpot-receipt rounded-[26px] p-5 text-sm text-[#7c5d46]">
+                Bảng gợi ý đang được bếp cập nhật. Bạn vẫn có thể xem toàn bộ thực đơn bên dưới.
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
     </section>

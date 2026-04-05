@@ -110,7 +110,7 @@ function main() {
 
   const addedWhenLegacyOn = diff(canonOn, canonOff);
 
-  const md = `# Hadilao API Route Map\n\nGenerated at: ${now}\n\n## Canonical routes (LEGACY_API_ENABLED=false)\n\n${toMarkdownTable(canonOff)}\n\n## Canonical additions when LEGACY_API_ENABLED=true\n\n> These routes are registered under **/api/v1/** only when the legacy flag is enabled (migration-only).\n\n${toMarkdownTable(addedWhenLegacyOn)}\n\n## Legacy mirror (/api/*) when LEGACY_API_ENABLED=true\n\n> When **LEGACY_API_ENABLED=false**, all **/api/** routes must return **404** (contract lock).\n\n${toMarkdownTable(legacyOn)}\n`;
+  const md = `# Tiệm lẩu trên Đường Hạnh Phúc API Route Map\n\nGenerated at: ${now}\n\n## Canonical routes (LEGACY_API_ENABLED=false)\n\n${toMarkdownTable(canonOff)}\n\n## Canonical additions when LEGACY_API_ENABLED=true\n\n> These routes are registered under **/api/v1/** only when the legacy flag is enabled (migration-only).\n\n${toMarkdownTable(addedWhenLegacyOn)}\n\n## Legacy mirror (/api/*) when LEGACY_API_ENABLED=true\n\n> When **LEGACY_API_ENABLED=false**, all **/api/** routes must return **404** (contract lock).\n\n${toMarkdownTable(legacyOn)}\n`;
 
   const outPaths = [
     path.resolve(process.cwd(), "ROUTE_MAP.md"),

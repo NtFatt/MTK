@@ -49,6 +49,35 @@ export class MySQLStaffUserRepository implements IStaffUserRepository {
     };
   }
 
+  async findManyByIds(staffIds: string[]): Promise<StaffUserRecord[]> {
+    const normalizedIds = Array.from(
+      new Set(
+        (staffIds ?? [])
+          .map((staffId) => String(staffId ?? "").trim())
+          .filter(Boolean),
+      ),
+    );
+    if (!normalizedIds.length) return [];
+
+    const placeholders = normalizedIds.map(() => "?").join(", ");
+    const [rows]: any = await pool.query(
+      `SELECT staff_id, username, password_hash, full_name, role, status, branch_id
+       FROM staff_users
+       WHERE staff_id IN (${placeholders})`,
+      normalizedIds,
+    );
+
+    return (rows ?? []).map((r: any) => ({
+      staffId: String(r.staff_id),
+      username: String(r.username),
+      passwordHash: String(r.password_hash),
+      fullName: r.full_name ? String(r.full_name) : null,
+      role: String(r.role) as any,
+      status: String(r.status) as any,
+      branchId: r.branch_id ? String(r.branch_id) : null,
+    }));
+  }
+
   async list(input?: { branchId?: string | null; status?: StaffUserStatus | null }): Promise<StaffUserRecord[]> {
     const where: string[] = [];
     const params: any[] = [];
@@ -77,38 +106,38 @@ export class MySQLStaffUserRepository implements IStaffUserRepository {
     }));
   }
 
-async create(input: {
-  username: string;
-  passwordHash: string;
-  fullName: string | null;
-  role: StaffUserRole;
-  branchId: string;
-}): Promise<StaffUserRecord> {
-  try {
-    const [result]: any = await pool.query(
-      `INSERT INTO staff_users (username, password_hash, full_name, role, status, branch_id)
-       VALUES (?, ?, ?, ?, 'ACTIVE', ?)`,
-      [input.username, input.passwordHash, input.fullName, input.role, input.branchId],
-    );
+  async create(input: {
+    username: string;
+    passwordHash: string;
+    fullName: string | null;
+    role: StaffUserRole;
+    branchId: string;
+  }): Promise<StaffUserRecord> {
+    try {
+      const [result]: any = await pool.query(
+        `INSERT INTO staff_users (username, password_hash, full_name, role, status, branch_id)
+         VALUES (?, ?, ?, ?, 'ACTIVE', ?)`,
+        [input.username, input.passwordHash, input.fullName, input.role, input.branchId],
+      );
 
-    const id = String(result.insertId);
-    const created = await this.findById(id);
-    if (!created) throw new Error("STAFF_CREATE_FAILED");
-    return created;
-  } catch (e: any) {
-    if (
-      e?.code === "ER_DUP_ENTRY" &&
-      String(e?.message ?? "").includes("uq_staff_username")
-    ) {
-      const err: any = new Error("STAFF_USERNAME_ALREADY_EXISTS");
-      err.status = 409;
-      err.code = "STAFF_USERNAME_ALREADY_EXISTS";
-      err.details = { username: input.username };
-      throw err;
+      const id = String(result.insertId);
+      const created = await this.findById(id);
+      if (!created) throw new Error("STAFF_CREATE_FAILED");
+      return created;
+    } catch (e: any) {
+      if (
+        e?.code === "ER_DUP_ENTRY" &&
+        String(e?.message ?? "").includes("uq_staff_username")
+      ) {
+        const err: any = new Error("STAFF_USERNAME_ALREADY_EXISTS");
+        err.status = 409;
+        err.code = "STAFF_USERNAME_ALREADY_EXISTS";
+        err.details = { username: input.username };
+        throw err;
+      }
+      throw e;
     }
-    throw e;
   }
-}
 
   async updateRole(staffId: string, role: StaffUserRole): Promise<void> {
     await pool.query(

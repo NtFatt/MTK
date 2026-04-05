@@ -1,6 +1,6 @@
 # PR-06 — Realtime nền tảng chuẩn v7 (Socket manager singleton + join.v1/replay.v1 + event router + invalidate) — Cursor Prompt
 
-> **Repo:** `hadilao-online` (pnpm workspace)  
+> **Repo:** `tiem-lau-tren-duong-hanh-phuc` (pnpm workspace)  
 > **Scope PR:** chỉ thay đổi trong `apps/fe/**`  
 > **Hiện trạng:** PR-00..PR-05 đã pass. Customer flow `/c/*` có session+cart+checkout+order status (polling). Internal `/i/*` có OTP auth + refresh single-flight + guards.
 
