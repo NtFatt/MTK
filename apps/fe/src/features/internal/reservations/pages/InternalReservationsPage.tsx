@@ -25,8 +25,7 @@ import { useReservationsQuery } from "../hooks/useReservationsQuery";
 import { useConfirmReservationMutation } from "../hooks/useConfirmReservationMutation";
 import { useCheckinReservationMutation } from "../hooks/useCheckinReservationMutation";
 import type { ReservationRow, ReservationStatus } from "../services/reservationsApi";
-
-import type { HttpError } from "../../../../shared/http/errors";
+import { normalizeApiError } from "../../../../shared/http/normalizeApiError";
 
 const INTERNAL_RESERVATION_ERROR_MAP: Record<string, string> = {
   FORBIDDEN: "Không đủ quyền thao tác reservation.",
@@ -35,12 +34,16 @@ const INTERNAL_RESERVATION_ERROR_MAP: Record<string, string> = {
   RESERVATION_CANCELED: "Reservation này đã bị hủy.",
   RESERVATION_EXPIRED: "Reservation này đã hết hạn.",
   RESERVATION_NOT_CONFIRMED: "Reservation chưa được confirm nên chưa thể check-in.",
-  RESERVATION_NOT_IN_TIME_WINDOW: "Chưa nằm trong khung giờ check-in hợp lệ.",
+  RESERVATION_NOT_IN_TIME_WINDOW:
+    "Chưa tới khung giờ check-in. Vui lòng thử lại gần giờ khách đến.",
   TABLE_NOT_FOUND: "Không tìm thấy bàn gắn với reservation.",
   INVALID_FROM: "Giá trị bộ lọc thời gian bắt đầu không hợp lệ.",
   INVALID_TO: "Giá trị bộ lọc thời gian kết thúc không hợp lệ.",
   INVALID_LIMIT: "Giới hạn bản ghi không hợp lệ.",
 };
+
+const CHECKIN_EARLY_MINUTES = 30;
+const CHECKIN_LATE_MINUTES = 15;
 
 const STATUS_OPTIONS: Array<{ value: "" | ReservationStatus; label: string }> = [
   { value: "", label: "Tất cả" },
@@ -92,8 +95,121 @@ function canCheckinRow(row: ReservationRow) {
   return row.status === "CONFIRMED";
 }
 
+function parseMs(value?: string | null): number | null {
+  if (!value) return null;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+type CheckinActionState = {
+  disabled: boolean;
+  helperText: string;
+  intent: "ready" | "warn" | "danger" | "blocked";
+  title?: string;
+};
+
+function getCheckinActionState(row: ReservationRow, nowMs = Date.now()): CheckinActionState {
+  switch (row.status) {
+    case "PENDING":
+      return {
+        disabled: true,
+        helperText: "Cần confirm reservation trước khi check-in.",
+        intent: "blocked",
+      };
+    case "CANCELED":
+      return {
+        disabled: true,
+        helperText: "Reservation này đã bị hủy nên không thể check-in.",
+        intent: "blocked",
+      };
+    case "EXPIRED":
+      return {
+        disabled: true,
+        helperText: "Reservation này đã hết hạn nên không thể check-in.",
+        intent: "blocked",
+      };
+    case "CHECKED_IN":
+      return {
+        disabled: true,
+        helperText: row.checkedInAt
+          ? `Reservation đã check-in lúc ${formatDateTime(row.checkedInAt)}.`
+          : "Reservation này đã được check-in rồi.",
+        intent: "blocked",
+      };
+    case "NO_SHOW":
+      return {
+        disabled: true,
+        helperText: "Reservation này đã được đánh dấu no-show.",
+        intent: "blocked",
+      };
+    case "COMPLETED":
+      return {
+        disabled: true,
+        helperText: "Reservation này đã hoàn tất nên không thể check-in lại.",
+        intent: "blocked",
+      };
+    default:
+      break;
+  }
+
+  const fromMs = parseMs(row.reservedFrom);
+  const toMs = parseMs(row.reservedTo);
+  if (fromMs == null || toMs == null) {
+    return {
+      disabled: false,
+      helperText: "Backend sẽ kiểm tra khung giờ check-in khi thao tác.",
+      intent: "warn",
+    };
+  }
+
+  const opensAtMs = fromMs - CHECKIN_EARLY_MINUTES * 60_000;
+  const closesAtMs = toMs + CHECKIN_LATE_MINUTES * 60_000;
+
+  if (nowMs < opensAtMs) {
+    const opensAt = formatDateTime(new Date(opensAtMs).toISOString());
+    return {
+      disabled: false,
+      helperText: `Chưa tới khung giờ check-in. Vui lòng thử lại gần giờ khách đến. Dự kiến từ ${opensAt}.`,
+      intent: "warn",
+      title: `Khung giờ check-in dự kiến mở từ ${opensAt}. Backend vẫn sẽ xác nhận lần cuối khi thao tác.`,
+    };
+  }
+
+  if (nowMs > closesAtMs) {
+    const closesAt = formatDateTime(new Date(closesAtMs).toISOString());
+    return {
+      disabled: false,
+      helperText: `Có thể đã quá khung giờ check-in dự kiến từ ${closesAt}. Backend sẽ kiểm tra lại khi thao tác.`,
+      intent: "danger",
+      title: `Khung giờ check-in dự kiến đã đóng lúc ${closesAt}. Backend vẫn là nguồn xác nhận cuối cùng.`,
+    };
+  }
+
+  const closesAt = formatDateTime(new Date(closesAtMs).toISOString());
+  return {
+    disabled: false,
+    helperText: `Đang trong khung giờ check-in dự kiến. Có thể thao tác đến ${closesAt}.`,
+    intent: "ready",
+    title: `Khung giờ check-in dự kiến còn hiệu lực đến ${closesAt}.`,
+  };
+}
+
+function getCheckinHintClassName(intent: CheckinActionState["intent"]) {
+  switch (intent) {
+    case "ready":
+      return "border-emerald-200 bg-emerald-50/80 text-emerald-900";
+    case "danger":
+      return "border-destructive/40 bg-destructive/10 text-destructive";
+    case "blocked":
+      return "border-slate-200 bg-slate-50 text-slate-700";
+    case "warn":
+    default:
+      return "border-amber-200 bg-amber-50/80 text-amber-900";
+  }
+}
+
 function extractErrorMessage(error: unknown) {
-  const e = error as HttpError | null | undefined;
+  const e = normalizeApiError(error);
   const code = e?.code;
 
   if (code && INTERNAL_RESERVATION_ERROR_MAP[code]) {
@@ -105,6 +221,10 @@ function extractErrorMessage(error: unknown) {
   }
 
   return "Thao tác reservation thất bại.";
+}
+
+function isConflictError(error: unknown) {
+  return normalizeApiError(error).status === 409;
 }
 
 export function InternalReservationsPage() {
@@ -202,6 +322,9 @@ export function InternalReservationsPage() {
             kind: "error",
             message: extractErrorMessage(mutationError),
           });
+          if (isConflictError(mutationError)) {
+            void refetch();
+          }
         },
       },
     );
@@ -375,6 +498,8 @@ export function InternalReservationsPage() {
                 checkinMut.isPending &&
                 checkinMut.variables?.reservationCode === row.reservationCode;
 
+              const checkinAction = getCheckinActionState(row);
+
               return (
                 <Card key={row.reservationCode}>
                   <CardContent className="space-y-4 pt-6">
@@ -425,27 +550,42 @@ export function InternalReservationsPage() {
                       </div>
                     )}
 
-                    <div className="flex flex-wrap gap-2">
-                      <Can perm="reservations.confirm">
-                        <Button
-                          type="button"
-                          disabled={!canConfirm || !canConfirmRow(row) || confirming || checkingIn}
-                          onClick={() => handleConfirm(row.reservationCode)}
-                        >
-                          {confirming ? "Đang confirm..." : "Confirm"}
-                        </Button>
-                      </Can>
+                    <div className="space-y-2">
+                      <div
+                        className={`rounded-md border px-3 py-2 text-sm ${getCheckinHintClassName(checkinAction.intent)}`}
+                      >
+                        {checkinAction.helperText}
+                      </div>
 
-                      <Can perm="reservations.checkin">
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          disabled={!canCheckin || !canCheckinRow(row) || checkingIn || confirming}
-                          onClick={() => handleCheckin(row.reservationCode)}
-                        >
-                          {checkingIn ? "Đang check-in..." : "Check-in"}
-                        </Button>
-                      </Can>
+                      <div className="flex flex-wrap gap-2">
+                        <Can perm="reservations.confirm">
+                          <Button
+                            type="button"
+                            disabled={!canConfirm || !canConfirmRow(row) || confirming || checkingIn}
+                            onClick={() => handleConfirm(row.reservationCode)}
+                          >
+                            {confirming ? "Đang confirm..." : "Confirm"}
+                          </Button>
+                        </Can>
+
+                        <Can perm="reservations.checkin">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            disabled={
+                              !canCheckin ||
+                              !canCheckinRow(row) ||
+                              checkinAction.disabled ||
+                              checkingIn ||
+                              confirming
+                            }
+                            title={checkinAction.title}
+                            onClick={() => handleCheckin(row.reservationCode)}
+                          >
+                            {checkingIn ? "Đang check-in..." : "Check-in"}
+                          </Button>
+                        </Can>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

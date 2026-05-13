@@ -1,15 +1,19 @@
 import type { ReservationStatus, TableReservation } from "../../../domain/entities/TableReservation.js";
 
+export type TableSlot = {
+  tableId: string;
+  branchId: string;
+  tableCode: string;
+  seats: number;
+  areaName: string;
+};
+
 export type ReservationAvailability = {
   available: boolean;
   availableCount: number;
-  suggestedTable: null | {
-    tableId: string;
-    branchId: string;
-    tableCode: string;
-    seats: number;
-    areaName: string;
-  };
+  availableTables: TableSlot[];
+  suggestedTable: TableSlot | null;
+  unavailableReason: string | null;
 };
 
 export type ReservationCreateInput = {
@@ -41,7 +45,8 @@ export interface ITableReservationRepository {
 
   /** Availability (best-fit) */
   getAvailability(params: {
-    areaName: string;
+    branchId: string;
+    areaName?: string;
     partySize: number;
     reservedFrom: Date;
     reservedTo: Date;
@@ -66,4 +71,10 @@ export interface ITableReservationRepository {
   hasConfirmedStartingSoon(tableId: string, now: Date, windowMinutes: number): Promise<boolean>;
 
   list(filter: ReservationListFilter): Promise<TableReservation[]>;
+
+  /**
+   * Returns the TableSlot for a tableId if it belongs to the given branch and area,
+   * or null if it does not / does not exist.
+   */
+  findTableSlotById(branchId: string, areaName: string, tableId: string): Promise<TableSlot | null>;
 }

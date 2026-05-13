@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import type { ITableReservationRepository } from "../../ports/repositories/ITableReservationRepository.js";
+import type { ITableReservationRepository, TableSlot } from "../../ports/repositories/ITableReservationRepository.js";
 import { addDays, addMinutes, assertValidDate, clampDate } from "./reservationTime.js";
 import type { IEventBus } from "../../ports/events/IEventBus.js";
 import { NoopEventBus } from "../../ports/events/NoopEventBus.js";
@@ -12,6 +12,7 @@ export class CreateReservation {
   ) {}
 
   async execute(input: {
+    branchId: string;
     areaName: string;
     partySize: number;
     contactPhone: string;
@@ -19,6 +20,7 @@ export class CreateReservation {
     note?: string | null;
     reservedFrom: Date;
     reservedTo: Date;
+    tableId?: string;
   }) {
     const now = new Date();
     await this.reservationRepo.expirePending(now);
@@ -39,6 +41,7 @@ export class CreateReservation {
     }
 
     const avail = await this.reservationRepo.getAvailability({
+      branchId: input.branchId,
       areaName: input.areaName.trim(),
       partySize: input.partySize,
       reservedFrom: input.reservedFrom,
@@ -46,7 +49,24 @@ export class CreateReservation {
       now,
     });
 
-    if (!avail.available || !avail.suggestedTable) throw new Error("NO_TABLE_AVAILABLE");
+    if (!avail.available) throw new Error("NO_TABLE_AVAILABLE");
+
+    let selectedTable: TableSlot;
+    if (input.tableId) {
+      const slot = await this.reservationRepo.findTableSlotById(
+        input.branchId,
+        input.areaName.trim(),
+        input.tableId,
+      );
+      if (!slot) throw new Error("SELECTED_TABLE_NOT_FOUND");
+      if (!avail.availableTables.some((t) => t.tableId === slot.tableId)) {
+        throw new Error("SELECTED_TABLE_NOT_AVAILABLE");
+      }
+      selectedTable = slot;
+    } else {
+      if (!avail.suggestedTable) throw new Error("NO_TABLE_AVAILABLE");
+      selectedTable = avail.suggestedTable;
+    }
 
     const expiresAt = clampDate(addMinutes(now, this.cfg.pendingMinutes), input.reservedFrom);
     const reservationCode = this.generateCode();
@@ -60,15 +80,15 @@ export class CreateReservation {
       reservedFrom: input.reservedFrom,
       reservedTo: input.reservedTo,
       expiresAt,
-      tableId: avail.suggestedTable.tableId,
-      tableCodeSnapshot: avail.suggestedTable.tableCode,
-      areaNameSnapshot: avail.suggestedTable.areaName,
+      tableId: selectedTable.tableId,
+      tableCodeSnapshot: selectedTable.tableCode,
+      areaNameSnapshot: selectedTable.areaName,
     });
 
     await this.eventBus.publish({
       type: "reservation.created",
       at: new Date().toISOString(),
-      scope: { reservationId: created.id, tableId: created.tableId, branchId: avail.suggestedTable.branchId },
+      scope: { reservationId: created.id, tableId: created.tableId, branchId: selectedTable.branchId },
       payload: {
         reservationCode: created.reservationCode,
         status: created.status,

@@ -6,6 +6,7 @@ import {
 } from "../services/reservationsApi";
 
 const FALLBACK_INPUT: ReservationAvailabilityInput = {
+  branchId: undefined,
   areaName: "",
   partySize: 1,
   reservedFrom: "1970-01-01T00:00:00.000Z",
@@ -17,6 +18,7 @@ function reservationAvailabilityQueryKey(input: ReservationAvailabilityInput | n
     "public",
     "reservations",
     "availability",
+    input?.branchId ?? "",
     input?.areaName ?? "",
     input?.partySize ?? 0,
     input?.reservedFrom ?? "",

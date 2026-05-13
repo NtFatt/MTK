@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { buttonVariants } from "../../../../shared/ui/button";
@@ -22,6 +22,7 @@ import {
 export function CustomerReservationPage() {
   const navigate = useNavigate();
 
+  const [branchId, setBranchId] = useState("");
   const [areaName, setAreaName] = useState("");
   const [partySize, setPartySize] = useState(2);
   const [contactName, setContactName] = useState("");
@@ -32,24 +33,23 @@ export function CustomerReservationPage() {
   const [reservedFromLocal, setReservedFromLocal] = useState(defaults.reservedFromLocal);
   const [reservedToLocal, setReservedToLocal] = useState(defaults.reservedToLocal);
   const [formError, setFormError] = useState<string | null>(null);
-
-  const createMutation = useCreateReservationMutation();
+  const [userSelectedTableId, setUserSelectedTableId] = useState<string | null>(null);
 
   const reservedFromIso = useMemo(() => toIsoOrNull(reservedFromLocal), [reservedFromLocal]);
   const reservedToIso = useMemo(() => toIsoOrNull(reservedToLocal), [reservedToLocal]);
 
   const availabilityInput = useMemo(() => {
-    if (!areaName.trim()) return null;
     if (!reservedFromIso || !reservedToIso) return null;
     if (!Number.isFinite(partySize) || partySize < 1) return null;
 
     return {
+      branchId: branchId.trim() || undefined,
       areaName: areaName.trim(),
       partySize,
       reservedFrom: reservedFromIso,
       reservedTo: reservedToIso,
     };
-  }, [areaName, partySize, reservedFromIso, reservedToIso]);
+  }, [branchId, areaName, partySize, reservedFromIso, reservedToIso]);
 
   const availabilityQuery = useReservationAvailabilityQuery(
     availabilityInput,
@@ -60,14 +60,30 @@ export function CustomerReservationPage() {
     ? getReservationErrorMessage(availabilityQuery.error)
     : null;
 
+  const createMutation = useCreateReservationMutation();
+
   const submitErrorMessage = formError ?? (
     createMutation.error ? getReservationErrorMessage(createMutation.error) : null
   );
+
+  // Clear user selection whenever the user changes availability inputs (new search).
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting derived state when inputs change is intentional
+    setUserSelectedTableId(null);
+  }, [availabilityInput]);
+
+  // Effective selected table: user pick > suggested > null.
+  const selectedTableId = useMemo<string | null>(() => {
+    if (userSelectedTableId !== null) return userSelectedTableId;
+    if (!availabilityQuery.data?.available) return null;
+    return availabilityQuery.data.suggestedTable?.tableId ?? null;
+  }, [userSelectedTableId, availabilityQuery.data]);
 
   const handleSubmit = async () => {
     setFormError(null);
 
     const validationMessage = validateReservationForm({
+      branchId,
       areaName,
       partySize,
       contactName,
@@ -87,8 +103,14 @@ export function CustomerReservationPage() {
       return;
     }
 
+    if (!selectedTableId) {
+      setFormError("Vui lòng chọn bàn trước khi đặt.");
+      return;
+    }
+
     try {
       const created = await createMutation.mutateAsync({
+        branchId: branchId.trim() || undefined,
         areaName: areaName.trim(),
         partySize,
         contactPhone: contactPhone.trim(),
@@ -96,6 +118,7 @@ export function CustomerReservationPage() {
         note: note.trim() || null,
         reservedFrom: reservedFromIso,
         reservedTo: reservedToIso,
+        tableId: selectedTableId,
       });
 
       navigate(`/c/reservations/${created.reservationCode}`);
@@ -137,6 +160,7 @@ export function CustomerReservationPage() {
         <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-4">
             <ReservationForm
+              branchId={branchId}
               areaName={areaName}
               partySize={partySize}
               contactName={contactName}
@@ -144,6 +168,7 @@ export function CustomerReservationPage() {
               note={note}
               reservedFromLocal={reservedFromLocal}
               reservedToLocal={reservedToLocal}
+              onBranchIdChange={setBranchId}
               onAreaNameChange={setAreaName}
               onPartySizeChange={setPartySize}
               onContactNameChange={setContactName}
@@ -169,10 +194,12 @@ export function CustomerReservationPage() {
 
           <div className="space-y-6">
             <ReservationAvailabilityCard
-              inputReady={availabilityInput !== null}
-              isLoading={availabilityQuery.isLoading || availabilityQuery.isFetching}
+              inputReady={Boolean(availabilityInput?.branchId?.trim())}
+              isLoading={availabilityInput !== null && (availabilityQuery.isLoading || availabilityQuery.isFetching)}
               errorMessage={availabilityMessage}
               data={availabilityQuery.data}
+              selectedTableId={selectedTableId}
+              onSelectTable={setUserSelectedTableId}
             />
 
             <ReservationPreviewCard

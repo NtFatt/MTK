@@ -1,0 +1,101 @@
+- generic [ref=e178]:
+  - banner [ref=e179]:
+    - generic [ref=e180]:
+      - link "Tiệm lẩu trên Đường Hạnh Phúc Tiệm lẩu Đường Hạnh Phúc" [ref=e181] [cursor=pointer]:
+        - /url: /c/menu
+        - generic [ref=e184]: Tiệm lẩu trên Đường Hạnh Phúc
+        - generic [ref=e185]: Tiệm lẩu Đường Hạnh Phúc
+      - generic [ref=e186]: Đang gọi món tại bàn
+      - navigation [ref=e187]:
+        - link "Giỏ hàng" [ref=e188] [cursor=pointer]:
+          - /url: /c/cart
+        - button "Mở bàn khác" [ref=e189] [cursor=pointer]
+  - main [ref=e190]:
+    - generic [ref=e191]:
+      - generic [ref=e192]:
+        - generic [ref=e193]:
+          - generic [ref=e194]: Chi tiết reservation
+          - heading "Giữ chỗ của bạn tại quán" [level=1] [ref=e195]
+          - paragraph [ref=e196]: Theo dõi trạng thái reservation và hủy nếu kế hoạch thay đổi.
+        - generic [ref=e197]: PENDING
+      - generic [ref=e198]:
+        - generic [ref=e200]:
+          - generic [ref=e201]: Mã reservation
+          - generic [ref=e202]: RSV2643F45A2
+          - paragraph [ref=e203]: Lưu mã này để tra cứu khi cần.
+        - generic [ref=e204]:
+          - generic [ref=e205]:
+            - generic [ref=e206]: Thông tin đặt bàn
+            - generic [ref=e207]:
+              - generic [ref=e208]:
+                - generic [ref=e209]: Khu vực
+                - generic [ref=e210]: Zone B
+              - generic [ref=e211]:
+                - generic [ref=e212]: Bàn
+                - generic [ref=e213]: A16
+              - generic [ref=e214]:
+                - generic [ref=e215]: Số lượng khách
+                - generic [ref=e216]: "2"
+              - generic [ref=e217]:
+                - generic [ref=e218]: Bắt đầu
+                - generic [ref=e219]: 18:00:00 3/5/2026
+              - generic [ref=e220]:
+                - generic [ref=e221]: Kết thúc
+                - generic [ref=e222]: 19:30:00 3/5/2026
+              - generic [ref=e223]:
+                - generic [ref=e224]: Hết hạn giữ bàn
+                - generic [ref=e225]: 16:58:38 1/5/2026
+          - generic [ref=e226]:
+            - generic [ref=e227]: Thông tin liên hệ
+            - generic [ref=e228]:
+              - generic [ref=e229]:
+                - generic [ref=e230]: Tên liên hệ
+                - generic [ref=e231]: —
+              - generic [ref=e232]:
+                - generic [ref=e233]: Số điện thoại
+                - generic [ref=e234]: "0900000000"
+              - generic [ref=e235]:
+                - generic [ref=e236]: Ghi chú
+                - generic [ref=e237]: Không có ghi chú.
+              - generic [ref=e238]:
+                - generic [ref=e239]: Tạo lúc
+                - generic [ref=e240]: 16:13:37 1/5/2026
+              - generic [ref=e241]:
+                - generic [ref=e242]: Cập nhật lúc
+                - generic [ref=e243]: 16:13:37 1/5/2026
+      - generic [ref=e244]: Reservation đang chờ xác nhận. Bàn sẽ được giữ đến 16:58:38 1/5/2026.
+      - generic [ref=e245]:
+        - generic [ref=e246]:
+          - generic [ref=e247]: Trạng thái giữ bàn
+          - generic [ref=e249]: Đang giữ bàn chờ xác nhận
+          - paragraph [ref=e250]: Bàn sẽ được giữ đến 16:58:38 1/5/2026 (còn 45 phút).
+        - generic [ref=e251]:
+          - generic [ref=e252]: Cửa sổ check-in
+          - generic [ref=e254]: Chưa đến cửa sổ check-in
+          - generic [ref=e255]:
+            - generic [ref=e256]:
+              - generic [ref=e257]: Mở từ
+              - generic [ref=e258]: 17:30:00 3/5/2026
+            - generic [ref=e259]:
+              - generic [ref=e260]: Đóng lúc
+              - generic [ref=e261]: 19:45:00 3/5/2026
+          - paragraph [ref=e262]: Quầy sẽ cho check-in từ 17:30:00 3/5/2026 (còn 2956 phút).
+      - generic [ref=e263]:
+        - button "Hủy reservation" [ref=e264] [cursor=pointer]
+        - button "Làm mới" [ref=e265] [cursor=pointer]
+        - link "Tạo reservation mới" [ref=e266] [cursor=pointer]:
+          - /url: /c/reservations
+  - contentinfo [ref=e267]:
+    - generic [ref=e268]:
+      - generic [ref=e269]:
+        - generic [ref=e270]:
+          - generic [ref=e271]: Tiệm lẩu trên Đường Hạnh Phúc
+          - text: Tiệm lẩu Đường Hạnh Phúc
+        - navigation [ref=e272]:
+          - link "Thực đơn" [ref=e273] [cursor=pointer]:
+            - /url: /c/menu
+          - link "Giỏ hàng" [ref=e274] [cursor=pointer]:
+            - /url: /c/cart
+          - link "Mở bàn" [ref=e275] [cursor=pointer]:
+            - /url: /c/qr
+      - separator [ref=e276]

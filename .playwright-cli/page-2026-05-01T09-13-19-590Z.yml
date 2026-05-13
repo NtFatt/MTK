@@ -1,0 +1,134 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "Tiệm lẩu trên Đường Hạnh Phúc Tiệm lẩu Đường Hạnh Phúc" [ref=e6] [cursor=pointer]:
+        - /url: /c/menu
+        - generic [ref=e9]: Tiệm lẩu trên Đường Hạnh Phúc
+        - generic [ref=e10]: Tiệm lẩu Đường Hạnh Phúc
+      - generic [ref=e11]: Đang gọi món tại bàn
+      - navigation [ref=e12]:
+        - link "Giỏ hàng" [ref=e13] [cursor=pointer]:
+          - /url: /c/cart
+        - button "Mở bàn khác" [ref=e14] [cursor=pointer]
+  - main [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: Đặt bàn trước
+        - heading "Giữ chỗ cho bữa lẩu của bạn" [level=1] [ref=e19]
+        - paragraph [ref=e20]: Chọn khu vực, số lượng khách và khung giờ để hệ thống kiểm tra bàn trống rồi tạo reservation ngay trong app.
+      - generic [ref=e21]:
+        - generic [ref=e22]:
+          - generic [ref=e24]:
+            - generic [ref=e25]:
+              - generic [ref=e26]: Thông tin reservation
+              - heading "Giữ bàn trước giờ cao điểm" [level=2] [ref=e27]
+              - paragraph [ref=e28]: Nhập đúng khu vực, thời gian và thông tin liên hệ để hệ thống giữ bàn cho bạn.
+            - generic [ref=e29]:
+              - generic [ref=e30]:
+                - generic [ref=e31]:
+                  - text: Mã chi nhánh
+                  - textbox "Mã chi nhánh" [ref=e32]:
+                    - /placeholder: "Ví dụ: 1"
+                    - text: "1"
+                - generic [ref=e33]:
+                  - text: Khu vực
+                  - textbox "Khu vực" [ref=e34]:
+                    - /placeholder: "Ví dụ: Main Hall / VIP / Outdoor"
+                    - text: Zone B
+                - generic [ref=e35]:
+                  - text: Số lượng khách
+                  - spinbutton "Số lượng khách" [ref=e36]: "2"
+                - generic [ref=e37]:
+                  - text: Thời gian bắt đầu
+                  - textbox "Thời gian bắt đầu" [ref=e38]: 2026-05-03T18:00
+                - generic [ref=e39]:
+                  - text: Thời gian kết thúc
+                  - textbox "Thời gian kết thúc" [ref=e40]: 2026-05-03T19:30
+                - generic [ref=e41]:
+                  - text: Tên liên hệ
+                  - textbox "Tên liên hệ" [ref=e42]:
+                    - /placeholder: Nguyễn Văn A
+                - generic [ref=e43]:
+                  - text: Số điện thoại
+                  - textbox "Số điện thoại" [ref=e44]:
+                    - /placeholder: 090...
+              - generic [ref=e45]:
+                - text: Ghi chú
+                - textbox "Ghi chú" [ref=e46]:
+                  - /placeholder: "Ví dụ: bàn yên tĩnh, có trẻ em, gần cửa sổ..."
+              - button "Đặt bàn" [ref=e48] [cursor=pointer]
+          - link "Quay lại thực đơn" [ref=e49] [cursor=pointer]:
+            - /url: /c/menu
+        - generic [ref=e50]:
+          - generic [ref=e52]:
+            - generic [ref=e53]:
+              - generic [ref=e54]: Kiểm tra khả dụng
+              - generic [ref=e55]: Bàn còn trống không?
+              - paragraph [ref=e56]: Hệ thống sẽ kiểm tra số bàn còn trống theo khu vực, thời gian và số khách.
+            - generic [ref=e128]:
+              - generic [ref=e129]: Có bàn phù hợp cho khung giờ này
+              - generic [ref=e130]: "Số bàn khả dụng: 2"
+            - generic [ref=e131]:
+              - generic [ref=e132]: Bàn khả dụng (2)
+              - button "B01 B01 Zone B · 6 ghế Dư 6 ghế Gợi ý" [ref=e133] [cursor=pointer]:
+                - generic [ref=e134]:
+                  - generic [ref=e135]: B01
+                  - generic [ref=e136]:
+                    - generic [ref=e137]: B01
+                    - generic [ref=e138]: Zone B · 6 ghế
+                - generic [ref=e139]:
+                  - generic [ref=e140]: Dư 6 ghế
+                  - generic [ref=e142]: Gợi ý
+              - button "A16 A16 Zone B · 16 ghế Dư 16 ghế Đã chọn" [ref=e143] [cursor=pointer]:
+                - generic [ref=e144]:
+                  - generic [ref=e145]: A16
+                  - generic [ref=e146]:
+                    - generic [ref=e147]: A16
+                    - generic [ref=e148]: Zone B · 16 ghế
+                - generic [ref=e149]:
+                  - generic [ref=e150]: Dư 16 ghế
+                  - generic [ref=e152]: Đã chọn
+          - generic [ref=e59]:
+            - generic [ref=e60]:
+              - generic [ref=e61]: Xem trước
+              - generic [ref=e62]: Tóm tắt reservation
+            - generic [ref=e64]:
+              - generic [ref=e65]:
+                - generic [ref=e66]: Khu vực
+                - generic [ref=e67]: Zone B
+              - generic [ref=e68]:
+                - generic [ref=e69]: Số khách
+                - generic [ref=e70]: "2"
+              - generic [ref=e71]:
+                - generic [ref=e72]: Bắt đầu
+                - generic [ref=e73]: 18:00:00 3/5/2026
+              - generic [ref=e74]:
+                - generic [ref=e75]: Kết thúc
+                - generic [ref=e76]: 19:30:00 3/5/2026
+              - generic [ref=e77]:
+                - generic [ref=e78]: Số điện thoại
+                - generic [ref=e79]: —
+          - generic [ref=e81]:
+            - generic [ref=e82]:
+              - generic [ref=e83]: Tra cứu reservation
+              - generic [ref=e84]: Đã đặt bàn trước đó?
+              - paragraph [ref=e85]: Nhập mã reservation để xem trạng thái hoặc hủy nếu còn hợp lệ.
+            - generic [ref=e86]:
+              - text: Mã reservation
+              - textbox "Mã reservation" [ref=e87]:
+                - /placeholder: "Ví dụ: RSV..."
+            - button "Tra cứu" [ref=e88] [cursor=pointer]
+  - contentinfo [ref=e89]:
+    - generic [ref=e90]:
+      - generic [ref=e91]:
+        - generic [ref=e92]:
+          - generic [ref=e93]: Tiệm lẩu trên Đường Hạnh Phúc
+          - text: Tiệm lẩu Đường Hạnh Phúc
+        - navigation [ref=e94]:
+          - link "Thực đơn" [ref=e95] [cursor=pointer]:
+            - /url: /c/menu
+          - link "Giỏ hàng" [ref=e96] [cursor=pointer]:
+            - /url: /c/cart
+          - link "Mở bàn" [ref=e97] [cursor=pointer]:
+            - /url: /c/qr
+      - separator [ref=e98]

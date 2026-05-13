@@ -1,0 +1,638 @@
+- generic [ref=e15]:
+  - banner [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e18]:
+        - generic [ref=e19]: Quản trị hệ thống
+        - generic [ref=e21]: "Đang quản lý: Chi nhánh 1"
+      - button "Logout" [ref=e23] [cursor=pointer]
+  - main [ref=e24]:
+    - generic [ref=e25]:
+      - generic [ref=e26]:
+        - heading "Reservations" [level=1] [ref=e27]
+        - paragraph [ref=e28]: "Chi nhánh: 1"
+      - generic [ref=e30]:
+        - generic [ref=e31]:
+          - link "Setup Bàn" [ref=e32] [cursor=pointer]:
+            - /url: /i/1/admin/tables-setup
+          - link "Tables" [ref=e33] [cursor=pointer]:
+            - /url: /i/1/tables
+          - link "Cashier" [ref=e34] [cursor=pointer]:
+            - /url: /i/1/cashier
+          - link "Chấm công" [ref=e35] [cursor=pointer]:
+            - /url: /i/1/attendance
+          - link "Tính lương" [ref=e36] [cursor=pointer]:
+            - /url: /i/1/payroll
+          - link "Ca làm việc" [ref=e37] [cursor=pointer]:
+            - /url: /i/1/shifts
+          - link "Orders" [ref=e38] [cursor=pointer]:
+            - /url: /i/1/orders
+          - link "Kitchen" [ref=e39] [cursor=pointer]:
+            - /url: /i/1/kitchen
+          - link "Reservations" [ref=e40] [cursor=pointer]:
+            - /url: /i/1/reservations
+          - link "Tồn kho" [ref=e41] [cursor=pointer]:
+            - /url: /i/1/inventory/stock
+          - link "Holds" [ref=e42] [cursor=pointer]:
+            - /url: /i/1/inventory/holds
+          - link "Lịch sử" [ref=e43] [cursor=pointer]:
+            - /url: /i/1/inventory/adjustments
+        - button "Refresh" [ref=e44] [cursor=pointer]
+    - generic [ref=e45]:
+      - generic [ref=e46]:
+        - heading "Reservations" [level=3] [ref=e48]
+        - generic [ref=e50]:
+          - generic [ref=e51]:
+            - text: Status
+            - combobox [ref=e52]:
+              - option "Tất cả" [selected]
+              - option "PENDING"
+              - option "CONFIRMED"
+              - option "CHECKED_IN"
+              - option "COMPLETED"
+              - option "NO_SHOW"
+              - option "CANCELED"
+              - option "EXPIRED"
+          - generic [ref=e53]:
+            - text: Số điện thoại
+            - textbox "090..." [ref=e54]
+          - generic [ref=e55]:
+            - text: Từ
+            - textbox [ref=e56]
+          - generic [ref=e57]:
+            - text: Đến
+            - textbox [ref=e58]
+          - generic [ref=e59]:
+            - text: Limit
+            - spinbutton [ref=e60]: "50"
+          - generic [ref=e61]:
+            - button "Lọc" [ref=e62] [cursor=pointer]
+            - button "Reset" [ref=e63] [cursor=pointer]
+      - generic [ref=e64]:
+        - generic [ref=e66]:
+          - generic [ref=e67]:
+            - generic [ref=e68]:
+              - generic [ref=e69]:
+                - generic [ref=e70]: RSVD72B91E0D
+                - generic [ref=e71]: EXPIRED
+              - generic [ref=e72]: Audit Bot · 0900000000
+            - generic [ref=e73]:
+              - generic [ref=e74]: "Bàn: B01"
+              - generic [ref=e75]: "Khu: Zone B"
+              - generic [ref=e76]: "Số khách: 2"
+          - generic [ref=e77]:
+            - generic [ref=e78]: "Reserved from: 18:00:00 3/5/2026"
+            - generic [ref=e79]: "Reserved to: 19:30:00 3/5/2026"
+            - generic [ref=e80]: "Confirmed at: —"
+            - generic [ref=e81]: "Checked-in at: —"
+          - generic [ref=e82]:
+            - generic [ref=e83]: Reservation này đã hết hạn nên không thể check-in.
+            - generic [ref=e84]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]
+        - generic [ref=e86]:
+          - generic [ref=e87]:
+            - generic [ref=e88]:
+              - generic [ref=e89]:
+                - generic [ref=e90]: RSV2643F45A2
+                - generic [ref=e91]: CANCELED
+              - generic [ref=e92]: Khách chưa rõ tên · 0900000000
+            - generic [ref=e93]:
+              - generic [ref=e94]: "Bàn: A16"
+              - generic [ref=e95]: "Khu: Zone B"
+              - generic [ref=e96]: "Số khách: 2"
+          - generic [ref=e97]:
+            - generic [ref=e98]: "Reserved from: 18:00:00 3/5/2026"
+            - generic [ref=e99]: "Reserved to: 19:30:00 3/5/2026"
+            - generic [ref=e100]: "Confirmed at: —"
+            - generic [ref=e101]: "Checked-in at: —"
+          - generic [ref=e102]:
+            - generic [ref=e103]: Reservation này đã bị hủy nên không thể check-in.
+            - generic [ref=e104]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]
+        - generic [ref=e106]:
+          - generic [ref=e107]:
+            - generic [ref=e108]:
+              - generic [ref=e109]:
+                - generic [ref=e110]: RSV2D7D35A99
+                - generic [ref=e111]: CANCELED
+              - generic [ref=e112]: Fatt · 0901111111
+            - generic [ref=e113]:
+              - generic [ref=e114]: "Bàn: A01"
+              - generic [ref=e115]: "Khu: Zone A"
+              - generic [ref=e116]: "Số khách: 2"
+          - generic [ref=e117]:
+            - generic [ref=e118]: "Reserved from: 14:56:00 2/5/2026"
+            - generic [ref=e119]: "Reserved to: 16:26:00 2/5/2026"
+            - generic [ref=e120]: "Confirmed at: 15:02:46 1/5/2026"
+            - generic [ref=e121]: "Checked-in at: —"
+          - generic [ref=e122]: ok
+          - generic [ref=e123]:
+            - generic [ref=e124]: Reservation này đã bị hủy nên không thể check-in.
+            - generic [ref=e125]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]
+        - generic [ref=e127]:
+          - generic [ref=e128]:
+            - generic [ref=e129]:
+              - generic [ref=e130]:
+                - generic [ref=e131]: RSV130021A9B
+                - generic [ref=e132]: CONFIRMED
+              - generic [ref=e133]: Verify Outside Window · 0901111002
+            - generic [ref=e134]:
+              - generic [ref=e135]: "Bàn: A01"
+              - generic [ref=e136]: "Khu: Zone A"
+              - generic [ref=e137]: "Số khách: 2"
+          - generic [ref=e138]:
+            - generic [ref=e139]: "Reserved from: 20:59:42 1/5/2026"
+            - generic [ref=e140]: "Reserved to: 22:29:42 1/5/2026"
+            - generic [ref=e141]: "Confirmed at: 16:59:55 1/5/2026"
+            - generic [ref=e142]: "Checked-in at: —"
+          - generic [ref=e143]:
+            - generic [ref=e144]: Chưa tới khung giờ check-in. Vui lòng thử lại gần giờ khách đến. Dự kiến từ 20:29:42 1/5/2026.
+            - generic [ref=e145]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [ref=e146] [cursor=pointer]
+        - generic [ref=e148]:
+          - generic [ref=e149]:
+            - generic [ref=e150]:
+              - generic [ref=e151]:
+                - generic [ref=e152]: RSV09B7D6C2D
+                - generic [ref=e153]: CONFIRMED
+              - generic [ref=e154]: Verify In Window · 0901111001
+            - generic [ref=e155]:
+              - generic [ref=e156]: "Bàn: B01"
+              - generic [ref=e157]: "Khu: Zone B"
+              - generic [ref=e158]: "Số khách: 2"
+          - generic [ref=e159]:
+            - generic [ref=e160]: "Reserved from: 17:04:42 1/5/2026"
+            - generic [ref=e161]: "Reserved to: 18:34:42 1/5/2026"
+            - generic [ref=e162]: "Confirmed at: 16:59:55 1/5/2026"
+            - generic [ref=e163]: "Checked-in at: —"
+          - generic [ref=e164]:
+            - generic [ref=e165]: Đang trong khung giờ check-in dự kiến. Có thể thao tác đến 18:49:42 1/5/2026.
+            - generic [ref=e166]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [ref=e167] [cursor=pointer]
+        - generic [ref=e169]:
+          - generic [ref=e170]:
+            - generic [ref=e171]:
+              - generic [ref=e172]:
+                - generic [ref=e173]: RSV423F4956F
+                - generic [ref=e174]: CONFIRMED
+              - generic [ref=e175]: Fatt · 0901111111
+            - generic [ref=e176]:
+              - generic [ref=e177]: "Bàn: A10"
+              - generic [ref=e178]: "Khu: Zone A"
+              - generic [ref=e179]: "Số khách: 3"
+          - generic [ref=e180]:
+            - generic [ref=e181]: "Reserved from: 12:41:00 5/4/2026"
+            - generic [ref=e182]: "Reserved to: 14:11:00 5/4/2026"
+            - generic [ref=e183]: "Confirmed at: 12:33:04 5/4/2026"
+            - generic [ref=e184]: "Checked-in at: —"
+          - generic [ref=e185]: Bàn yên tĩnh
+          - generic [ref=e186]:
+            - generic [ref=e187]: Có thể đã quá khung giờ check-in dự kiến từ 14:26:00 5/4/2026. Backend sẽ kiểm tra lại khi thao tác.
+            - generic [ref=e188]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [ref=e189] [cursor=pointer]
+        - generic [ref=e191]:
+          - generic [ref=e192]:
+            - generic [ref=e193]:
+              - generic [ref=e194]:
+                - generic [ref=e195]: RSV050401EC3
+                - generic [ref=e196]: EXPIRED
+              - generic [ref=e197]: PHÁT · 09011111122
+            - generic [ref=e198]:
+              - generic [ref=e199]: "Bàn: A01"
+              - generic [ref=e200]: "Khu: Zone A"
+              - generic [ref=e201]: "Số khách: 2"
+          - generic [ref=e202]:
+            - generic [ref=e203]: "Reserved from: 00:55:00 31/3/2026"
+            - generic [ref=e204]: "Reserved to: 02:25:00 31/3/2026"
+            - generic [ref=e205]: "Confirmed at: —"
+            - generic [ref=e206]: "Checked-in at: —"
+          - generic [ref=e207]: Có trẻ em
+          - generic [ref=e208]:
+            - generic [ref=e209]: Reservation này đã hết hạn nên không thể check-in.
+            - generic [ref=e210]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]
+        - generic [ref=e212]:
+          - generic [ref=e213]:
+            - generic [ref=e214]:
+              - generic [ref=e215]:
+                - generic [ref=e216]: RSV2BFFB387F
+                - generic [ref=e217]: EXPIRED
+              - generic [ref=e218]: Fatt · 0901111111
+            - generic [ref=e219]:
+              - generic [ref=e220]: "Bàn: A09"
+              - generic [ref=e221]: "Khu: Zone A"
+              - generic [ref=e222]: "Số khách: 13"
+          - generic [ref=e223]:
+            - generic [ref=e224]: "Reserved from: 00:51:00 31/3/2026"
+            - generic [ref=e225]: "Reserved to: 02:21:00 31/3/2026"
+            - generic [ref=e226]: "Confirmed at: —"
+            - generic [ref=e227]: "Checked-in at: —"
+          - generic [ref=e228]: Bàn yên tĩnh
+          - generic [ref=e229]:
+            - generic [ref=e230]: Reservation này đã hết hạn nên không thể check-in.
+            - generic [ref=e231]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]
+        - generic [ref=e233]:
+          - generic [ref=e234]:
+            - generic [ref=e235]:
+              - generic [ref=e236]:
+                - generic [ref=e237]: RSVE8EEA5E28
+                - generic [ref=e238]: CANCELED
+              - generic [ref=e239]: Realtime Smoke · 0900000000
+            - generic [ref=e240]:
+              - generic [ref=e241]: "Bàn: A01"
+              - generic [ref=e242]: "Khu: Zone A"
+              - generic [ref=e243]: "Số khách: 4"
+          - generic [ref=e244]:
+            - generic [ref=e245]: "Reserved from: 16:11:52 30/3/2026"
+            - generic [ref=e246]: "Reserved to: 17:11:52 30/3/2026"
+            - generic [ref=e247]: "Confirmed at: 16:06:52 30/3/2026"
+            - generic [ref=e248]: "Checked-in at: 16:06:52 30/3/2026"
+          - generic [ref=e249]: realtime-smoke
+          - generic [ref=e250]:
+            - generic [ref=e251]: Reservation này đã bị hủy nên không thể check-in.
+            - generic [ref=e252]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]
+        - generic [ref=e254]:
+          - generic [ref=e255]:
+            - generic [ref=e256]:
+              - generic [ref=e257]:
+                - generic [ref=e258]: RSVD71E37F0D
+                - generic [ref=e259]: CANCELED
+              - generic [ref=e260]: Realtime Smoke · 0900000000
+            - generic [ref=e261]:
+              - generic [ref=e262]: "Bàn: A01"
+              - generic [ref=e263]: "Khu: Zone A"
+              - generic [ref=e264]: "Số khách: 4"
+          - generic [ref=e265]:
+            - generic [ref=e266]: "Reserved from: 16:11:50 30/3/2026"
+            - generic [ref=e267]: "Reserved to: 17:11:50 30/3/2026"
+            - generic [ref=e268]: "Confirmed at: 16:06:50 30/3/2026"
+            - generic [ref=e269]: "Checked-in at: 16:06:50 30/3/2026"
+          - generic [ref=e270]: realtime-smoke
+          - generic [ref=e271]:
+            - generic [ref=e272]: Reservation này đã bị hủy nên không thể check-in.
+            - generic [ref=e273]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]
+        - generic [ref=e275]:
+          - generic [ref=e276]:
+            - generic [ref=e277]:
+              - generic [ref=e278]:
+                - generic [ref=e279]: RSV88FD083A7
+                - generic [ref=e280]: CANCELED
+              - generic [ref=e281]: Realtime Smoke · 0900000000
+            - generic [ref=e282]:
+              - generic [ref=e283]: "Bàn: A01"
+              - generic [ref=e284]: "Khu: Zone A"
+              - generic [ref=e285]: "Số khách: 4"
+          - generic [ref=e286]:
+            - generic [ref=e287]: "Reserved from: 16:11:41 30/3/2026"
+            - generic [ref=e288]: "Reserved to: 17:11:41 30/3/2026"
+            - generic [ref=e289]: "Confirmed at: 16:06:41 30/3/2026"
+            - generic [ref=e290]: "Checked-in at: 16:06:41 30/3/2026"
+          - generic [ref=e291]: realtime-smoke
+          - generic [ref=e292]:
+            - generic [ref=e293]: Reservation này đã bị hủy nên không thể check-in.
+            - generic [ref=e294]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]
+        - generic [ref=e296]:
+          - generic [ref=e297]:
+            - generic [ref=e298]:
+              - generic [ref=e299]:
+                - generic [ref=e300]: RSVF8E570B92
+                - generic [ref=e301]: COMPLETED
+              - generic [ref=e302]: Smoke Tester · 0900000000
+            - generic [ref=e303]:
+              - generic [ref=e304]: "Bàn: A01"
+              - generic [ref=e305]: "Khu: Zone A"
+              - generic [ref=e306]: "Số khách: 4"
+          - generic [ref=e307]:
+            - generic [ref=e308]: "Reserved from: 16:11:36 30/3/2026"
+            - generic [ref=e309]: "Reserved to: 17:11:36 30/3/2026"
+            - generic [ref=e310]: "Confirmed at: 16:06:37 30/3/2026"
+            - generic [ref=e311]: "Checked-in at: 16:06:37 30/3/2026"
+          - generic [ref=e312]: smoke
+          - generic [ref=e313]:
+            - generic [ref=e314]: Reservation này đã hoàn tất nên không thể check-in lại.
+            - generic [ref=e315]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]
+        - generic [ref=e317]:
+          - generic [ref=e318]:
+            - generic [ref=e319]:
+              - generic [ref=e320]:
+                - generic [ref=e321]: RSVF2A18BAB2
+                - generic [ref=e322]: CANCELED
+              - generic [ref=e323]: Realtime Smoke · 0900000000
+            - generic [ref=e324]:
+              - generic [ref=e325]: "Bàn: A01"
+              - generic [ref=e326]: "Khu: Zone A"
+              - generic [ref=e327]: "Số khách: 4"
+          - generic [ref=e328]:
+            - generic [ref=e329]: "Reserved from: 16:10:06 30/3/2026"
+            - generic [ref=e330]: "Reserved to: 17:10:06 30/3/2026"
+            - generic [ref=e331]: "Confirmed at: 16:05:06 30/3/2026"
+            - generic [ref=e332]: "Checked-in at: 16:05:06 30/3/2026"
+          - generic [ref=e333]: realtime-smoke
+          - generic [ref=e334]:
+            - generic [ref=e335]: Reservation này đã bị hủy nên không thể check-in.
+            - generic [ref=e336]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]
+        - generic [ref=e338]:
+          - generic [ref=e339]:
+            - generic [ref=e340]:
+              - generic [ref=e341]:
+                - generic [ref=e342]: RSV721A8C355
+                - generic [ref=e343]: CANCELED
+              - generic [ref=e344]: Realtime Smoke · 0900000000
+            - generic [ref=e345]:
+              - generic [ref=e346]: "Bàn: A01"
+              - generic [ref=e347]: "Khu: Zone A"
+              - generic [ref=e348]: "Số khách: 4"
+          - generic [ref=e349]:
+            - generic [ref=e350]: "Reserved from: 16:10:05 30/3/2026"
+            - generic [ref=e351]: "Reserved to: 17:10:05 30/3/2026"
+            - generic [ref=e352]: "Confirmed at: 16:05:05 30/3/2026"
+            - generic [ref=e353]: "Checked-in at: 16:05:05 30/3/2026"
+          - generic [ref=e354]: realtime-smoke
+          - generic [ref=e355]:
+            - generic [ref=e356]: Reservation này đã bị hủy nên không thể check-in.
+            - generic [ref=e357]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]
+        - generic [ref=e359]:
+          - generic [ref=e360]:
+            - generic [ref=e361]:
+              - generic [ref=e362]:
+                - generic [ref=e363]: RSV7CA8D9ED5
+                - generic [ref=e364]: CANCELED
+              - generic [ref=e365]: Realtime Smoke · 0900000000
+            - generic [ref=e366]:
+              - generic [ref=e367]: "Bàn: A01"
+              - generic [ref=e368]: "Khu: Zone A"
+              - generic [ref=e369]: "Số khách: 4"
+          - generic [ref=e370]:
+            - generic [ref=e371]: "Reserved from: 16:09:55 30/3/2026"
+            - generic [ref=e372]: "Reserved to: 17:09:55 30/3/2026"
+            - generic [ref=e373]: "Confirmed at: 16:04:55 30/3/2026"
+            - generic [ref=e374]: "Checked-in at: 16:04:55 30/3/2026"
+          - generic [ref=e375]: realtime-smoke
+          - generic [ref=e376]:
+            - generic [ref=e377]: Reservation này đã bị hủy nên không thể check-in.
+            - generic [ref=e378]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]
+        - generic [ref=e380]:
+          - generic [ref=e381]:
+            - generic [ref=e382]:
+              - generic [ref=e383]:
+                - generic [ref=e384]: RSVD7535B3FC
+                - generic [ref=e385]: COMPLETED
+              - generic [ref=e386]: Smoke Tester · 0900000000
+            - generic [ref=e387]:
+              - generic [ref=e388]: "Bàn: A01"
+              - generic [ref=e389]: "Khu: Zone A"
+              - generic [ref=e390]: "Số khách: 4"
+          - generic [ref=e391]:
+            - generic [ref=e392]: "Reserved from: 16:09:50 30/3/2026"
+            - generic [ref=e393]: "Reserved to: 17:09:50 30/3/2026"
+            - generic [ref=e394]: "Confirmed at: 16:04:51 30/3/2026"
+            - generic [ref=e395]: "Checked-in at: 16:04:51 30/3/2026"
+          - generic [ref=e396]: smoke
+          - generic [ref=e397]:
+            - generic [ref=e398]: Reservation này đã hoàn tất nên không thể check-in lại.
+            - generic [ref=e399]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]
+        - generic [ref=e401]:
+          - generic [ref=e402]:
+            - generic [ref=e403]:
+              - generic [ref=e404]:
+                - generic [ref=e405]: RSV3C071A7C1
+                - generic [ref=e406]: CANCELED
+              - generic [ref=e407]: Realtime Smoke · 0900000000
+            - generic [ref=e408]:
+              - generic [ref=e409]: "Bàn: A01"
+              - generic [ref=e410]: "Khu: Zone A"
+              - generic [ref=e411]: "Số khách: 4"
+          - generic [ref=e412]:
+            - generic [ref=e413]: "Reserved from: 15:28:37 30/3/2026"
+            - generic [ref=e414]: "Reserved to: 16:28:37 30/3/2026"
+            - generic [ref=e415]: "Confirmed at: 15:23:37 30/3/2026"
+            - generic [ref=e416]: "Checked-in at: 15:23:37 30/3/2026"
+          - generic [ref=e417]: realtime-smoke
+          - generic [ref=e418]:
+            - generic [ref=e419]: Reservation này đã bị hủy nên không thể check-in.
+            - generic [ref=e420]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]
+        - generic [ref=e422]:
+          - generic [ref=e423]:
+            - generic [ref=e424]:
+              - generic [ref=e425]:
+                - generic [ref=e426]: RSV2809C8DBD
+                - generic [ref=e427]: CANCELED
+              - generic [ref=e428]: Realtime Smoke · 0900000000
+            - generic [ref=e429]:
+              - generic [ref=e430]: "Bàn: A01"
+              - generic [ref=e431]: "Khu: Zone A"
+              - generic [ref=e432]: "Số khách: 4"
+          - generic [ref=e433]:
+            - generic [ref=e434]: "Reserved from: 15:28:36 30/3/2026"
+            - generic [ref=e435]: "Reserved to: 16:28:36 30/3/2026"
+            - generic [ref=e436]: "Confirmed at: 15:23:36 30/3/2026"
+            - generic [ref=e437]: "Checked-in at: 15:23:36 30/3/2026"
+          - generic [ref=e438]: realtime-smoke
+          - generic [ref=e439]:
+            - generic [ref=e440]: Reservation này đã bị hủy nên không thể check-in.
+            - generic [ref=e441]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]
+        - generic [ref=e443]:
+          - generic [ref=e444]:
+            - generic [ref=e445]:
+              - generic [ref=e446]:
+                - generic [ref=e447]: RSV6515E4F43
+                - generic [ref=e448]: CANCELED
+              - generic [ref=e449]: Realtime Smoke · 0900000000
+            - generic [ref=e450]:
+              - generic [ref=e451]: "Bàn: A01"
+              - generic [ref=e452]: "Khu: Zone A"
+              - generic [ref=e453]: "Số khách: 4"
+          - generic [ref=e454]:
+            - generic [ref=e455]: "Reserved from: 15:28:27 30/3/2026"
+            - generic [ref=e456]: "Reserved to: 16:28:27 30/3/2026"
+            - generic [ref=e457]: "Confirmed at: 15:23:27 30/3/2026"
+            - generic [ref=e458]: "Checked-in at: 15:23:27 30/3/2026"
+          - generic [ref=e459]: realtime-smoke
+          - generic [ref=e460]:
+            - generic [ref=e461]: Reservation này đã bị hủy nên không thể check-in.
+            - generic [ref=e462]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]
+        - generic [ref=e464]:
+          - generic [ref=e465]:
+            - generic [ref=e466]:
+              - generic [ref=e467]:
+                - generic [ref=e468]: RSVA2C9D0A29
+                - generic [ref=e469]: COMPLETED
+              - generic [ref=e470]: Smoke Tester · 0900000000
+            - generic [ref=e471]:
+              - generic [ref=e472]: "Bàn: A01"
+              - generic [ref=e473]: "Khu: Zone A"
+              - generic [ref=e474]: "Số khách: 4"
+          - generic [ref=e475]:
+            - generic [ref=e476]: "Reserved from: 15:28:22 30/3/2026"
+            - generic [ref=e477]: "Reserved to: 16:28:22 30/3/2026"
+            - generic [ref=e478]: "Confirmed at: 15:23:22 30/3/2026"
+            - generic [ref=e479]: "Checked-in at: 15:23:22 30/3/2026"
+          - generic [ref=e480]: smoke
+          - generic [ref=e481]:
+            - generic [ref=e482]: Reservation này đã hoàn tất nên không thể check-in lại.
+            - generic [ref=e483]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]
+        - generic [ref=e485]:
+          - generic [ref=e486]:
+            - generic [ref=e487]:
+              - generic [ref=e488]:
+                - generic [ref=e489]: RSVCCC64D248
+                - generic [ref=e490]: CANCELED
+              - generic [ref=e491]: Realtime Smoke · 0900000000
+            - generic [ref=e492]:
+              - generic [ref=e493]: "Bàn: A01"
+              - generic [ref=e494]: "Khu: Zone A"
+              - generic [ref=e495]: "Số khách: 4"
+          - generic [ref=e496]:
+            - generic [ref=e497]: "Reserved from: 15:28:10 30/3/2026"
+            - generic [ref=e498]: "Reserved to: 16:28:10 30/3/2026"
+            - generic [ref=e499]: "Confirmed at: 15:23:10 30/3/2026"
+            - generic [ref=e500]: "Checked-in at: 15:23:10 30/3/2026"
+          - generic [ref=e501]: realtime-smoke
+          - generic [ref=e502]:
+            - generic [ref=e503]: Reservation này đã bị hủy nên không thể check-in.
+            - generic [ref=e504]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]
+        - generic [ref=e506]:
+          - generic [ref=e507]:
+            - generic [ref=e508]:
+              - generic [ref=e509]:
+                - generic [ref=e510]: RSVD7694F374
+                - generic [ref=e511]: CANCELED
+              - generic [ref=e512]: Realtime Smoke · 0900000000
+            - generic [ref=e513]:
+              - generic [ref=e514]: "Bàn: A01"
+              - generic [ref=e515]: "Khu: Zone A"
+              - generic [ref=e516]: "Số khách: 4"
+          - generic [ref=e517]:
+            - generic [ref=e518]: "Reserved from: 15:18:31 30/3/2026"
+            - generic [ref=e519]: "Reserved to: 16:18:31 30/3/2026"
+            - generic [ref=e520]: "Confirmed at: 15:13:31 30/3/2026"
+            - generic [ref=e521]: "Checked-in at: 15:13:31 30/3/2026"
+          - generic [ref=e522]: realtime-smoke
+          - generic [ref=e523]:
+            - generic [ref=e524]: Reservation này đã bị hủy nên không thể check-in.
+            - generic [ref=e525]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]
+        - generic [ref=e527]:
+          - generic [ref=e528]:
+            - generic [ref=e529]:
+              - generic [ref=e530]:
+                - generic [ref=e531]: RSVAD436C67E
+                - generic [ref=e532]: COMPLETED
+              - generic [ref=e533]: Smoke Tester · 0900000000
+            - generic [ref=e534]:
+              - generic [ref=e535]: "Bàn: A01"
+              - generic [ref=e536]: "Khu: Zone A"
+              - generic [ref=e537]: "Số khách: 4"
+          - generic [ref=e538]:
+            - generic [ref=e539]: "Reserved from: 15:18:26 30/3/2026"
+            - generic [ref=e540]: "Reserved to: 16:18:26 30/3/2026"
+            - generic [ref=e541]: "Confirmed at: 15:13:26 30/3/2026"
+            - generic [ref=e542]: "Checked-in at: 15:13:27 30/3/2026"
+          - generic [ref=e543]: smoke
+          - generic [ref=e544]:
+            - generic [ref=e545]: Reservation này đã hoàn tất nên không thể check-in lại.
+            - generic [ref=e546]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]
+        - generic [ref=e548]:
+          - generic [ref=e549]:
+            - generic [ref=e550]:
+              - generic [ref=e551]:
+                - generic [ref=e552]: RSV5899C67CA
+                - generic [ref=e553]: COMPLETED
+              - generic [ref=e554]: Smoke Tester · 0900000000
+            - generic [ref=e555]:
+              - generic [ref=e556]: "Bàn: A01"
+              - generic [ref=e557]: "Khu: Zone A"
+              - generic [ref=e558]: "Số khách: 4"
+          - generic [ref=e559]:
+            - generic [ref=e560]: "Reserved from: 15:08:36 30/3/2026"
+            - generic [ref=e561]: "Reserved to: 16:08:36 30/3/2026"
+            - generic [ref=e562]: "Confirmed at: 15:03:36 30/3/2026"
+            - generic [ref=e563]: "Checked-in at: 15:03:36 30/3/2026"
+          - generic [ref=e564]: smoke
+          - generic [ref=e565]:
+            - generic [ref=e566]: Reservation này đã hoàn tất nên không thể check-in lại.
+            - generic [ref=e567]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]
+        - generic [ref=e569]:
+          - generic [ref=e570]:
+            - generic [ref=e571]:
+              - generic [ref=e572]:
+                - generic [ref=e573]: RSVF2662C901
+                - generic [ref=e574]: CANCELED
+              - generic [ref=e575]: Smoke Tester · 0900000000
+            - generic [ref=e576]:
+              - generic [ref=e577]: "Bàn: A01"
+              - generic [ref=e578]: "Khu: Zone A"
+              - generic [ref=e579]: "Số khách: 4"
+          - generic [ref=e580]:
+            - generic [ref=e581]: "Reserved from: 14:52:04 30/3/2026"
+            - generic [ref=e582]: "Reserved to: 15:52:04 30/3/2026"
+            - generic [ref=e583]: "Confirmed at: 14:47:04 30/3/2026"
+            - generic [ref=e584]: "Checked-in at: —"
+          - generic [ref=e585]: smoke
+          - generic [ref=e586]:
+            - generic [ref=e587]: Reservation này đã bị hủy nên không thể check-in.
+            - generic [ref=e588]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]
+        - generic [ref=e590]:
+          - generic [ref=e591]:
+            - generic [ref=e592]:
+              - generic [ref=e593]:
+                - generic [ref=e594]: RSVED8BA7332
+                - generic [ref=e595]: CANCELED
+              - generic [ref=e596]: Fatt · 0901111111
+            - generic [ref=e597]:
+              - generic [ref=e598]: "Bàn: A02"
+              - generic [ref=e599]: "Khu: Zone A"
+              - generic [ref=e600]: "Số khách: 2"
+          - generic [ref=e601]:
+            - generic [ref=e602]: "Reserved from: 13:18:00 29/3/2026"
+            - generic [ref=e603]: "Reserved to: 14:48:00 29/3/2026"
+            - generic [ref=e604]: "Confirmed at: 13:08:54 29/3/2026"
+            - generic [ref=e605]: "Checked-in at: —"
+          - generic [ref=e606]: abc
+          - generic [ref=e607]:
+            - generic [ref=e608]: Reservation này đã bị hủy nên không thể check-in.
+            - generic [ref=e609]:
+              - button "Confirm" [disabled]
+              - button "Check-in" [disabled]

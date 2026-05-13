@@ -1,6 +1,7 @@
 import type { HttpError } from "../../../shared/http/errors";
 
 const PUBLIC_RESERVATION_ERROR_MAP: Record<string, string> = {
+  BRANCH_ID_REQUIRED: "Vui lòng nhập mã chi nhánh.",
   INVALID_RESERVATION_TIME: "Khung giờ đặt bàn không hợp lệ.",
   RESERVATION_IN_PAST: "Không thể đặt bàn trong quá khứ.",
   RESERVATION_TOO_FAR: "Chỉ được đặt bàn trong 7 ngày tới.",
@@ -10,6 +11,9 @@ const PUBLIC_RESERVATION_ERROR_MAP: Record<string, string> = {
   INVALID_RESERVED_FROM: "Thời gian bắt đầu không hợp lệ.",
   INVALID_RESERVED_TO: "Thời gian kết thúc không hợp lệ.",
   NO_TABLE_AVAILABLE: "Hiện không còn bàn phù hợp cho khung giờ này.",
+  SELECTED_TABLE_NOT_FOUND: "Bàn đã chọn không còn tồn tại trong hệ thống.",
+  SELECTED_TABLE_NOT_AVAILABLE: "Bàn bạn chọn không còn trống trong khung giờ này. Vui lòng chọn bàn khác.",
+  TABLE_REQUIRED: "Vui lòng chọn bàn trước khi đặt.",
   RESERVATION_NOT_FOUND: "Không tìm thấy reservation.",
   RESERVATION_CANCELED: "Reservation này đã bị hủy.",
   RESERVATION_EXPIRED: "Reservation này đã hết hạn.",

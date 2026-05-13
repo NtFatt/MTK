@@ -1,0 +1,15 @@
+- main [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - heading "Đăng nhập nội bộ" [level=3] [ref=e6]
+      - paragraph [ref=e7]: Dùng tài khoản staff/admin (username/password)
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - text: Username
+        - textbox "Username" [ref=e11]:
+          - /placeholder: admin
+      - generic [ref=e12]:
+        - text: Password
+        - textbox "Password" [ref=e13]:
+          - /placeholder: ••••••••
+      - button "Đăng nhập" [ref=e14] [cursor=pointer]

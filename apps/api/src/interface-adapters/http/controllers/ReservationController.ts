@@ -50,6 +50,8 @@ function toJson(r: TableReservation) {
 }
 
 const CreateBodySchema = z.object({
+  tableId: z.string().optional(),
+  branchId: z.string().min(1),
   areaName: z.string().min(1).max(80),
   partySize: z.number().int().min(1).max(50),
   contactPhone: z.string().min(6).max(20),
@@ -68,13 +70,21 @@ export class ReservationController {
   ) {}
 
   availability = async (req: Request, res: Response) => {
-    const areaName = mustString(req.query.areaName, "AREA_NAME");
+    const rawBranchId = req.query.branchId;
+    const branchId = typeof rawBranchId === "string" && rawBranchId.trim()
+      ? rawBranchId.trim()
+      : undefined;
+    if (!branchId) throw Object.assign(new Error("BRANCH_ID_REQUIRED"), { status: 400 });
+
+    const rawAreaName = String(req.query.areaName ?? "").trim();
+    const areaName = rawAreaName.length > 0 ? rawAreaName : undefined;
     const partySize = parseIntOrThrow(req.query.partySize, "PARTY_SIZE_INVALID");
     const reservedFrom = parseDateOrThrow(req.query.reservedFrom, "INVALID_RESERVED_FROM");
     const reservedTo = parseDateOrThrow(req.query.reservedTo, "INVALID_RESERVED_TO");
 
     const out = await this.availabilityUc.execute({
-      areaName,
+      branchId,
+      ...(areaName ? { areaName } : {}),
       partySize,
       reservedFrom,
       reservedTo,
@@ -90,6 +100,7 @@ export class ReservationController {
     const reservedTo = parseDateOrThrow(body.reservedTo, "INVALID_RESERVED_TO");
 
     const created = await this.createUc.execute({
+      branchId: body.branchId,
       areaName: body.areaName,
       partySize: body.partySize,
       contactPhone: body.contactPhone,
@@ -97,6 +108,7 @@ export class ReservationController {
       note: body.note ?? null,
       reservedFrom,
       reservedTo,
+      ...(body.tableId ? { tableId: body.tableId } : {}),
     });
 
     return res.status(201).json(toJson(created));

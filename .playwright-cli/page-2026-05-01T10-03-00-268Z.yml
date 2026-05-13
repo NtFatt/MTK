@@ -1,0 +1,148 @@
+- generic [ref=e502]:
+  - banner [ref=e503]:
+    - generic [ref=e504]:
+      - generic [ref=e505]:
+        - generic [ref=e506]: Quản trị hệ thống
+        - generic [ref=e508]: "Đang quản lý: Chi nhánh 1"
+      - button "Logout" [ref=e510] [cursor=pointer]
+  - main [ref=e511]:
+    - generic [ref=e512]:
+      - generic [ref=e513]:
+        - heading "Tables" [level=1] [ref=e514]
+        - paragraph [ref=e515]: "Chi nhánh: 1"
+      - generic [ref=e517]:
+        - generic [ref=e518]:
+          - link "Tables" [ref=e519] [cursor=pointer]:
+            - /url: /i/1/tables
+          - link "Orders" [ref=e520] [cursor=pointer]:
+            - /url: /i/1/orders
+          - link "Reservations" [ref=e521] [cursor=pointer]:
+            - /url: /i/1/reservations
+        - button "Refresh" [ref=e522] [cursor=pointer]
+    - generic [ref=e523]:
+      - generic [ref=e524]:
+        - generic [ref=e525]:
+          - heading "Tổng số bàn" [level=3] [ref=e527]
+          - generic [ref=e529]: "7"
+        - generic [ref=e530]:
+          - heading "Sẵn sàng đón khách" [level=3] [ref=e532]
+          - generic [ref=e534]: "2"
+        - generic [ref=e535]:
+          - heading "Đang có phiên" [level=3] [ref=e537]
+          - generic [ref=e539]: "0"
+        - generic [ref=e540]:
+          - heading "Cần theo dõi" [level=3] [ref=e542]
+          - generic [ref=e544]: "0"
+      - generic [ref=e545]:
+        - generic [ref=e546]:
+          - generic [ref=e547]:
+            - generic [ref=e548]: Tìm bàn nhanh
+            - textbox "Tìm theo mã bàn, khu vực hoặc trạng thái..." [ref=e549]
+          - generic [ref=e550]:
+            - generic [ref=e551]: Lọc trạng thái
+            - generic [ref=e552]:
+              - button "Tất cả" [ref=e553] [cursor=pointer]
+              - button "Sẵn sàng" [ref=e554] [cursor=pointer]
+              - button "Đang phục vụ" [ref=e555] [cursor=pointer]
+              - button "Cần theo dõi" [ref=e556] [cursor=pointer]
+        - generic [ref=e557]: Đang hiển thị 7 / 7 bàn
+      - generic [ref=e558]:
+        - generic [ref=e559]:
+          - generic [ref=e560]:
+            - heading "A01" [level=3] [ref=e562]
+            - generic [ref=e563]: OCCUPIED
+          - generic [ref=e564]:
+            - generic [ref=e565]: "Số ghế: 4"
+            - generic [ref=e566]: "Khu: Zone A"
+            - generic [ref=e567]: "Direction: 3a958c21-249c-11f1-8459-9c2dcd558dd0"
+            - generic [ref=e568]:
+              - generic [ref=e569]: Món khách gọi
+              - generic [ref=e570]: Chưa có món (khách chưa gọi)
+            - generic [ref=e571]:
+              - button "Chi tiết" [ref=e572] [cursor=pointer]
+              - button "Gọi món" [ref=e573] [cursor=pointer]
+        - generic [ref=e574]:
+          - generic [ref=e575]:
+            - heading "A02" [level=3] [ref=e577]
+            - generic [ref=e578]: OCCUPIED
+          - generic [ref=e579]:
+            - generic [ref=e580]: "Số ghế: 4"
+            - generic [ref=e581]: "Khu: Zone A"
+            - generic [ref=e582]: "Direction: 3a95918a-249c-11f1-8459-9c2dcd558dd0"
+            - generic [ref=e583]:
+              - generic [ref=e584]: Món khách gọi
+              - generic [ref=e585]: Chưa có món (khách chưa gọi)
+            - generic [ref=e586]:
+              - button "Chi tiết" [ref=e587] [cursor=pointer]
+              - button "Gọi món" [ref=e588] [cursor=pointer]
+        - generic [ref=e589]:
+          - generic [ref=e590]:
+            - heading "A09" [level=3] [ref=e592]
+            - generic [ref=e593]: AVAILABLE
+          - generic [ref=e594]:
+            - generic [ref=e595]: "Số ghế: 15"
+            - generic [ref=e596]: "Khu: Zone A"
+            - generic [ref=e597]: "Direction: A09"
+            - generic [ref=e598]:
+              - generic [ref=e599]: Món khách gọi
+              - generic [ref=e600]: Chưa có món (khách chưa gọi)
+            - generic [ref=e601]:
+              - button "Chi tiết" [ref=e602] [cursor=pointer]
+              - button "Gọi món" [ref=e603] [cursor=pointer]
+        - generic [ref=e604]:
+          - generic [ref=e605]:
+            - heading "A10" [level=3] [ref=e607]
+            - generic [ref=e608]: RESERVED
+          - generic [ref=e609]:
+            - generic [ref=e610]: "Số ghế: 10"
+            - generic [ref=e611]: "Khu: Zone A"
+            - generic [ref=e612]: "Direction: A10"
+            - generic [ref=e613]:
+              - generic [ref=e614]: Món khách gọi
+              - generic [ref=e615]: Chưa có món (khách chưa gọi)
+            - generic [ref=e616]:
+              - button "Chi tiết" [ref=e617] [cursor=pointer]
+              - button "Gọi món" [ref=e618] [cursor=pointer]
+        - generic [ref=e619]:
+          - generic [ref=e620]:
+            - heading "A11" [level=3] [ref=e622]
+            - generic [ref=e623]: OCCUPIED
+          - generic [ref=e624]:
+            - generic [ref=e625]: "Số ghế: 11"
+            - generic [ref=e626]: "Khu: Zone A"
+            - generic [ref=e627]: "Direction: A11"
+            - generic [ref=e628]:
+              - generic [ref=e629]: Món khách gọi
+              - generic [ref=e664]: Bàn chưa có phiên. Bấm Gọi món để mở phiên trước.
+              - generic [ref=e630]: Chưa có món (khách chưa gọi)
+            - generic [ref=e631]:
+              - button "Chi tiết" [ref=e632] [cursor=pointer]
+              - button "Gọi món" [ref=e633] [cursor=pointer]
+        - generic [ref=e634]:
+          - generic [ref=e635]:
+            - heading "A16" [level=3] [ref=e637]
+            - generic [ref=e638]: AVAILABLE
+          - generic [ref=e639]:
+            - generic [ref=e640]: "Số ghế: 16"
+            - generic [ref=e641]: "Khu: Zone B"
+            - generic [ref=e642]: "Direction: A16"
+            - generic [ref=e643]:
+              - generic [ref=e644]: Món khách gọi
+              - generic [ref=e645]: Chưa có món (khách chưa gọi)
+            - generic [ref=e646]:
+              - button "Chi tiết" [ref=e647] [cursor=pointer]
+              - button "Gọi món" [ref=e648] [cursor=pointer]
+        - generic [ref=e649]:
+          - generic [ref=e650]:
+            - heading "B01" [level=3] [ref=e652]
+            - generic [ref=e653]: OCCUPIED
+          - generic [ref=e654]:
+            - generic [ref=e655]: "Số ghế: 6"
+            - generic [ref=e656]: "Khu: Zone B"
+            - generic [ref=e657]: "Direction: 3a959293-249c-11f1-8459-9c2dcd558dd0"
+            - generic [ref=e658]:
+              - generic [ref=e659]: Món khách gọi
+              - generic [ref=e660]: Chưa có món (khách chưa gọi)
+            - generic [ref=e661]:
+              - button "Chi tiết" [ref=e662] [cursor=pointer]
+              - button "Gọi món" [ref=e663] [cursor=pointer]

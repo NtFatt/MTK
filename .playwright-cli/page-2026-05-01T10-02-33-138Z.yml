@@ -1,0 +1,324 @@
+- main [ref=e177]:
+  - generic [ref=e178]:
+    - generic [ref=e179]:
+      - heading "POS — Gọi món (Bàn A11)" [level=1] [ref=e180]
+      - paragraph [ref=e181]: "Session: d3908c2a-4544-11f1-b151-9c2dcd558dd0"
+    - button "Đổi bàn" [ref=e182] [cursor=pointer]
+  - generic [ref=e183]:
+    - generic [ref=e184]:
+      - generic [ref=e185]: Thực đơn
+      - generic [ref=e186]:
+        - generic [ref=e187]:
+          - generic [ref=e188]:
+            - generic [ref=e189]: Ba chỉ bò cuộn phô mai
+            - generic [ref=e190]: 169.000 đ
+          - button "Thêm" [ref=e191] [cursor=pointer]
+        - generic [ref=e192]:
+          - generic [ref=e193]:
+            - generic [ref=e194]: Ba chỉ heo
+            - generic [ref=e195]: 99.000 đ
+          - button "Thêm" [ref=e196] [cursor=pointer]
+        - generic [ref=e197]:
+          - generic [ref=e198]:
+            - generic [ref=e199]: Bạch tuộc
+            - generic [ref=e200]: 149.000 đ
+          - button "Thêm" [ref=e201] [cursor=pointer]
+        - generic [ref=e202]:
+          - generic [ref=e203]:
+            - generic [ref=e204]: Bạch tuộc baby
+            - generic [ref=e205]: 139.000 đ
+          - button "Thêm" [ref=e206] [cursor=pointer]
+        - generic [ref=e207]:
+          - generic [ref=e208]:
+            - generic [ref=e209]: Bánh đa
+            - generic [ref=e210]: 29.000 đ
+          - button "Thêm" [ref=e211] [cursor=pointer]
+        - generic [ref=e212]:
+          - generic [ref=e213]:
+            - generic [ref=e214]: Bánh phở
+            - generic [ref=e215]: 29.000 đ
+          - button "Thêm" [ref=e216] [cursor=pointer]
+        - generic [ref=e217]:
+          - generic [ref=e218]:
+            - generic [ref=e219]: Bánh quẩy
+            - generic [ref=e220]: 29.000 đ
+          - button "Thêm" [ref=e221] [cursor=pointer]
+        - generic [ref=e222]:
+          - generic [ref=e223]:
+            - generic [ref=e224]:
+              - text: Bắp bò (Brisket)
+              - generic [ref=e225]: Còn 4
+            - generic [ref=e226]: 139.000 đ
+          - button "Thêm" [ref=e227] [cursor=pointer]
+        - generic [ref=e228]:
+          - generic [ref=e229]:
+            - generic [ref=e230]: Bắp heo
+            - generic [ref=e231]: 119.000 đ
+          - button "Thêm" [ref=e232] [cursor=pointer]
+        - generic [ref=e233]:
+          - generic [ref=e234]:
+            - generic [ref=e235]: Bắp ngọt
+            - generic [ref=e236]: 29.000 đ
+          - button "Thêm" [ref=e237] [cursor=pointer]
+        - generic [ref=e238]:
+          - generic [ref=e239]:
+            - generic [ref=e240]: Beef Tongue Premium
+            - generic [ref=e241]: 209.000 đ
+          - button "Thêm" [ref=e242] [cursor=pointer]
+        - generic [ref=e243]:
+          - generic [ref=e244]:
+            - generic [ref=e245]: Bí đỏ
+            - generic [ref=e246]: 39.000 đ
+          - button "Thêm" [ref=e247] [cursor=pointer]
+        - generic [ref=e248]:
+          - generic [ref=e249]:
+            - generic [ref=e250]: Bò cuộn nấm kim châm
+            - generic [ref=e251]: 149.000 đ
+          - button "Thêm" [ref=e252] [cursor=pointer]
+        - generic [ref=e253]:
+          - generic [ref=e254]:
+            - generic [ref=e255]: Bò Mỹ thái mỏng (Short Plate)
+            - generic [ref=e256]: 129.000 đ
+          - button "Thêm" [ref=e257] [cursor=pointer]
+        - generic [ref=e258]:
+          - generic [ref=e259]:
+            - generic [ref=e260]: Bò viên
+            - generic [ref=e261]: 59.000 đ
+          - button "Thêm" [ref=e262] [cursor=pointer]
+        - generic [ref=e263]:
+          - generic [ref=e264]:
+            - generic [ref=e265]: Bò viên phô mai
+            - generic [ref=e266]: 69.000 đ
+          - button "Thêm" [ref=e267] [cursor=pointer]
+        - generic [ref=e268]:
+          - generic [ref=e269]:
+            - generic [ref=e270]: Bông cải xanh
+            - generic [ref=e271]: 39.000 đ
+          - button "Thêm" [ref=e272] [cursor=pointer]
+        - generic [ref=e273]:
+          - generic [ref=e274]:
+            - generic [ref=e275]: Bún tươi
+            - generic [ref=e276]: 29.000 đ
+          - button "Thêm" [ref=e277] [cursor=pointer]
+        - generic [ref=e278]:
+          - generic [ref=e279]:
+            - generic [ref=e280]: Cá hồi
+            - generic [ref=e281]: 300.000 đ
+          - button "Thêm" [ref=e282] [cursor=pointer]
+        - generic [ref=e283]:
+          - generic [ref=e284]:
+            - generic [ref=e285]: Cá hồi phi lê
+            - generic [ref=e286]: 199.000 đ
+          - button "Thêm" [ref=e287] [cursor=pointer]
+        - generic [ref=e288]:
+          - generic [ref=e289]:
+            - generic [ref=e290]: Cá viên
+            - generic [ref=e291]: 49.000 đ
+          - button "Thêm" [ref=e292] [cursor=pointer]
+        - generic [ref=e293]:
+          - generic [ref=e294]:
+            - generic [ref=e295]: Cải thảo
+            - generic [ref=e296]: 29.000 đ
+          - button "Thêm" [ref=e297] [cursor=pointer]
+        - generic [ref=e298]:
+          - generic [ref=e299]:
+            - generic [ref=e300]: Cải xanh
+            - generic [ref=e301]: 29.000 đ
+          - button "Thêm" [ref=e302] [cursor=pointer]
+        - generic [ref=e303]:
+          - generic [ref=e304]:
+            - generic [ref=e305]: Chả cá thác lác
+            - generic [ref=e306]: 69.000 đ
+          - button "Thêm" [ref=e307] [cursor=pointer]
+        - generic [ref=e308]:
+          - generic [ref=e309]:
+            - generic [ref=e310]: Chè hạt sen
+            - generic [ref=e311]: 39.000 đ
+          - button "Thêm" [ref=e312] [cursor=pointer]
+        - generic [ref=e313]:
+          - generic [ref=e314]:
+            - generic [ref=e315]: Chè khúc bạch
+            - generic [ref=e316]: 39.000 đ
+          - button "Thêm" [ref=e317] [cursor=pointer]
+        - generic [ref=e318]:
+          - generic [ref=e319]:
+            - generic [ref=e320]: Cổ heo thái mỏng
+            - generic [ref=e321]: 119.000 đ
+          - button "Thêm" [ref=e322] [cursor=pointer]
+        - generic [ref=e323]:
+          - generic [ref=e324]:
+            - generic [ref=e325]: Coca
+            - generic [ref=e326]: 19.000 đ
+          - button "Thêm" [ref=e327] [cursor=pointer]
+        - generic [ref=e328]:
+          - generic [ref=e329]:
+            - generic [ref=e330]: Combo 1 người - Solo
+            - generic [ref=e331]: 299.000 đ
+          - button "Thêm" [ref=e332] [cursor=pointer]
+        - generic [ref=e333]:
+          - generic [ref=e334]:
+            - generic [ref=e335]: Combo 2 người - Premium Wagyu
+            - generic [ref=e336]: 899.000 đ
+          - button "Thêm" [ref=e337] [cursor=pointer]
+        - generic [ref=e338]:
+          - generic [ref=e339]:
+            - generic [ref=e340]: Combo 2 người - Seafood Lover
+            - generic [ref=e341]: 799.000 đ
+          - button "Thêm" [ref=e342] [cursor=pointer]
+        - generic [ref=e343]:
+          - generic [ref=e344]:
+            - generic [ref=e345]: Combo 2 người - Signature
+            - generic [ref=e346]: 599.000 đ
+          - button "Thêm" [ref=e347] [cursor=pointer]
+        - generic [ref=e348]:
+          - generic [ref=e349]:
+            - generic [ref=e350]: Combo 2 người - Veggie Light
+            - generic [ref=e351]: 549.000 đ
+          - button "Thêm" [ref=e352] [cursor=pointer]
+        - generic [ref=e353]:
+          - generic [ref=e354]:
+            - generic [ref=e355]: Combo 4 người - Family
+            - generic [ref=e356]: 1.199.000 đ
+          - button "Thêm" [ref=e357] [cursor=pointer]
+        - generic [ref=e358]:
+          - generic [ref=e359]:
+            - generic [ref=e360]: Combo Tiệc 6 người - Party
+            - generic [ref=e361]: 1.799.000 đ
+          - button "Thêm" [ref=e362] [cursor=pointer]
+        - generic [ref=e363]:
+          - generic [ref=e364]:
+            - generic [ref=e365]: Combo Trẻ em - Kids
+            - generic [ref=e366]: 329.000 đ
+          - button "Thêm" [ref=e367] [cursor=pointer]
+        - generic [ref=e368]:
+          - generic [ref=e369]:
+            - generic [ref=e370]: Cừu cuộn nấm
+            - generic [ref=e371]: 179.000 đ
+          - button "Thêm" [ref=e372] [cursor=pointer]
+        - generic [ref=e373]:
+          - generic [ref=e374]:
+            - generic [ref=e375]: Cừu non (Baby Lamb)
+            - generic [ref=e376]: 209.000 đ
+          - button "Thêm" [ref=e377] [cursor=pointer]
+        - generic [ref=e378]:
+          - generic [ref=e379]:
+            - generic [ref=e380]: Cừu Thảo nguyên
+            - generic [ref=e381]: 50.000.000 đ
+          - button "Thêm" [ref=e382] [cursor=pointer]
+        - generic [ref=e383]:
+          - generic [ref=e384]:
+            - generic [ref=e385]: Cừu Úc thái mỏng
+            - generic [ref=e386]: 159.000 đ
+          - button "Thêm" [ref=e387] [cursor=pointer]
+        - generic [ref=e388]:
+          - generic [ref=e389]:
+            - generic [ref=e390]: Dấm đen
+            - generic [ref=e391]: 10.000 đ
+          - button "Thêm" [ref=e392] [cursor=pointer]
+        - generic [ref=e393]:
+          - generic [ref=e394]:
+            - generic [ref=e395]: Đậu bắp
+            - generic [ref=e396]: 39.000 đ
+          - button "Thêm" [ref=e397] [cursor=pointer]
+        - generic [ref=e398]:
+          - generic [ref=e399]:
+            - generic [ref=e400]: Dầu hào
+            - generic [ref=e401]: 10.000 đ
+          - button "Thêm" [ref=e402] [cursor=pointer]
+        - generic [ref=e403]:
+          - generic [ref=e404]:
+            - generic [ref=e405]: Đậu hũ chiên
+            - generic [ref=e406]: 39.000 đ
+          - button "Thêm" [ref=e407] [cursor=pointer]
+        - generic [ref=e408]:
+          - generic [ref=e409]:
+            - generic [ref=e410]: Đậu hũ ky cuộn
+            - generic [ref=e411]: 49.000 đ
+          - button "Thêm" [ref=e412] [cursor=pointer]
+        - generic [ref=e413]:
+          - generic [ref=e414]:
+            - generic [ref=e415]: Đậu hũ non
+            - generic [ref=e416]: 39.000 đ
+          - button "Thêm" [ref=e417] [cursor=pointer]
+        - generic [ref=e418]:
+          - generic [ref=e419]:
+            - generic [ref=e420]: Đậu hũ phô mai
+            - generic [ref=e421]: 59.000 đ
+          - button "Thêm" [ref=e422] [cursor=pointer]
+        - generic [ref=e423]:
+          - generic [ref=e424]:
+            - generic [ref=e425]: Dầu mè
+            - generic [ref=e426]: 10.000 đ
+          - button "Thêm" [ref=e427] [cursor=pointer]
+        - generic [ref=e428]:
+          - generic [ref=e429]:
+            - generic [ref=e430]: Diềm thăn (Skirt Steak)
+            - generic [ref=e431]: 169.000 đ
+          - button "Thêm" [ref=e432] [cursor=pointer]
+        - generic [ref=e433]:
+          - generic [ref=e434]:
+            - generic [ref=e435]: Đuôi bò
+            - generic [ref=e436]: 189.000 đ
+          - button "Thêm" [ref=e437] [cursor=pointer]
+        - generic [ref=e438]:
+          - generic [ref=e439]:
+            - generic [ref=e440]: Fanta
+            - generic [ref=e441]: 19.000 đ
+          - button "Thêm" [ref=e442] [cursor=pointer]
+        - generic [ref=e443]:
+          - generic [ref=e444]:
+            - generic [ref=e445]: Gân bò
+            - generic [ref=e446]: 99.000 đ
+          - button "Thêm" [ref=e447] [cursor=pointer]
+        - generic [ref=e448]:
+          - generic [ref=e449]:
+            - generic [ref=e450]: Gầu bò
+            - generic [ref=e451]: 149.000 đ
+          - button "Thêm" [ref=e452] [cursor=pointer]
+        - generic [ref=e453]:
+          - generic [ref=e454]:
+            - generic [ref=e455]: Gầu bò Prime
+            - generic [ref=e456]: 189.000 đ
+          - button "Thêm" [ref=e457] [cursor=pointer]
+        - generic [ref=e458]:
+          - generic [ref=e459]:
+            - generic [ref=e460]: Gù cừu
+            - generic [ref=e461]: 189.000 đ
+          - button "Thêm" [ref=e462] [cursor=pointer]
+        - generic [ref=e463]:
+          - generic [ref=e464]:
+            - generic [ref=e465]: Há cảo sò điệp
+            - generic [ref=e466]: 89.000 đ
+          - button "Thêm" [ref=e467] [cursor=pointer]
+        - generic [ref=e468]:
+          - generic [ref=e469]:
+            - generic [ref=e470]: Há cảo tôm
+            - generic [ref=e471]: 69.000 đ
+          - button "Thêm" [ref=e472] [cursor=pointer]
+        - generic [ref=e473]:
+          - generic [ref=e474]:
+            - generic [ref=e475]: Hành phi
+            - generic [ref=e476]: 10.000 đ
+          - button "Thêm" [ref=e477] [cursor=pointer]
+        - generic [ref=e478]:
+          - generic [ref=e479]:
+            - generic [ref=e480]: Hàu sữa
+            - generic [ref=e481]: 189.000 đ
+          - button "Thêm" [ref=e482] [cursor=pointer]
+        - generic [ref=e483]:
+          - generic [ref=e484]:
+            - generic [ref=e485]: Heo cuộn nấm
+            - generic [ref=e486]: 129.000 đ
+          - button "Thêm" [ref=e487] [cursor=pointer]
+    - generic [ref=e488]:
+      - generic [ref=e489]: Giỏ (OPS)
+      - list [ref=e495]:
+        - listitem [ref=e496]:
+          - generic [ref=e497]: Ba chỉ bò cuộn phô mai
+          - generic [ref=e498]:
+            - button "Giảm" [ref=e499] [cursor=pointer]: −
+            - generic [ref=e500]: "1"
+            - button "Tăng" [ref=e501] [cursor=pointer]: +
+  - generic [ref=e492]:
+    - generic [ref=e493]: 1 món • Tổng 1
+    - button "Đặt món" [ref=e494] [cursor=pointer]

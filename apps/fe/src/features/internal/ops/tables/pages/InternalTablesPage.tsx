@@ -19,17 +19,15 @@ import { realtimeConfig } from "../../../../../shared/realtime/config";
 import { useOpsTablesQuery } from "../hooks/useOpsTablesQuery";
 import { useAppMutation } from "../../../../../shared/http/useAppMutation";
 import { normalizeApiError } from "../../../../../shared/http/normalizeApiError";
+import {
+  OPS_TABLE_NO_SESSION_ERROR,
+  useOpsTableLiveMutation,
+  type OpsTableLiveInfo,
+} from "../hooks/useOpsTableLiveMutation";
 
 import { openOpsSession, closeOpsSession, extractSessionKey } from "../services/opsSessionsApi";
-import { apiFetch } from "../../../../../lib/apiFetch";
 import { posStore } from "../../../ops/posStore";
-import {
-  getOrCreateOpsCartBySessionKey,
-  extractCartKey,
-  getOpsCart,
-  normalizeOpsCartItems,
-  extractCartCreatedAt,
-} from "../services/opsCartsApi";
+import { getOrCreateOpsCartBySessionKey, extractCartKey } from "../services/opsCartsApi";
 import type { OpsTableDto } from "../services/opsTablesApi";
 
 function formatElapsed(iso?: string) {
@@ -44,12 +42,7 @@ function formatElapsed(iso?: string) {
   return `${h}h ${mm}m`;
 }
 
-type LiveInfo = {
-  sessionKey?: string;
-  cartKey?: string;
-  startedAt?: string;
-  items?: { itemId: string; name?: string; qty: number; note?: string }[];
-};
+type LiveInfo = Partial<OpsTableLiveInfo>;
 
 type TableFilter = "ALL" | "AVAILABLE" | "ACTIVE" | "ATTENTION";
 
@@ -250,56 +243,7 @@ export function InternalTablesPage() {
   const [query, setQuery] = useState("");
   const [tableFilter, setTableFilter] = useState<TableFilter>("ALL");
 
-  const loadLive = useAppMutation({
-    mutationFn: async (t: { tableId: string | number; sessionKey?: string | null; cartKey?: string | null }) => {
-      const sessionKey = String(t.sessionKey ?? "").trim();
-      if (!sessionKey) throw new Error("NO_SESSION");
-
-      let cartKey = String(t.cartKey ?? "").trim();
-
-      if (!cartKey) {
-        const c = await getOrCreateOpsCartBySessionKey(sessionKey);
-        cartKey = extractCartKey(c);
-      }
-
-        if (!cartKey) {
-          return { tableId: String(t.tableId), sessionKey, cartKey: "", startedAt: undefined, items: [] };
-        }
-
-      const cartDetail = await getOpsCart(cartKey);
-      const items = normalizeOpsCartItems(cartDetail);
-      const startedAt = extractCartCreatedAt(cartDetail);
-
-      const menuRes = await apiFetch<unknown>(
-        `/menu/items?branchId=${encodeURIComponent(String(effectiveBranchId))}&limit=500`,
-      );
-
-      const menuItems = Array.isArray((menuRes as { items?: unknown[] } | null)?.items)
-        ? ((menuRes as { items: unknown[] }).items ?? [])
-        : Array.isArray(menuRes)
-          ? menuRes
-          : [];
-
-      const nameById = new Map(
-        menuItems
-          .map((x) => {
-            const record = x && typeof x === "object" ? (x as Record<string, unknown>) : null;
-            return [
-              String(record?.id ?? record?.itemId ?? "").trim(),
-              String(record?.name ?? "").trim(),
-            ] as const;
-          })
-          .filter(([id, name]) => id && name)
-      );
-
-      const itemsWithName = items.map((it) => ({
-        ...it,
-        name: it.name ?? nameById.get(String(it.itemId)) ?? undefined,
-      }));
-
-      return { tableId: String(t.tableId), sessionKey, cartKey, startedAt, items: itemsWithName };
-    },
-
+  const loadLive = useOpsTableLiveMutation(effectiveBranchId, enabled, {
     onSuccess: (out) => {
       setActionError(null);
       setLive((prev) => ({
@@ -340,7 +284,7 @@ export function InternalTablesPage() {
     try {
       const s = await openOpsSession({ tableId: t.id, directionId });
       const sessionKey = extractSessionKey(s);
-      if (!sessionKey) throw new Error("Missing sessionKey from /admin/ops/sessions/open");
+      if (!sessionKey) throw new Error("Missing sessionKey from ops session open response");
 
       const c = await getOrCreateOpsCartBySessionKey(sessionKey);
       const cartKey = extractCartKey(c) ?? undefined;
@@ -714,7 +658,7 @@ export function InternalTablesPage() {
                               cartKey: cartKeyFromRow,
                             })
                             .catch((e) => {
-                              if (String(e?.message ?? "") === "NO_SESSION") {
+                              if (String(e?.message ?? "") === OPS_TABLE_NO_SESSION_ERROR) {
                                 setNoSessionFor(tid);
                                 return;
                               }

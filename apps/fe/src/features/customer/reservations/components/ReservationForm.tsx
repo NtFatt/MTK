@@ -5,6 +5,7 @@ import { Input } from "../../../../shared/ui/input";
 import { Label } from "../../../../shared/ui/label";
 
 type ReservationFormProps = {
+  branchId: string;
   areaName: string;
   partySize: number;
   contactName: string;
@@ -12,6 +13,7 @@ type ReservationFormProps = {
   note: string;
   reservedFromLocal: string;
   reservedToLocal: string;
+  onBranchIdChange: (value: string) => void;
   onAreaNameChange: (value: string) => void;
   onPartySizeChange: (value: number) => void;
   onContactNameChange: (value: string) => void;
@@ -25,6 +27,7 @@ type ReservationFormProps = {
 };
 
 export function ReservationForm({
+  branchId,
   areaName,
   partySize,
   contactName,
@@ -32,6 +35,7 @@ export function ReservationForm({
   note,
   reservedFromLocal,
   reservedToLocal,
+  onBranchIdChange,
   onAreaNameChange,
   onPartySizeChange,
   onContactNameChange,
@@ -68,6 +72,17 @@ export function ReservationForm({
           ) : null}
 
           <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="branchId" className="text-[#6a4226]">Mã chi nhánh</Label>
+              <Input
+                id="branchId"
+                value={branchId}
+                onChange={(e) => onBranchIdChange(e.target.value)}
+                placeholder="Ví dụ: 1"
+                className="customer-hotpot-input"
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="areaName" className="text-[#6a4226]">Khu vực</Label>
               <Input

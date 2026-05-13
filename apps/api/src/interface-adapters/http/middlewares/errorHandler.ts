@@ -347,6 +347,9 @@ const MAP: Record<string, ErrorMapping> = {
   PARTY_SIZE_INVALID: { status: 400, code: "PARTY_SIZE_INVALID", message: "partySize is invalid" },
   PHONE_REQUIRED: { status: 400, code: "PHONE_REQUIRED", message: "contactPhone is required" },
   BRANCH_REQUIRED: { status: 400, code: "BRANCH_REQUIRED", message: "branchId is required" },
+  BRANCH_ID_REQUIRED: { status: 400, code: "BRANCH_ID_REQUIRED", message: "branchId is required" },
+  SELECTED_TABLE_NOT_FOUND: { status: 404, code: "SELECTED_TABLE_NOT_FOUND", message: "Selected table not found" },
+  SELECTED_TABLE_NOT_AVAILABLE: { status: 409, code: "SELECTED_TABLE_NOT_AVAILABLE", message: "Selected table is no longer available" },
   BRANCH_SCOPE_REQUIRED: {
     status: 403,
     code: "BRANCH_SCOPE_REQUIRED",

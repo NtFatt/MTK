@@ -37,6 +37,8 @@ function mapAppErrorMessage(code?: string) {
       return "Hãy nhập ghi chú khi kết ca có chênh lệch.";
     case "SHIFT_STALE":
       return "Dữ liệu ca vừa thay đổi. Vui lòng tải lại rồi thử lại.";
+    case "RESERVATION_NOT_IN_TIME_WINDOW":
+      return "Chưa tới khung giờ check-in. Vui lòng thử lại gần giờ khách đến.";
     case "ORDER_NOT_PAYABLE":
       return "Bill này hiện không còn ở trạng thái có thể thanh toán. Hãy kiểm tra lại trạng thái mới nhất của đơn.";
     case "SHIFT_NOT_ASSIGNED_TO_ACTOR":

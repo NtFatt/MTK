@@ -1,0 +1,18 @@
+- main [ref=e5]:
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - heading "Đăng nhập nội bộ" [level=3] [ref=e8]
+      - paragraph [ref=e9]: Dùng tài khoản staff/admin (username/password)
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - text: Username
+        - textbox "Username" [ref=e13]:
+          - /placeholder: admin
+          - text: admin
+      - generic [ref=e14]:
+        - text: Password
+        - textbox "Password" [active] [ref=e15]:
+          - /placeholder: ••••••••
+          - text: admin123
+      - generic [ref=e18]: Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.
+      - button "Đăng nhập" [ref=e16] [cursor=pointer]

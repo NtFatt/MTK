@@ -3,6 +3,7 @@ import type {
   ReservationAvailability,
   ReservationCreateInput,
   ReservationListFilter,
+  TableSlot,
 } from "../../../../application/ports/repositories/ITableReservationRepository.js";
 import { TableReservation, type ReservationStatus } from "../../../../domain/entities/TableReservation.js";
 import { pool } from "../connection.js";
@@ -74,74 +75,95 @@ export class MySQLTableReservationRepository implements ITableReservationReposit
   }
 
   async getAvailability(params: {
-    areaName: string;
+    branchId: string;
+    areaName?: string;
     partySize: number;
     reservedFrom: Date;
     reservedTo: Date;
     now: Date;
   }): Promise<ReservationAvailability> {
+    const now = params.now;
     // If reservation is soon (<=30m), require table_status AVAILABLE to avoid conflicts with walk-in.
-    const enforceAvailableNow = params.reservedFrom.getTime() <= params.now.getTime() + 30 * 60 * 1000 ? 1 : 0;
+    const enforceAvailableNow = params.reservedFrom.getTime() <= now.getTime() + 30 * 60 * 1000 ? 1 : 0;
 
-    const baseWhere = `
-      t.area_name = ?
-      AND t.seats >= ?
-      AND t.table_status <> 'OUT_OF_SERVICE'
-      AND (? = 0 OR t.table_status = 'AVAILABLE')
-      AND NOT EXISTS (
-        SELECT 1
-        FROM table_reservations r
-        WHERE r.table_id = t.table_id
-          AND r.status IN ('PENDING','CONFIRMED','CHECKED_IN')
-          AND (r.status <> 'PENDING' OR (r.expires_at IS NULL OR r.expires_at > ?))
-          AND r.reserved_from < ?
-          AND r.reserved_to > ?
-      )
-    `;
+    // Safe pattern: build clauses + args together, always from a valid starting point.
+    const whereClauses: string[] = ["1=1"];
+    const sqlArgs: any[] = [];
 
-    const args = [
-      params.areaName,
-      params.partySize,
-      enforceAvailableNow,
-      params.now,
-      params.reservedTo,
-      params.reservedFrom,
-    ];
+    whereClauses.push("t.branch_id = ?");
+    sqlArgs.push(params.branchId);
 
-    const [[cnt]]: any = await pool.query(
-      `SELECT COUNT(*) AS c
-       FROM restaurant_tables t
-       WHERE ${baseWhere}`,
-      args
-    );
+    if (params.areaName?.trim()) {
+      whereClauses.push("t.area_name = ?");
+      sqlArgs.push(params.areaName.trim());
+    }
+
+    whereClauses.push("t.seats >= ?");
+    sqlArgs.push(params.partySize);
+    whereClauses.push("t.table_status <> 'OUT_OF_SERVICE'");
+    whereClauses.push("(? = 0 OR t.table_status = 'AVAILABLE')");
+    sqlArgs.push(enforceAvailableNow);
+
+    const where = whereClauses.join("\n      AND ");
+
+    const countSql = `
+      SELECT COUNT(*) AS c
+      FROM restaurant_tables t
+      WHERE ${where}
+        AND NOT EXISTS (
+          SELECT 1
+          FROM table_reservations r
+          WHERE r.table_id = t.table_id
+            AND r.status IN ('PENDING','CONFIRMED','CHECKED_IN')
+            AND (r.status <> 'PENDING' OR (r.expires_at IS NULL OR r.expires_at > ?))
+            AND r.reserved_from < ?
+            AND r.reserved_to > ?
+        )`;
+
+    const countArgs = [...sqlArgs, now, params.reservedTo, params.reservedFrom];
+    const [[cnt]]: any = await pool.query(countSql, countArgs);
 
     const availableCount = Number(cnt?.c ?? 0);
     if (availableCount <= 0) {
-      return { available: false, availableCount: 0, suggestedTable: null };
+      const reason = params.areaName?.trim()
+        ? `Không có bàn nào trong khu vực "${params.areaName}" phù hợp cho ${params.partySize} khách vào khung giờ này.`
+        : `Không có bàn nào phù hợp cho ${params.partySize} khách vào khung giờ này.`;
+      return { available: false, availableCount: 0, availableTables: [], suggestedTable: null, unavailableReason: reason };
     }
 
-    const [rows]: any = await pool.query(
-      `SELECT t.table_id, t.branch_id, t.table_code, t.seats, t.area_name
-       FROM restaurant_tables t
-       WHERE ${baseWhere}
-       ORDER BY t.seats ASC, t.table_code ASC
-       LIMIT 1`,
-      args
-    );
+    const selectSql = `
+      SELECT t.table_id, t.branch_id, t.table_code, t.seats, t.area_name
+      FROM restaurant_tables t
+      WHERE ${where}
+        AND NOT EXISTS (
+          SELECT 1
+          FROM table_reservations r
+          WHERE r.table_id = t.table_id
+            AND r.status IN ('PENDING','CONFIRMED','CHECKED_IN')
+            AND (r.status <> 'PENDING' OR (r.expires_at IS NULL OR r.expires_at > ?))
+            AND r.reserved_from < ?
+            AND r.reserved_to > ?
+        )
+      ORDER BY t.seats ASC, t.table_code ASC`;
 
-    const r = rows?.[0];
-    if (!r) return { available: false, availableCount, suggestedTable: null };
+    const [rows]: any = await pool.query(selectSql, countArgs);
+
+    const availableTables = (rows ?? []).map((r: any) => ({
+      tableId: String(r.table_id),
+      branchId: String(r.branch_id),
+      tableCode: String(r.table_code),
+      seats: Number(r.seats),
+      areaName: String(r.area_name),
+    }));
+
+    const suggestedTable = availableTables[0] ?? null;
 
     return {
       available: true,
       availableCount,
-      suggestedTable: {
-        tableId: String(r.table_id),
-        branchId: String(r.branch_id),
-        tableCode: String(r.table_code),
-        seats: Number(r.seats),
-        areaName: String(r.area_name),
-      },
+      availableTables,
+      suggestedTable,
+      unavailableReason: null,
     };
   }
 
@@ -300,5 +322,25 @@ export class MySQLTableReservationRepository implements ITableReservationReposit
     );
 
     return (rows ?? []).map((r: any) => toReservation(r));
+  }
+
+  async findTableSlotById(branchId: string, areaName: string, tableId: string): Promise<TableSlot | null> {
+    const [rows]: any = await pool.query(
+      `SELECT table_id, branch_id, table_code, seats, area_name
+       FROM restaurant_tables
+       WHERE table_id = ?
+         AND branch_id = ?
+         AND area_name = ?`,
+      [tableId, branchId, areaName]
+    );
+    const r = rows?.[0];
+    if (!r) return null;
+    return {
+      tableId: String(r.table_id),
+      branchId: String(r.branch_id),
+      tableCode: String(r.table_code),
+      seats: Number(r.seats),
+      areaName: String(r.area_name),
+    };
   }
 }

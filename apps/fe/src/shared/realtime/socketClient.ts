@@ -40,3 +40,4 @@ export function destroySocket() {
   }
   socket = null;
 }
+ 

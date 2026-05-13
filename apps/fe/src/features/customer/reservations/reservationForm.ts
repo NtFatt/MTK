@@ -1,4 +1,5 @@
 export type ReservationFormState = {
+  branchId: string;
   areaName: string;
   partySize: number;
   contactName: string;
@@ -65,6 +66,7 @@ export function normalizeReservationForm(
   input: ReservationFormState,
 ): ReservationFormState {
   return {
+    branchId: input.branchId.trim(),
     areaName: input.areaName.trim(),
     partySize: input.partySize,
     contactName: input.contactName.trim(),
@@ -79,6 +81,10 @@ export function validateReservationForm(
   input: ReservationFormState,
 ): string | null {
   const normalized = normalizeReservationForm(input);
+
+  if (!normalized.branchId) {
+    return "Vui lòng nhập mã chi nhánh.";
+  }
 
   if (!normalized.areaName) {
     return "Vui lòng nhập khu vực.";

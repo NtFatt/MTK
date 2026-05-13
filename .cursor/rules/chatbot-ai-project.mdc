@@ -1,0 +1,45 @@
+---
+alwaysApply: true
+---
+# Chatbot AI Project Rules
+
+## Core principle
+Work as a senior full-stack engineer. Make minimal, safe, production-minded changes. Do not refactor unrelated files.
+
+## Architecture
+- Respect the existing monorepo structure.
+- Check `package.json`, `apps/*`, `packages/*`, `docs/*`, and `.env.example` before making architectural assumptions.
+- Do not invent APIs, database fields, environment variables, or routes.
+- If a contract/schema exists, follow it exactly.
+- Keep frontend, backend, services, hooks, UI components, and database logic separated.
+
+## Backend rules
+- Validate request bodies.
+- Return consistent error responses.
+- Do not expose secrets.
+- Do not log API keys, tokens, passwords, or private user content.
+- Use existing database/ORM patterns.
+- Handle AI provider errors cleanly.
+
+## Frontend rules
+- Do not call APIs directly inside large UI components.
+- Split API services, hooks, pages, and reusable components.
+- Build clean, compact, user-friendly UI.
+- Prioritize accessibility, loading states, empty states, and error states.
+- Do not create cluttered dashboards.
+
+## AI chatbot rules
+- Chat must support clear conversation state.
+- AI provider integration must be isolated behind a service layer.
+- Support graceful fallback when provider API fails.
+- Never hardcode API keys.
+- Streaming should be handled safely if implemented.
+
+## Quality gates
+After changes, verify with the available scripts from `package.json`, usually:
+- pnpm lint
+- pnpm typecheck
+- pnpm build
+- pnpm dev
+
+If scripts are different, inspect `package.json` and use the correct ones.

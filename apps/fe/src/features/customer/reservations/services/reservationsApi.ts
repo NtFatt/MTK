@@ -32,6 +32,7 @@ export type PublicReservationRow = {
 };
 
 export type ReservationAvailabilityInput = {
+  branchId?: string;
   areaName: string;
   partySize: number;
   reservedFrom: string;
@@ -41,16 +42,26 @@ export type ReservationAvailabilityInput = {
 export type ReservationAvailabilityResult = {
   available: boolean;
   availableCount: number;
-  suggestedTable: null | {
+  availableTables: Array<{
     tableId: string;
     branchId: string;
     tableCode: string;
     seats: number;
     areaName: string;
-  };
+  }>;
+  suggestedTable: {
+    tableId: string;
+    branchId: string;
+    tableCode: string;
+    seats: number;
+    areaName: string;
+  } | null;
+  unavailableReason: string | null;
 };
 
 export type CreateReservationInput = {
+  tableId?: string;
+  branchId?: string;
   areaName: string;
   partySize: number;
   contactPhone: string;
@@ -101,6 +112,16 @@ function normalizeReservationRow(raw: any): PublicReservationRow | null {
 }
 
 function normalizeAvailability(raw: any): ReservationAvailabilityResult {
+  const tables = Array.isArray(raw?.availableTables)
+    ? raw.availableTables.map((t: any) => ({
+        tableId: String(t?.tableId ?? ""),
+        branchId: String(t?.branchId ?? ""),
+        tableCode: String(t?.tableCode ?? ""),
+        seats: toNum(t?.seats, 0),
+        areaName: String(t?.areaName ?? ""),
+      }))
+    : [];
+
   const suggested = raw?.suggestedTable && typeof raw.suggestedTable === "object"
     ? {
         tableId: String(raw.suggestedTable.tableId ?? ""),
@@ -114,7 +135,9 @@ function normalizeAvailability(raw: any): ReservationAvailabilityResult {
   return {
     available: Boolean(raw?.available),
     availableCount: toNum(raw?.availableCount, 0),
+    availableTables: tables,
     suggestedTable: suggested && suggested.tableId ? suggested : null,
+    unavailableReason: typeof raw?.unavailableReason === "string" ? raw.unavailableReason : null,
   };
 }
 
@@ -122,7 +145,8 @@ export async function getReservationAvailability(
   input: ReservationAvailabilityInput,
 ): Promise<ReservationAvailabilityResult> {
   const qs = new URLSearchParams();
-  qs.set("areaName", input.areaName.trim());
+  if (input.branchId) qs.set("branchId", input.branchId);
+  if (input.areaName) qs.set("areaName", input.areaName.trim());
   qs.set("partySize", String(input.partySize));
   qs.set("reservedFrom", input.reservedFrom);
   qs.set("reservedTo", input.reservedTo);
@@ -134,17 +158,21 @@ export async function getReservationAvailability(
 export async function createReservation(
   input: CreateReservationInput,
 ): Promise<PublicReservationRow> {
+  const body: Record<string, unknown> = {
+    areaName: input.areaName.trim(),
+    partySize: input.partySize,
+    contactPhone: input.contactPhone.trim(),
+    contactName: input.contactName?.trim() || null,
+    note: input.note?.trim() || null,
+    reservedFrom: input.reservedFrom,
+    reservedTo: input.reservedTo,
+  };
+  if (input.branchId) body.branchId = input.branchId;
+  if (input.tableId) body.tableId = input.tableId;
+
   const res = await apiFetch<unknown>("/reservations", {
     method: "POST",
-    body: JSON.stringify({
-      areaName: input.areaName.trim(),
-      partySize: input.partySize,
-      contactPhone: input.contactPhone.trim(),
-      contactName: input.contactName?.trim() || null,
-      note: input.note?.trim() || null,
-      reservedFrom: input.reservedFrom,
-      reservedTo: input.reservedTo,
-    }),
+    body: JSON.stringify(body),
   });
 
   const row = normalizeReservationRow(res);

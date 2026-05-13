@@ -1,13 +1,21 @@
 # Tiệm lẩu trên Đường Hạnh Phúc API Route Map
 
-Generated at: 2026-03-20T16:21:27.684Z
+Generated at: 2026-05-01T10:03:50.741Z
 
 ## Canonical routes (LEGACY_API_ENABLED=false)
 
 | Method | Path |
 |---|---|
+| GET | /api/v1/admin/attendance |
+| POST | /api/v1/admin/attendance/:attendanceId/check-out |
+| POST | /api/v1/admin/attendance/:staffId/check-in |
+| POST | /api/v1/admin/attendance/:staffId/mark-absent |
+| GET | /api/v1/admin/attendance/assignments |
+| PUT | /api/v1/admin/attendance/assignments/:shiftCode |
+| GET | /api/v1/admin/attendance/staff/:staffId/history |
 | POST | /api/v1/admin/cashier/settle-cash/:orderCode |
 | GET | /api/v1/admin/cashier/unpaid |
+| GET | /api/v1/admin/dashboard/overview |
 | GET | /api/v1/admin/inventory/adjustments |
 | GET | /api/v1/admin/inventory/alerts |
 | GET | /api/v1/admin/inventory/holds |
@@ -27,6 +35,9 @@ Generated at: 2026-03-20T16:21:27.684Z
 | POST | /api/v1/admin/maintenance/run |
 | POST | /api/v1/admin/maintenance/sync-table-status |
 | GET | /api/v1/admin/menu/categories |
+| POST | /api/v1/admin/menu/categories |
+| DELETE | /api/v1/admin/menu/categories/:categoryId |
+| PUT | /api/v1/admin/menu/categories/:categoryId |
 | GET | /api/v1/admin/menu/items |
 | POST | /api/v1/admin/menu/items |
 | PUT | /api/v1/admin/menu/items/:itemId |
@@ -44,19 +55,33 @@ Generated at: 2026-03-20T16:21:27.684Z
 | POST | /api/v1/admin/ops/sessions/:sessionKey/close |
 | POST | /api/v1/admin/ops/sessions/open |
 | GET | /api/v1/admin/ops/tables |
+| GET | /api/v1/admin/orders |
 | POST | /api/v1/admin/orders/:orderCode/status |
 | POST | /api/v1/admin/payments/mock-success/:orderCode |
+| PATCH | /api/v1/admin/payroll/bonuses/:payrollBonusId |
+| POST | /api/v1/admin/payroll/bonuses/:payrollBonusId/void |
+| PUT | /api/v1/admin/payroll/profiles/:staffId |
+| GET | /api/v1/admin/payroll/staff/:staffId |
+| POST | /api/v1/admin/payroll/staff/:staffId/bonuses |
+| GET | /api/v1/admin/payroll/summary |
 | GET | /api/v1/admin/realtime/audit |
 | GET | /api/v1/admin/realtime/replay |
 | GET | /api/v1/admin/reservations |
 | POST | /api/v1/admin/reservations/:reservationCode/checkin |
 | PATCH | /api/v1/admin/reservations/:reservationCode/confirm |
 | POST | /api/v1/admin/reservations/:reservationCode/confirm |
+| POST | /api/v1/admin/shifts/:branchId/open |
+| POST | /api/v1/admin/shifts/:shiftRunId/close |
+| GET | /api/v1/admin/shifts/current |
+| GET | /api/v1/admin/shifts/history |
 | GET | /api/v1/admin/staff |
 | POST | /api/v1/admin/staff |
 | POST | /api/v1/admin/staff/:staffId/reset-password |
 | PATCH | /api/v1/admin/staff/:staffId/role |
 | PATCH | /api/v1/admin/staff/:staffId/status |
+| POST | /api/v1/admin/tables |
+| DELETE | /api/v1/admin/tables/:tableId |
+| PUT | /api/v1/admin/tables/:tableId |
 | GET | /api/v1/admin/vouchers |
 | POST | /api/v1/admin/vouchers |
 | PATCH | /api/v1/admin/vouchers/:voucherId |
@@ -112,8 +137,16 @@ Generated at: 2026-03-20T16:21:27.684Z
 | Method | Path |
 |---|---|
 | POST | /api/admin/:orderCode(ORD[0-9A-F]{10})/status |
+| GET | /api/admin/attendance |
+| POST | /api/admin/attendance/:attendanceId/check-out |
+| POST | /api/admin/attendance/:staffId/check-in |
+| POST | /api/admin/attendance/:staffId/mark-absent |
+| GET | /api/admin/attendance/assignments |
+| PUT | /api/admin/attendance/assignments/:shiftCode |
+| GET | /api/admin/attendance/staff/:staffId/history |
 | POST | /api/admin/cashier/settle-cash/:orderCode |
 | GET | /api/admin/cashier/unpaid |
+| GET | /api/admin/dashboard/overview |
 | GET | /api/admin/inventory/adjustments |
 | GET | /api/admin/inventory/alerts |
 | GET | /api/admin/inventory/holds |
@@ -133,6 +166,9 @@ Generated at: 2026-03-20T16:21:27.684Z
 | POST | /api/admin/maintenance/run |
 | POST | /api/admin/maintenance/sync-table-status |
 | GET | /api/admin/menu/categories |
+| POST | /api/admin/menu/categories |
+| DELETE | /api/admin/menu/categories/:categoryId |
+| PUT | /api/admin/menu/categories/:categoryId |
 | GET | /api/admin/menu/items |
 | POST | /api/admin/menu/items |
 | PUT | /api/admin/menu/items/:itemId |
@@ -150,19 +186,33 @@ Generated at: 2026-03-20T16:21:27.684Z
 | POST | /api/admin/ops/sessions/:sessionKey/close |
 | POST | /api/admin/ops/sessions/open |
 | GET | /api/admin/ops/tables |
+| GET | /api/admin/orders |
 | POST | /api/admin/orders/:orderCode/status |
 | POST | /api/admin/payments/mock-success/:orderCode |
+| PATCH | /api/admin/payroll/bonuses/:payrollBonusId |
+| POST | /api/admin/payroll/bonuses/:payrollBonusId/void |
+| PUT | /api/admin/payroll/profiles/:staffId |
+| GET | /api/admin/payroll/staff/:staffId |
+| POST | /api/admin/payroll/staff/:staffId/bonuses |
+| GET | /api/admin/payroll/summary |
 | GET | /api/admin/realtime/audit |
 | GET | /api/admin/realtime/replay |
 | GET | /api/admin/reservations |
 | POST | /api/admin/reservations/:reservationCode/checkin |
 | PATCH | /api/admin/reservations/:reservationCode/confirm |
 | POST | /api/admin/reservations/:reservationCode/confirm |
+| POST | /api/admin/shifts/:branchId/open |
+| POST | /api/admin/shifts/:shiftRunId/close |
+| GET | /api/admin/shifts/current |
+| GET | /api/admin/shifts/history |
 | GET | /api/admin/staff |
 | POST | /api/admin/staff |
 | POST | /api/admin/staff/:staffId/reset-password |
 | PATCH | /api/admin/staff/:staffId/role |
 | PATCH | /api/admin/staff/:staffId/status |
+| POST | /api/admin/tables |
+| DELETE | /api/admin/tables/:tableId |
+| PUT | /api/admin/tables/:tableId |
 | GET | /api/admin/vouchers |
 | POST | /api/admin/vouchers |
 | PATCH | /api/admin/vouchers/:voucherId |

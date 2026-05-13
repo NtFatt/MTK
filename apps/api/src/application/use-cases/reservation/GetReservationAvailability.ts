@@ -4,7 +4,8 @@ export class GetReservationAvailability {
   constructor(private reservationRepo: ITableReservationRepository) {}
 
   async execute(params: {
-    areaName: string;
+    branchId: string;
+    areaName?: string;
     partySize: number;
     reservedFrom: Date;
     reservedTo: Date;
